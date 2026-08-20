@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Variables &amp; Scope — Ume Language</title>
+<link rel="stylesheet" href="../style.css"/>
+<link rel="icon" href="../img/logo.png"/>
+<link rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css"
+      referrerpolicy="no-referrer"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/csharp.min.js" defer></script>
+</head>
+<body>
+
+<nav class="topnav">
+  <a class="nav-brand" href="../index.html">
+    <img src="../img/logo.png" alt="Ume"/>
+    <span>Ume</span>
+  </a>
+  <div class="nav-links">
+    <a href="../index.html">Home</a>
+    <a href="index.html">Wiki</a>
+    <a href="https://github.com" target="_blank" rel="noopener">GitHub</a>
+    <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Toggle dark mode">
+      <span id="theme-icon">◐</span>
+    </button>
+  </div>
+</nav>
+
+<div class="wiki">
+<aside class="sidebar">
+
+  <h4>Overview</h4>
+
+  <a href="index.html">Wiki Home</a>
+
+  <a href="getting-started.html">Getting Started</a>
+
+  <a href="project-config.html">Projects &amp; ume.toml</a>
+
+  <a href="modules.html">Modules &amp; Imports</a>
+
+  <h4>Language</h4>
+
+  <a href="types.html">Primitive Types</a>
+
+  <a href="variables.html" class=&#34;active&#34;>Variables &amp; Scope</a>
+
+  <a href="strings.html">Strings &amp; Interpolation</a>
+
+  <a href="expressions.html">Expressions &amp; Operators</a>
+
+  <a href="functions.html">Functions</a>
+
+  <a href="control-flow.html">Control Flow</a>
+
+  <a href="classes.html">Classes</a>
+
+  <a href="interfaces.html">Interfaces &amp; Abstract</a>
+
+  <a href="enums.html">Enums &amp; Structs</a>
+
+  <a href="generics.html">Generics</a>
+
+  <a href="properties.html">Properties &amp; Indexers</a>
+
+  <a href="attributes.html">Attributes</a>
+
+  <a href="exceptions.html">Exceptions</a>
+
+  <a href="lambdas.html">Lambdas &amp; Closures</a>
+
+  <a href="operators.html">Operator Overloading</a>
+
+  <a href="unsafe.html">Unsafe Blocks</a>
+
+  <h4>Standard Library</h4>
+
+  <a href="stdlib-core.html">Core (Prelude)</a>
+
+  <a href="stdlib-io.html">Console &amp; File</a>
+
+  <a href="stdlib-collections.html">Collections</a>
+
+  <a href="stdlib-string.html">String Utilities</a>
+
+  <a href="stdlib-math.html">Math &amp; Random</a>
+
+  <a href="stdlib-json.html">JSON</a>
+
+  <a href="stdlib-thread.html">Concurrency</a>
+
+  <a href="stdlib-audio.html">Audio</a>
+
+  <a href="stdlib-net.html">Networking</a>
+
+  <a href="stdlib-system.html">System &amp; FileSystem</a>
+
+  <a href="stdlib-time.html">Time &amp; Timestep</a>
+
+  <a href="stdlib-graphics.html">Graphics</a>
+
+  <a href="stdlib-vector.html">Vectors</a>
+
+  <a href="stdlib-matrix.html">Matrices</a>
+
+</aside>
+
+<main class="content">
+
+<span class="eyebrow">Language</span>
+<h1>Variables &amp; Scope</h1>
+<p class="lead">Variables in Ume are declared with either an explicit type or <code>var</code> for type inference. Once declared, a variable's type is fixed — Ume is statically typed, and <code>var</code> is a convenience, not dynamic typing.</p>
+
+<h2 id="explicit">Explicit type declaration</h2>
+<p>Write the type, then the name, then optionally an initializer. The initializer's type must be assignable to the declared type. If you omit the initializer, the variable is default-initialized (zero for numerics, <code>false</code> for bool, <code>null</code> for references).</p>
+<pre><code class="language-ume">int    age    = 30;
+double pi     = 3.14159;
+string name   = &quot;Alice&quot;;
+bool   ready  = true;
+char   grade  = &#39;A&#39;;
+
+List&lt;int&gt; nums = new List&lt;int&gt;();
+
+// Multiple variables of the same type in one statement
+int a = 1, b = 2, c = 3;
+
+// Without initializer — default-initialized
+int count;
+Console.println(count);   // 0</code></pre>
+
+<h2 id="var">Type inference with <code>var</code></h2>
+<p>When you write <code>var</code> instead of a type, the compiler infers the type from the initializer. The inferred type is the static type of the initializer expression — there's no "common supertype" guessing. <code>var</code> is purely a syntactic convenience; the compiled code is identical to writing the inferred type out by hand. <code>auto</code> is accepted as an alias for <code>var</code>.</p>
+<pre><code class="language-ume">var name   = &quot;Alice&quot;;      // type: string
+var age    = 30;            // type: int
+var pi     = 3.14159;       // type: double
+var nums   = new List&lt;int&gt;();
+var person = new User();
+
+// var requires an initializer — the type has to come from somewhere
+// var x;   // ← error: cannot infer type without initializer</code></pre>
+
+<p>Inference is especially useful with generics, where writing the full type is verbose:</p>
+<pre><code class="language-ume">var scores = new Map&lt;string, int&gt;();
+scores.put(&quot;Alice&quot;, 95);
+
+// Equivalent explicit form:
+// Map&lt;string, int&gt; scores = new Map&lt;string, int&gt;();</code></pre>
+
+<h2 id="const"><code>const</code> variables</h2>
+<p>A <code>const</code> variable cannot be reassigned after initialization. The value itself is not necessarily deeply immutable — if you have a <code>const List&lt;int&gt;</code>, you can still call <code>add()</code> on it; you just can't make the variable point at a different list. Use <code>const</code> for values that should not change, like configuration constants or computed results you want to cache.</p>
+<pre><code class="language-ume">const int MAX_RETRIES = 3;
+const string APP_NAME = &quot;MyApp&quot;;
+const double PI_OVER_2 = Math.PI / 2.0;
+
+// MAX_RETRIES = 5;   // ← error: cannot assign to const
+
+// The binding is const, not the object:
+const List&lt;int&gt; fixed = new List&lt;int&gt;();
+fixed.add(1);          // OK — mutating the list, not rebinding the variable
+// fixed = new List&lt;int&gt;();  // ← error: cannot rebind const</code></pre>
+
+<h2 id="scope">Scope</h2>
+<p>Variables are block-scoped. A block is anything between matching <code>{ }</code> — a function body, an <code>if</code> body, a loop body, or a standalone <code>{ }</code> block. A variable declared inside a block is not visible outside it. Inner blocks can shadow outer variables with the same name, though this is discouraged for readability.</p>
+<pre><code class="language-ume">func void demo() {
+    int x = 1;            // visible in the whole function body
+
+    if (true) {
+        int y = 2;        // visible only inside this if-block
+        int x = 10;       // shadows the outer x — legal but confusing
+        Console.println(x);   // 10
+    }
+
+    // Console.println(y);  // ← error: y is not in scope here
+    Console.println(x);       // 1 (the outer x is unchanged)
+}</code></pre>
+
+<p>Loop variables are scoped to the loop body, not the enclosing block:</p>
+<pre><code class="language-ume">for (int i = 0; i &lt; 3; i++) {
+    Console.println(i);
+}
+// Console.println(i);   // ← error: i is not visible here
+
+foreach (string n in names) {
+    Console.println(n);
+}
+// Console.println(n);   // ← error: n is not visible here</code></pre>
+
+<h2 id="fields">Fields vs locals</h2>
+<p>Variables declared inside a class body (outside any method) are <em>fields</em> — they live on each instance of the class (or on the class itself if <code>static</code>). Variables declared inside a method, constructor, or lambda are <em>locals</em> — they live on the call stack and disappear when the method returns.</p>
+<pre><code class="language-ume">class Counter {
+    public int count = 0;          // field — one per instance
+
+    public func void increment() {
+        int step = 1;              // local — fresh on each call
+        count = count + step;
+    }
+}</code></pre>
+
+<p>Fields can have initializers that run when the object is constructed, and they default to a zero/null value if you don't provide one. Locals do <em>not</em> get a default zero value in safe code — you must assign them before reading.</p>
+
+<h2 id="assign">Assignment and compound assignment</h2>
+<p>The basic assignment operator <code>=</code> stores a value into an existing variable or field. The compound forms <code>+=</code>, <code>-=</code>, <code>*=</code>, <code>/=</code>, <code>%=</code> combine an arithmetic operation with assignment — <code>x += 5</code> is exactly equivalent to <code>x = x + 5</code> but more concise and slightly more efficient for complex left-hand sides.</p>
+<pre><code class="language-ume">int x = 10;
+x += 5;    // x is now 15
+x -= 3;    // x is now 12
+x *= 2;    // x is now 24
+x /= 4;    // x is now 6
+x %= 4;    // x is now 2</code></pre>
+
+<p>Increment and decrement are available as both prefix (<code>++x</code>, returns the new value) and postfix (<code>x++</code>, returns the old value). They modify the variable in place.</p>
+<pre><code class="language-ume">int i = 0;
+int a = i++;   // a = 0, i = 1  (postfix: returns old value)
+int b = ++i;   // b = 2, i = 2  (prefix: returns new value)</code></pre>
+
+<p><a class="next-link" href="strings.html">Strings &amp; Interpolation →</a></p>
+</main>
+</div>
+<footer>
+  <div class="container">
+    <p>Ume Language &nbsp;·&nbsp; <a href="../index.html">Home</a> &nbsp;·&nbsp;
+       <a href="index.html">Wiki</a> &nbsp;·&nbsp; MIT License</p>
+  </div>
+</footer>
+<script>
+(function() {
+  // Theme toggle (persisted, respects OS preference on first load)
+  var root = document.documentElement;
+  var stored = localStorage.getItem('ume-theme');
+  if (!stored) {
+    stored = (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches)
+      ? 'dark' : 'light';
+  }
+  root.setAttribute('data-theme', stored);
+  var icon = document.getElementById('theme-icon');
+  if (icon) icon.textContent = stored === 'dark' ? '◑' : '◐';
+
+  document.getElementById('theme-toggle').addEventListener('click', function() {
+    var cur = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    root.setAttribute('data-theme', cur);
+    localStorage.setItem('ume-theme', cur);
+    if (icon) icon.textContent = cur === 'dark' ? '◑' : '◐';
+  });
+
+  // Highlight + copy button
+  function setup() {
+    if (!window.hljs) { setTimeout(setup, 30); return; }
+    try { hljs.registerAliases(['ume','Ume'], { languageName: 'csharp' }); } catch(e) {}
+    document.querySelectorAll('pre code').forEach(function(block) {
+      try { hljs.highlightElement(block); } catch(e) {}
+      if (block.parentElement.querySelector('.copy-btn')) return;
+      var btn = document.createElement('button');
+      btn.className = 'copy-btn';
+      btn.type = 'button';
+      btn.textContent = 'Copy';
+      btn.addEventListener('click', function() {
+        var txt = block.innerText;
+        navigator.clipboard.writeText(txt).then(function() {
+          btn.classList.add('copied');
+          btn.textContent = 'Copied!';
+          setTimeout(function() {
+            btn.classList.remove('copied');
+            btn.textContent = 'Copy';
+          }, 1600);
+        }, function() {
+          var ta = document.createElement('textarea');
+          ta.value = txt; document.body.appendChild(ta); ta.select();
+          try { document.execCommand('copy'); } catch(e) {}
+          document.body.removeChild(ta);
+          btn.textContent = 'Copied!';
+          setTimeout(function() { btn.textContent = 'Copy'; }, 1600);
+        });
+      });
+      block.parentElement.appendChild(btn);
+    });
+  }
+  setup();
+})();
+</script>
+</body>
+</html>
+

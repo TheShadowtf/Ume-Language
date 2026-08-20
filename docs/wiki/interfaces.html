@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Interfaces &amp; Abstract — Ume Language</title>
+<link rel="stylesheet" href="../style.css"/>
+<link rel="icon" href="../img/logo.png"/>
+<link rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css"
+      referrerpolicy="no-referrer"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/csharp.min.js" defer></script>
+</head>
+<body>
+
+<nav class="topnav">
+  <a class="nav-brand" href="../index.html">
+    <img src="../img/logo.png" alt="Ume"/>
+    <span>Ume</span>
+  </a>
+  <div class="nav-links">
+    <a href="../index.html">Home</a>
+    <a href="index.html">Wiki</a>
+    <a href="https://github.com" target="_blank" rel="noopener">GitHub</a>
+    <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Toggle dark mode">
+      <span id="theme-icon">◐</span>
+    </button>
+  </div>
+</nav>
+
+<div class="wiki">
+<aside class="sidebar">
+
+  <h4>Overview</h4>
+
+  <a href="index.html">Wiki Home</a>
+
+  <a href="getting-started.html">Getting Started</a>
+
+  <a href="project-config.html">Projects &amp; ume.toml</a>
+
+  <a href="modules.html">Modules &amp; Imports</a>
+
+  <h4>Language</h4>
+
+  <a href="types.html">Primitive Types</a>
+
+  <a href="variables.html">Variables &amp; Scope</a>
+
+  <a href="strings.html">Strings &amp; Interpolation</a>
+
+  <a href="expressions.html">Expressions &amp; Operators</a>
+
+  <a href="functions.html">Functions</a>
+
+  <a href="control-flow.html">Control Flow</a>
+
+  <a href="classes.html">Classes</a>
+
+  <a href="interfaces.html" class=&#34;active&#34;>Interfaces &amp; Abstract</a>
+
+  <a href="enums.html">Enums &amp; Structs</a>
+
+  <a href="generics.html">Generics</a>
+
+  <a href="properties.html">Properties &amp; Indexers</a>
+
+  <a href="attributes.html">Attributes</a>
+
+  <a href="exceptions.html">Exceptions</a>
+
+  <a href="lambdas.html">Lambdas &amp; Closures</a>
+
+  <a href="operators.html">Operator Overloading</a>
+
+  <a href="unsafe.html">Unsafe Blocks</a>
+
+  <h4>Standard Library</h4>
+
+  <a href="stdlib-core.html">Core (Prelude)</a>
+
+  <a href="stdlib-io.html">Console &amp; File</a>
+
+  <a href="stdlib-collections.html">Collections</a>
+
+  <a href="stdlib-string.html">String Utilities</a>
+
+  <a href="stdlib-math.html">Math &amp; Random</a>
+
+  <a href="stdlib-json.html">JSON</a>
+
+  <a href="stdlib-thread.html">Concurrency</a>
+
+  <a href="stdlib-audio.html">Audio</a>
+
+  <a href="stdlib-net.html">Networking</a>
+
+  <a href="stdlib-system.html">System &amp; FileSystem</a>
+
+  <a href="stdlib-time.html">Time &amp; Timestep</a>
+
+  <a href="stdlib-graphics.html">Graphics</a>
+
+  <a href="stdlib-vector.html">Vectors</a>
+
+  <a href="stdlib-matrix.html">Matrices</a>
+
+</aside>
+
+<main class="content">
+
+<span class="eyebrow">Language</span>
+<h1>Interfaces &amp; Abstract Classes</h1>
+<p class="lead">Interfaces define a contract — a set of method signatures that a class promises to implement. A class can implement multiple interfaces, which is Ume's mechanism for multi-type polymorphism (since single inheritance applies to classes). This page covers interface declaration, implementation, default methods, and how interfaces differ from abstract classes.</p>
+
+<h2 id="decl">Declaring an interface</h2>
+<p>An interface is declared with the <code>interface</code> keyword. Inside the body you list method signatures — return type, name, parameters — without bodies (terminated by a semicolon). A class declares that it implements an interface with the <code>implements</code> keyword.</p>
+<pre><code class="language-ume">public interface IDrawable {
+    func void draw();
+    func void resize(double factor);
+}
+
+public interface IClickable {
+    func void onClick();
+}
+
+public class Button implements IDrawable, IClickable {
+    public func void draw() {
+        Console.println(&quot;[Button Drawn]&quot;);
+    }
+
+    public func void resize(double factor) {
+        Console.println(&quot;Resized by &quot; + factor);
+    }
+
+    public func void onClick() {
+        Console.println(&quot;Button Clicked&quot;);
+    }
+}</code></pre>
+
+<p>A class can implement multiple interfaces (comma-separated after <code>implements</code>), and can also extend a base class at the same time. The class must provide an implementation for every method declared in every interface it implements.</p>
+
+<h2 id="using">Using interfaces as types</h2>
+<p>An interface is a type. You can declare variables, parameters, and fields of an interface type, and assign any object whose class implements that interface. Method calls through an interface variable dispatch to the actual runtime class's implementation.</p>
+<pre><code class="language-ume">IDrawable d = new Button();
+d.draw();        // calls Button.draw()
+d.resize(2.0);   // calls Button.resize()
+
+// A function that accepts any IDrawable
+func void renderTwice(IDrawable item) {
+    item.draw();
+    item.draw();
+}
+
+renderTwice(new Button());</code></pre>
+
+<h2 id="default">Default method implementations</h2>
+<p>An interface method can include a body (a "default method"). When it does, classes that implement the interface inherit that default implementation unless they override it. This lets you add new methods to an interface without breaking existing implementers.</p>
+<pre><code class="language-ume">public interface IGreeter {
+    func string name();
+
+    // Default implementation — uses name()
+    func string greet() {
+        return &quot;Hello, &quot; + name() + &quot;!&quot;;
+    }
+}
+
+public class EnglishGreeter implements IGreeter {
+    public func string name()  { return &quot;World&quot;; }
+    // inherits the default greet()
+}
+
+public class FancyGreeter implements IGreeter {
+    public func string name()  { return &quot;Alice&quot;; }
+    public func string greet() { return $&quot;✨ Hi there, {name()}! ✨&quot;; }   // override
+}</code></pre>
+
+<h2 id="constants">Interface constants</h2>
+<p>Interfaces can declare constants with <code>const</code>. These are implicitly <code>public static final</code> and must be initialized. They're useful for interface-related configuration values.</p>
+<pre><code class="language-ume">public interface Config {
+    const int MAX_CONNECTIONS = 10;
+    const string DEFAULT_HOST = &quot;localhost&quot;;
+}
+
+Console.println(Config.MAX_CONNECTIONS);   // 10</code></pre>
+
+<h2 id="generic-interfaces">Generic interfaces</h2>
+<p>Interfaces can be parameterized over types, just like classes. Type parameters go in angle brackets after the interface name.</p>
+<pre><code class="language-ume">public interface Comparable&lt;T&gt; {
+    func int compareTo(T other);
+}
+
+public class Temperature implements Comparable&lt;Temperature&gt; {
+    public double celsius;
+
+    public Temperature(double c) { this.celsius = c; }
+
+    public func int compareTo(Temperature other) {
+        if (this.celsius &lt; other.celsius) return -1;
+        if (this.celsius &gt; other.celsius) return 1;
+        return 0;
+    }
+}</code></pre>
+
+<h2 id="interface-vs-abstract">Interfaces vs abstract classes</h2>
+<p>Both define contracts that other types must fulfill, but they differ in important ways:</p>
+<table>
+  <thead><tr><th></th><th>Interface</th><th>Abstract class</th></tr></thead>
+  <tbody>
+    <tr><td>Inheritance</td><td>A class can implement <em>many</em>.</td><td>A class can extend <em>one</em>.</td></tr>
+    <tr><td>State</td><td>No instance fields (only constants).</td><td>Can have instance fields.</td></tr>
+    <tr><td>Constructors</td><td>None.</td><td>Can have constructors (called via <code>super</code>).</td></tr>
+    <tr><td>Default methods</td><td>Yes.</td><td>Yes (abstract methods can sit alongside concrete ones).</td></tr>
+    <tr><td>Use when…</td><td>You want to describe a capability that unrelated types can have.</td><td>You want to share implementation among closely related types.</td></tr>
+  </tbody>
+</table>
+
+<p>A common pattern is to use an abstract class for the shared base (with fields and partial implementation) and interfaces for the orthogonal capabilities. For example, an <code>Animal</code> abstract class might hold the <code>name</code> and <code>age</code> fields, while <code>IDrawable</code> and <code>IClickable</code> interfaces describe capabilities that some animals (but not others) have.</p>
+
+<h2 id="multiple">Multiple interface inheritance</h2>
+<p>A class can implement several interfaces. If two interfaces declare a method with the same signature, the class's single implementation satisfies both. If two interfaces declare a method with the same name but different signatures, they're treated as overloads.</p>
+<pre><code class="language-ume">public interface A { func void ping(); }
+public interface B { func void ping(); }
+
+public class C implements A, B {
+    public func void ping() {
+        Console.println(&quot;pong&quot;);   // satisfies both A.ping and B.ping
+    }
+}
+
+A a = new C();
+B b = new C();
+a.ping();   // pong
+b.ping();   // pong</code></pre>
+
+<p><a class="next-link" href="enums.html">Enums &amp; Structs →</a></p>
+</main>
+</div>
+<footer>
+  <div class="container">
+    <p>Ume Language &nbsp;·&nbsp; <a href="../index.html">Home</a> &nbsp;·&nbsp;
+       <a href="index.html">Wiki</a> &nbsp;·&nbsp; MIT License</p>
+  </div>
+</footer>
+<script>
+(function() {
+  // Theme toggle (persisted, respects OS preference on first load)
+  var root = document.documentElement;
+  var stored = localStorage.getItem('ume-theme');
+  if (!stored) {
+    stored = (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches)
+      ? 'dark' : 'light';
+  }
+  root.setAttribute('data-theme', stored);
+  var icon = document.getElementById('theme-icon');
+  if (icon) icon.textContent = stored === 'dark' ? '◑' : '◐';
+
+  document.getElementById('theme-toggle').addEventListener('click', function() {
+    var cur = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    root.setAttribute('data-theme', cur);
+    localStorage.setItem('ume-theme', cur);
+    if (icon) icon.textContent = cur === 'dark' ? '◑' : '◐';
+  });
+
+  // Highlight + copy button
+  function setup() {
+    if (!window.hljs) { setTimeout(setup, 30); return; }
+    try { hljs.registerAliases(['ume','Ume'], { languageName: 'csharp' }); } catch(e) {}
+    document.querySelectorAll('pre code').forEach(function(block) {
+      try { hljs.highlightElement(block); } catch(e) {}
+      if (block.parentElement.querySelector('.copy-btn')) return;
+      var btn = document.createElement('button');
+      btn.className = 'copy-btn';
+      btn.type = 'button';
+      btn.textContent = 'Copy';
+      btn.addEventListener('click', function() {
+        var txt = block.innerText;
+        navigator.clipboard.writeText(txt).then(function() {
+          btn.classList.add('copied');
+          btn.textContent = 'Copied!';
+          setTimeout(function() {
+            btn.classList.remove('copied');
+            btn.textContent = 'Copy';
+          }, 1600);
+        }, function() {
+          var ta = document.createElement('textarea');
+          ta.value = txt; document.body.appendChild(ta); ta.select();
+          try { document.execCommand('copy'); } catch(e) {}
+          document.body.removeChild(ta);
+          btn.textContent = 'Copied!';
+          setTimeout(function() { btn.textContent = 'Copy'; }, 1600);
+        });
+      });
+      block.parentElement.appendChild(btn);
+    });
+  }
+  setup();
+})();
+</script>
+</body>
+</html>
+

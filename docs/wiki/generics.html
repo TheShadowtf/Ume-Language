@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Generics — Ume Language</title>
+<link rel="stylesheet" href="../style.css"/>
+<link rel="icon" href="../img/logo.png"/>
+<link rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css"
+      referrerpolicy="no-referrer"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/csharp.min.js" defer></script>
+</head>
+<body>
+
+<nav class="topnav">
+  <a class="nav-brand" href="../index.html">
+    <img src="../img/logo.png" alt="Ume"/>
+    <span>Ume</span>
+  </a>
+  <div class="nav-links">
+    <a href="../index.html">Home</a>
+    <a href="index.html">Wiki</a>
+    <a href="https://github.com" target="_blank" rel="noopener">GitHub</a>
+    <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Toggle dark mode">
+      <span id="theme-icon">◐</span>
+    </button>
+  </div>
+</nav>
+
+<div class="wiki">
+<aside class="sidebar">
+
+  <h4>Overview</h4>
+
+  <a href="index.html">Wiki Home</a>
+
+  <a href="getting-started.html">Getting Started</a>
+
+  <a href="project-config.html">Projects &amp; ume.toml</a>
+
+  <a href="modules.html">Modules &amp; Imports</a>
+
+  <h4>Language</h4>
+
+  <a href="types.html">Primitive Types</a>
+
+  <a href="variables.html">Variables &amp; Scope</a>
+
+  <a href="strings.html">Strings &amp; Interpolation</a>
+
+  <a href="expressions.html">Expressions &amp; Operators</a>
+
+  <a href="functions.html">Functions</a>
+
+  <a href="control-flow.html">Control Flow</a>
+
+  <a href="classes.html">Classes</a>
+
+  <a href="interfaces.html">Interfaces &amp; Abstract</a>
+
+  <a href="enums.html">Enums &amp; Structs</a>
+
+  <a href="generics.html" class=&#34;active&#34;>Generics</a>
+
+  <a href="properties.html">Properties &amp; Indexers</a>
+
+  <a href="attributes.html">Attributes</a>
+
+  <a href="exceptions.html">Exceptions</a>
+
+  <a href="lambdas.html">Lambdas &amp; Closures</a>
+
+  <a href="operators.html">Operator Overloading</a>
+
+  <a href="unsafe.html">Unsafe Blocks</a>
+
+  <h4>Standard Library</h4>
+
+  <a href="stdlib-core.html">Core (Prelude)</a>
+
+  <a href="stdlib-io.html">Console &amp; File</a>
+
+  <a href="stdlib-collections.html">Collections</a>
+
+  <a href="stdlib-string.html">String Utilities</a>
+
+  <a href="stdlib-math.html">Math &amp; Random</a>
+
+  <a href="stdlib-json.html">JSON</a>
+
+  <a href="stdlib-thread.html">Concurrency</a>
+
+  <a href="stdlib-audio.html">Audio</a>
+
+  <a href="stdlib-net.html">Networking</a>
+
+  <a href="stdlib-system.html">System &amp; FileSystem</a>
+
+  <a href="stdlib-time.html">Time &amp; Timestep</a>
+
+  <a href="stdlib-graphics.html">Graphics</a>
+
+  <a href="stdlib-vector.html">Vectors</a>
+
+  <a href="stdlib-matrix.html">Matrices</a>
+
+</aside>
+
+<main class="content">
+
+<span class="eyebrow">Language</span>
+<h1>Generics</h1>
+<p class="lead">Generics let you write code that works over any type while keeping full static type safety. A <code>List&lt;int&gt;</code> and a <code>List&lt;string&gt;</code> share the same code but the compiler knows their element types are different — you can't add a string to a <code>List&lt;int&gt;</code>.</p>
+
+<h2 id="generic-classes">Generic classes</h2>
+<p>A class can take one or more type parameters, listed in angle brackets after the class name. Inside the class body, the type parameters can be used anywhere a regular type would: as field types, parameter types, return types, or local variable types.</p>
+<pre><code class="language-ume">public class Box&lt;T&gt; {
+    private T value;
+
+    public Box(T v) { value = v; }
+
+    public func T get() { return value; }
+    public func void set(T v) { value = v; }
+}
+
+var intBox = new Box&lt;int&gt;(42);
+var strBox = new Box&lt;string&gt;(&quot;hello&quot;);
+
+Console.println(intBox.get());   // 42
+Console.println(strBox.get());   // hello
+
+// intBox.set(&quot;oops&quot;);   // ← compile error: wrong type</code></pre>
+
+<h2 id="multiple-params">Multiple type parameters</h2>
+<p>A generic class can take several type parameters, separated by commas. The standard library's <code>Map&lt;K, V&gt;</code> is a good example.</p>
+<pre><code class="language-ume">public class Pair&lt;A, B&gt; {
+    public A first;
+    public B second;
+
+    public Pair(A a, B b) { first = a; second = b; }
+}
+
+var p = new Pair&lt;string, int&gt;(&quot;Alice&quot;, 30);
+Console.println(p.first);   // Alice
+Console.println(p.second);  // 30</code></pre>
+
+<h2 id="generic-methods">Generic methods</h2>
+<p>Methods and free functions can also be generic. Type parameters go in angle brackets before the function name. The compiler can often infer them from the arguments, but you can specify them explicitly when needed.</p>
+<pre><code class="language-ume">// T is a type parameter
+public func T identity&lt;T&gt;(T x) {
+    return x;
+}
+
+int    n = identity(42);            // T inferred as int
+string s = identity(&quot;hi&quot;);         // T inferred as string
+
+// Generic function with two type params
+public func Pair&lt;A, B&gt; makePair&lt;A, B&gt;(A a, B b) {
+    return new Pair&lt;A, B&gt;(a, b);
+}
+
+var p = makePair(&quot;Alice&quot;, 30);     // inferred: Pair&lt;string, int&gt;</code></pre>
+
+<h2 id="generic-methods-on-generic-class">Generic methods on generic classes</h2>
+<p>A method on a generic class can introduce <em>additional</em> type parameters of its own. This is how <code>List&lt;T&gt;.map&lt;R&gt;()</code> works: <code>T</code> comes from the class, <code>R</code> is introduced by the method.</p>
+<pre><code class="language-ume">public class List&lt;T&gt; {
+    // ...
+    public func List&lt;R&gt; map&lt;R&gt;(func R (T) transform) {
+        var result = new List&lt;R&gt;();
+        foreach (T item in this) {
+            result.add(transform(item));
+        }
+        return result;
+    }
+}
+
+List&lt;int&gt;  nums    = [1, 2, 3, 4, 5];
+List&lt;int&gt;  doubled = nums.map(n -&gt; n * 2);          // T=int, R=int (inferred)
+List&lt;string&gt; words = nums.map(n -&gt; $&quot;num {n}&quot;);        // T=int, R=string (inferred)</code></pre>
+
+<h2 id="type-args">Specifying type arguments at construction</h2>
+<p>When you construct an instance of a generic class, you provide the type arguments in angle brackets after the class name. This fixes the type parameters for that instance. For generic <em>methods</em>, type arguments are usually inferred from context — you can omit them:</p>
+<pre><code class="language-ume">// Generic method — type inferred (preferred):
+var n = identity(42);        // T = int
+var s = identity("hi");     // T = string
+
+// Generic method — explicit type args (also works, but verbose):
+// var n = identity&lt;int&gt;(42);  // explicit, but may not parse in all versions
+<pre><code class="language-ume">var ints    = new List&lt;int&gt;();
+var strings = new List&lt;string&gt;();
+var pairs   = new List&lt;Pair&lt;string, int&gt;&gt;();
+
+ints.add(1);       // OK
+// ints.add(&quot;x&quot;);  // error</code></pre>
+
+<h2 id="generic-interfaces">Generic interfaces</h2>
+<p>Interfaces can be generic too, with the same syntax. See <a href="/wiki/interfaces#generic-interfaces">Interfaces → Generic interfaces</a> for an example using <code>Comparable&lt;T&gt;</code>.</p>
+
+<h2 id="why">Why generics matter</h2>
+<p>Without generics you'd have two bad options: write a separate <code>IntList</code>, <code>StringList</code>, etc. for every element type (lots of duplicated code), or use <code>List&lt;any&gt;</code> and lose type safety (the compiler can't stop you from putting a string into a list of integers). Generics give you both reuse <em>and</em> safety — write the list code once, parameterize it by element type, and the compiler enforces the types at every use site.</p>
+
+<div class="callout callout-info">
+  <div class="callout-title">Type erasure</div>
+  <p>Ume generics are <strong>not</strong> implemented by type erasure. Different instantiations of a generic class produce different C++ types in the transpiled output, so <code>Box&lt;int&gt;</code> and <code>Box&lt;string&gt;</code> are genuinely distinct types at runtime — you cannot cast between them.</p>
+</div>
+
+<h2 id="constraints">Type constraints</h2>
+<p>Currently Ume does not enforce explicit type constraints (like <code>T extends Comparable</code>) on type parameters. Type parameters are treated as <code>any</code>-like — you can call any method on a value of type <code>T</code>, and the call is checked dynamically. This is less safe than bounded generics but more flexible; treat it as a known limitation when designing APIs.</p>
+
+<p><a class="next-link" href="properties.html">Properties &amp; Indexers →</a></p>
+</main>
+</div>
+<footer>
+  <div class="container">
+    <p>Ume Language &nbsp;·&nbsp; <a href="../index.html">Home</a> &nbsp;·&nbsp;
+       <a href="index.html">Wiki</a> &nbsp;·&nbsp; MIT License</p>
+  </div>
+</footer>
+<script>
+(function() {
+  // Theme toggle (persisted, respects OS preference on first load)
+  var root = document.documentElement;
+  var stored = localStorage.getItem('ume-theme');
+  if (!stored) {
+    stored = (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches)
+      ? 'dark' : 'light';
+  }
+  root.setAttribute('data-theme', stored);
+  var icon = document.getElementById('theme-icon');
+  if (icon) icon.textContent = stored === 'dark' ? '◑' : '◐';
+
+  document.getElementById('theme-toggle').addEventListener('click', function() {
+    var cur = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    root.setAttribute('data-theme', cur);
+    localStorage.setItem('ume-theme', cur);
+    if (icon) icon.textContent = cur === 'dark' ? '◑' : '◐';
+  });
+
+  // Highlight + copy button
+  function setup() {
+    if (!window.hljs) { setTimeout(setup, 30); return; }
+    try { hljs.registerAliases(['ume','Ume'], { languageName: 'csharp' }); } catch(e) {}
+    document.querySelectorAll('pre code').forEach(function(block) {
+      try { hljs.highlightElement(block); } catch(e) {}
+      if (block.parentElement.querySelector('.copy-btn')) return;
+      var btn = document.createElement('button');
+      btn.className = 'copy-btn';
+      btn.type = 'button';
+      btn.textContent = 'Copy';
+      btn.addEventListener('click', function() {
+        var txt = block.innerText;
+        navigator.clipboard.writeText(txt).then(function() {
+          btn.classList.add('copied');
+          btn.textContent = 'Copied!';
+          setTimeout(function() {
+            btn.classList.remove('copied');
+            btn.textContent = 'Copy';
+          }, 1600);
+        }, function() {
+          var ta = document.createElement('textarea');
+          ta.value = txt; document.body.appendChild(ta); ta.select();
+          try { document.execCommand('copy'); } catch(e) {}
+          document.body.removeChild(ta);
+          btn.textContent = 'Copied!';
+          setTimeout(function() { btn.textContent = 'Copy'; }, 1600);
+        });
+      });
+      block.parentElement.appendChild(btn);
+    });
+  }
+  setup();
+})();
+</script>
+</body>
+</html>
+

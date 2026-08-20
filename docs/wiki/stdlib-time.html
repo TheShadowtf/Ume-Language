@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Time &amp; Timestep — Ume Language</title>
+<link rel="stylesheet" href="../style.css"/>
+<link rel="icon" href="../img/logo.png"/>
+<link rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css"
+      referrerpolicy="no-referrer"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/csharp.min.js" defer></script>
+</head>
+<body>
+
+<nav class="topnav">
+  <a class="nav-brand" href="../index.html">
+    <img src="../img/logo.png" alt="Ume"/>
+    <span>Ume</span>
+  </a>
+  <div class="nav-links">
+    <a href="../index.html">Home</a>
+    <a href="index.html">Wiki</a>
+    <a href="https://github.com" target="_blank" rel="noopener">GitHub</a>
+    <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Toggle dark mode">
+      <span id="theme-icon">◐</span>
+    </button>
+  </div>
+</nav>
+
+<div class="wiki">
+<aside class="sidebar">
+
+  <h4>Overview</h4>
+
+  <a href="index.html">Wiki Home</a>
+
+  <a href="getting-started.html">Getting Started</a>
+
+  <a href="project-config.html">Projects &amp; ume.toml</a>
+
+  <a href="modules.html">Modules &amp; Imports</a>
+
+  <h4>Language</h4>
+
+  <a href="types.html">Primitive Types</a>
+
+  <a href="variables.html">Variables &amp; Scope</a>
+
+  <a href="strings.html">Strings &amp; Interpolation</a>
+
+  <a href="expressions.html">Expressions &amp; Operators</a>
+
+  <a href="functions.html">Functions</a>
+
+  <a href="control-flow.html">Control Flow</a>
+
+  <a href="classes.html">Classes</a>
+
+  <a href="interfaces.html">Interfaces &amp; Abstract</a>
+
+  <a href="enums.html">Enums &amp; Structs</a>
+
+  <a href="generics.html">Generics</a>
+
+  <a href="properties.html">Properties &amp; Indexers</a>
+
+  <a href="attributes.html">Attributes</a>
+
+  <a href="exceptions.html">Exceptions</a>
+
+  <a href="lambdas.html">Lambdas &amp; Closures</a>
+
+  <a href="operators.html">Operator Overloading</a>
+
+  <a href="unsafe.html">Unsafe Blocks</a>
+
+  <h4>Standard Library</h4>
+
+  <a href="stdlib-core.html">Core (Prelude)</a>
+
+  <a href="stdlib-io.html">Console &amp; File</a>
+
+  <a href="stdlib-collections.html">Collections</a>
+
+  <a href="stdlib-string.html">String Utilities</a>
+
+  <a href="stdlib-math.html">Math &amp; Random</a>
+
+  <a href="stdlib-json.html">JSON</a>
+
+  <a href="stdlib-thread.html">Concurrency</a>
+
+  <a href="stdlib-audio.html">Audio</a>
+
+  <a href="stdlib-net.html">Networking</a>
+
+  <a href="stdlib-system.html">System &amp; FileSystem</a>
+
+  <a href="stdlib-time.html" class=&#34;active&#34;>Time &amp; Timestep</a>
+
+  <a href="stdlib-graphics.html">Graphics</a>
+
+  <a href="stdlib-vector.html">Vectors</a>
+
+  <a href="stdlib-matrix.html">Matrices</a>
+
+</aside>
+
+<main class="content">
+
+<span class="eyebrow">Standard Library</span>
+<h1>Time</h1>
+<p class="lead">Time utilities for measuring frame time, fixed timesteps, delays, and elapsed time in milliseconds and seconds.</p>
+
+<div class="callout callout-info">
+  <div class="callout-title">Importing</div>
+  <pre><code class="language-ume">import std.time.*;</code></pre>
+</div>
+
+<h2 id="time"><code>Time</code></h2>
+<p>The <code>Time</code> class provides static utilities for high-precision time measurements.</p>
+
+<table>
+  <thead><tr><th>Method</th><th>Signature</th><th>Description</th></tr></thead>
+  <tbody>
+    <tr><td><code>millis</code></td><td><code>public static func long millis()</code></td><td>Returns current system time in milliseconds.</td></tr>
+    <tr><td><code>seconds</code></td><td><code>public static func double seconds()</code></td><td>Returns current time in seconds as a double.</td></tr>
+  </tbody>
+</table>
+
+<h3 id="example">Fixed Timestep Example</h3>
+<pre><code class="language-ume">import std.time.*;
+
+double lastTime = Time.seconds();
+double timeStep = 1.0 / 60.0;
+double accumulator = 0.0;
+
+while (running) {
+    double now = Time.seconds();
+    double frameTime = now - lastTime;
+    lastTime = now;
+    accumulator += frameTime;
+
+    while (accumulator &gt;= timeStep) {
+        // Fixed 60Hz physics step
+        updatePhysics(timeStep);
+        accumulator -= timeStep;
+    }
+
+    render();
+}</code></pre>
+
+<p><a class="next-link" href="stdlib-system.html">← System</a></p>
+</main>
+</div>
+<footer>
+  <div class="container">
+    <p>Ume Language &nbsp;·&nbsp; <a href="../index.html">Home</a> &nbsp;·&nbsp;
+       <a href="index.html">Wiki</a> &nbsp;·&nbsp; MIT License</p>
+  </div>
+</footer>
+<script>
+(function() {
+  // Theme toggle (persisted, respects OS preference on first load)
+  var root = document.documentElement;
+  var stored = localStorage.getItem('ume-theme');
+  if (!stored) {
+    stored = (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches)
+      ? 'dark' : 'light';
+  }
+  root.setAttribute('data-theme', stored);
+  var icon = document.getElementById('theme-icon');
+  if (icon) icon.textContent = stored === 'dark' ? '◑' : '◐';
+
+  document.getElementById('theme-toggle').addEventListener('click', function() {
+    var cur = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    root.setAttribute('data-theme', cur);
+    localStorage.setItem('ume-theme', cur);
+    if (icon) icon.textContent = cur === 'dark' ? '◑' : '◐';
+  });
+
+  // Highlight + copy button
+  function setup() {
+    if (!window.hljs) { setTimeout(setup, 30); return; }
+    try { hljs.registerAliases(['ume','Ume'], { languageName: 'csharp' }); } catch(e) {}
+    document.querySelectorAll('pre code').forEach(function(block) {
+      try { hljs.highlightElement(block); } catch(e) {}
+      if (block.parentElement.querySelector('.copy-btn')) return;
+      var btn = document.createElement('button');
+      btn.className = 'copy-btn';
+      btn.type = 'button';
+      btn.textContent = 'Copy';
+      btn.addEventListener('click', function() {
+        var txt = block.innerText;
+        navigator.clipboard.writeText(txt).then(function() {
+          btn.classList.add('copied');
+          btn.textContent = 'Copied!';
+          setTimeout(function() {
+            btn.classList.remove('copied');
+            btn.textContent = 'Copy';
+          }, 1600);
+        }, function() {
+          var ta = document.createElement('textarea');
+          ta.value = txt; document.body.appendChild(ta); ta.select();
+          try { document.execCommand('copy'); } catch(e) {}
+          document.body.removeChild(ta);
+          btn.textContent = 'Copied!';
+          setTimeout(function() { btn.textContent = 'Copy'; }, 1600);
+        });
+      });
+      block.parentElement.appendChild(btn);
+    });
+  }
+  setup();
+})();
+</script>
+</body>
+</html>
+

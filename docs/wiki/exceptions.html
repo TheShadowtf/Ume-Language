@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Exceptions — Ume Language</title>
+<link rel="stylesheet" href="../style.css"/>
+<link rel="icon" href="../img/logo.png"/>
+<link rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css"
+      referrerpolicy="no-referrer"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/csharp.min.js" defer></script>
+</head>
+<body>
+
+<nav class="topnav">
+  <a class="nav-brand" href="../index.html">
+    <img src="../img/logo.png" alt="Ume"/>
+    <span>Ume</span>
+  </a>
+  <div class="nav-links">
+    <a href="../index.html">Home</a>
+    <a href="index.html">Wiki</a>
+    <a href="https://github.com" target="_blank" rel="noopener">GitHub</a>
+    <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Toggle dark mode">
+      <span id="theme-icon">◐</span>
+    </button>
+  </div>
+</nav>
+
+<div class="wiki">
+<aside class="sidebar">
+
+  <h4>Overview</h4>
+
+  <a href="index.html">Wiki Home</a>
+
+  <a href="getting-started.html">Getting Started</a>
+
+  <a href="project-config.html">Projects &amp; ume.toml</a>
+
+  <a href="modules.html">Modules &amp; Imports</a>
+
+  <h4>Language</h4>
+
+  <a href="types.html">Primitive Types</a>
+
+  <a href="variables.html">Variables &amp; Scope</a>
+
+  <a href="strings.html">Strings &amp; Interpolation</a>
+
+  <a href="expressions.html">Expressions &amp; Operators</a>
+
+  <a href="functions.html">Functions</a>
+
+  <a href="control-flow.html">Control Flow</a>
+
+  <a href="classes.html">Classes</a>
+
+  <a href="interfaces.html">Interfaces &amp; Abstract</a>
+
+  <a href="enums.html">Enums &amp; Structs</a>
+
+  <a href="generics.html">Generics</a>
+
+  <a href="properties.html">Properties &amp; Indexers</a>
+
+  <a href="attributes.html">Attributes</a>
+
+  <a href="exceptions.html" class=&#34;active&#34;>Exceptions</a>
+
+  <a href="lambdas.html">Lambdas &amp; Closures</a>
+
+  <a href="operators.html">Operator Overloading</a>
+
+  <a href="unsafe.html">Unsafe Blocks</a>
+
+  <h4>Standard Library</h4>
+
+  <a href="stdlib-core.html">Core (Prelude)</a>
+
+  <a href="stdlib-io.html">Console &amp; File</a>
+
+  <a href="stdlib-collections.html">Collections</a>
+
+  <a href="stdlib-string.html">String Utilities</a>
+
+  <a href="stdlib-math.html">Math &amp; Random</a>
+
+  <a href="stdlib-json.html">JSON</a>
+
+  <a href="stdlib-thread.html">Concurrency</a>
+
+  <a href="stdlib-audio.html">Audio</a>
+
+  <a href="stdlib-net.html">Networking</a>
+
+  <a href="stdlib-system.html">System &amp; FileSystem</a>
+
+  <a href="stdlib-time.html">Time &amp; Timestep</a>
+
+  <a href="stdlib-graphics.html">Graphics</a>
+
+  <a href="stdlib-vector.html">Vectors</a>
+
+  <a href="stdlib-matrix.html">Matrices</a>
+
+</aside>
+
+<main class="content">
+
+<span class="eyebrow">Language</span>
+<h1>Exceptions</h1>
+<p class="lead">Exceptions are Ume's mechanism for signaling and recovering from runtime errors. The <code>try</code>/<code>catch</code>/<code>finally</code>/<code>throw</code> quadruple works just as in C# or Java — you wrap risky code in <code>try</code>, handle failures in <code>catch</code>, and clean up in <code>finally</code>.</p>
+
+<h2 id="throw"><code>throw</code></h2>
+<p>The <code>throw</code> statement raises an exception. It must be followed by an expression that evaluates to an <code>Exception</code> instance. When <code>throw</code> executes, the current function exits immediately and the runtime walks up the call stack looking for a matching <code>catch</code>. If none is found, the program terminates with an unhandled-exception error.</p>
+<pre><code class="language-ume">func int divide(int a, int b) {
+    if (b == 0) {
+        throw new Exception(&quot;Division by zero&quot;);
+    }
+    return a / b;
+}</code></pre>
+
+<h2 id="try-catch"><code>try</code> / <code>catch</code></h2>
+<p>Wrap code that might throw in a <code>try</code> block. Follow it with one or more <code>catch</code> clauses, each catching a specific exception type. When an exception is thrown inside the <code>try</code>, the runtime walks the <code>catch</code> clauses in order and runs the first one whose type matches. The caught exception is bound to the variable you name in the <code>catch (Type name)</code> clause.</p>
+<pre><code class="language-ume">try {
+    Console.println(divide(10, 0));
+} catch (Exception e) {
+    Console.println(&quot;Error: &quot; + e.getMessage());
+}</code></pre>
+
+<h2 id="multiple-catch">Multiple catch clauses</h2>
+<p>You can have several <code>catch</code> clauses, each handling a different exception type. They're tried in order — put the most specific types first, because the first match wins. A general <code>Exception</code> catch at the end acts as a catch-all.</p>
+<pre><code class="language-ume">public class ValidationError extends Exception {
+    public string field;
+    public ValidationError(string field, string msg) {
+        super(msg);
+        this.field = field;
+    }
+}
+
+try {
+    throw new ValidationError(&quot;email&quot;, &quot;Invalid email format&quot;);
+} catch (ValidationError ve) {
+    Console.println(&quot;Validation failed on &#39;&quot; + ve.field + &quot;&#39;: &quot; + ve.getMessage());
+} catch (Exception ex) {
+    Console.println(&quot;Generic error: &quot; + ex.getMessage());
+}</code></pre>
+
+<h2 id="finally"><code>finally</code></h2>
+<p>A <code>finally</code> block runs no matter what — whether the <code>try</code> completed normally, threw an exception that was caught, or threw an exception that wasn't caught (in which case <code>finally</code> runs and then the exception propagates). Use <code>finally</code> for cleanup that must always happen: closing files, releasing locks, restoring state.</p>
+<pre><code class="language-ume">Mutex m = new Mutex();
+m.lock();
+try {
+    // critical section
+    doWork();
+} catch (Exception e) {
+    Console.println(&quot;work failed: &quot; + e.getMessage());
+} finally {
+    m.unlock();   // always runs — even if doWork threw
+}</code></pre>
+
+<h2 id="exception-class">The <code>Exception</code> class</h2>
+<p>The base <code>Exception</code> class is provided by the <a href="stdlib-core.html">prelude</a> and is always available without an import. It has a <code>message</code> field (a string) and two accessors:</p>
+<table>
+  <thead><tr><th>Member</th><th>Description</th></tr></thead>
+  <tbody>
+    <tr><td><code>message</code></td><td>Public field holding the error description.</td></tr>
+    <tr><td><code>getMessage()</code></td><td>Returns the message string.</td></tr>
+    <tr><td><code>toString()</code></td><td>Returns the message string (alias for <code>getMessage</code>).</td></tr>
+  </tbody>
+</table>
+
+<p>Construct an <code>Exception</code> with <code>new Exception("message")</code>. The constructor stores the message in the <code>message</code> field.</p>
+
+<div class="callout callout-warn">
+  <div class="callout-title">Custom exceptions: set this.message explicitly</div>
+  <p>When creating a custom exception that extends <code>Exception</code>, the <code>super(msg)</code> call should set the <code>message</code> field. However, to be safe across all interpreter versions, <strong>also set <code>this.message = msg</code> explicitly</strong> in your constructor. This ensures <code>getMessage()</code> always returns the correct message:</p>
+</div>
+
+<h2 id="custom">Custom exception types</h2>
+<p>Extend <code>Exception</code> to create your own exception types. Call <code>super(message)</code> in your constructor to set the base message, then add any extra fields your exception needs. Custom exceptions let you carry structured error information and let callers catch specifically your error type rather than any <code>Exception</code>.</p>
+<pre><code class="language-ume">public class FileNotFoundError extends Exception {
+    public string path;
+    public FileNotFoundError(string path) {
+        super(&quot;File not found: &quot; + path);
+        this.path = path;
+        this.message = &quot;File not found: &quot; + path;  // explicitly set for getMessage()
+    }
+}
+
+try {
+    throw new FileNotFoundError(&quot;/etc/config&quot;);
+} catch (FileNotFoundError e) {
+    Console.println(&quot;Missing: &quot; + e.path);
+    Console.println(&quot;Message: &quot; + e.getMessage());
+}</code></pre>
+
+<h2 id="exception-hierarchy">Exception hierarchy</h2>
+<p>Since custom exceptions extend <code>Exception</code>, a <code>catch (Exception e)</code> clause catches them too. This is why the catch-all <code>Exception</code> clause goes last in a multi-catch block — otherwise it would shadow the more specific types below it. You can build deeper hierarchies (<code>AppError extends Exception</code>, <code>NetworkError extends AppError</code>, <code>TimeoutError extends NetworkError</code>) and catch at whichever level of specificity you need.</p>
+
+<h2 id="rethrow">Re-throwing</h2>
+<p>Inside a <code>catch</code> block you can <code>throw</code> again — either the same exception you caught or a different one. This is useful for logging and rethrowing, or for wrapping a low-level error in a higher-level one:</p>
+<pre><code class="language-ume">try {
+    riskyOperation();
+} catch (Exception e) {
+    Console.println(&quot;logging: &quot; + e.getMessage());
+    throw new Exception(&quot;higher-level failure&quot;, e);   // wrap and rethrow
+}</code></pre>
+
+<div class="callout callout-info">
+  <div class="callout-title">Exceptions for exceptional cases</div>
+  <p>Exceptions are for <em>exceptional</em> conditions — things that go wrong unexpectedly. Don't use them for normal control flow (like ending a loop or returning a value), because they're slower than a normal return and they obscure the happy path. If a failure is an expected outcome that callers will routinely check for, prefer returning a nullable or a result value.</p>
+</div>
+
+<p><a class="next-link" href="lambdas.html">Lambdas &amp; Closures →</a></p>
+</main>
+</div>
+<footer>
+  <div class="container">
+    <p>Ume Language &nbsp;·&nbsp; <a href="../index.html">Home</a> &nbsp;·&nbsp;
+       <a href="index.html">Wiki</a> &nbsp;·&nbsp; MIT License</p>
+  </div>
+</footer>
+<script>
+(function() {
+  // Theme toggle (persisted, respects OS preference on first load)
+  var root = document.documentElement;
+  var stored = localStorage.getItem('ume-theme');
+  if (!stored) {
+    stored = (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches)
+      ? 'dark' : 'light';
+  }
+  root.setAttribute('data-theme', stored);
+  var icon = document.getElementById('theme-icon');
+  if (icon) icon.textContent = stored === 'dark' ? '◑' : '◐';
+
+  document.getElementById('theme-toggle').addEventListener('click', function() {
+    var cur = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    root.setAttribute('data-theme', cur);
+    localStorage.setItem('ume-theme', cur);
+    if (icon) icon.textContent = cur === 'dark' ? '◑' : '◐';
+  });
+
+  // Highlight + copy button
+  function setup() {
+    if (!window.hljs) { setTimeout(setup, 30); return; }
+    try { hljs.registerAliases(['ume','Ume'], { languageName: 'csharp' }); } catch(e) {}
+    document.querySelectorAll('pre code').forEach(function(block) {
+      try { hljs.highlightElement(block); } catch(e) {}
+      if (block.parentElement.querySelector('.copy-btn')) return;
+      var btn = document.createElement('button');
+      btn.className = 'copy-btn';
+      btn.type = 'button';
+      btn.textContent = 'Copy';
+      btn.addEventListener('click', function() {
+        var txt = block.innerText;
+        navigator.clipboard.writeText(txt).then(function() {
+          btn.classList.add('copied');
+          btn.textContent = 'Copied!';
+          setTimeout(function() {
+            btn.classList.remove('copied');
+            btn.textContent = 'Copy';
+          }, 1600);
+        }, function() {
+          var ta = document.createElement('textarea');
+          ta.value = txt; document.body.appendChild(ta); ta.select();
+          try { document.execCommand('copy'); } catch(e) {}
+          document.body.removeChild(ta);
+          btn.textContent = 'Copied!';
+          setTimeout(function() { btn.textContent = 'Copy'; }, 1600);
+        });
+      });
+      block.parentElement.appendChild(btn);
+    });
+  }
+  setup();
+})();
+</script>
+</body>
+</html>
+

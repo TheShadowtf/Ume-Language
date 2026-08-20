@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Getting Started — Ume Language</title>
+<link rel="stylesheet" href="../style.css"/>
+<link rel="icon" href="../img/logo.png"/>
+<link rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css"
+      referrerpolicy="no-referrer"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/csharp.min.js" defer></script>
+</head>
+<body>
+
+<nav class="topnav">
+  <a class="nav-brand" href="../index.html">
+    <img src="../img/logo.png" alt="Ume"/>
+    <span>Ume</span>
+  </a>
+  <div class="nav-links">
+    <a href="../index.html">Home</a>
+    <a href="index.html">Wiki</a>
+    <a href="https://github.com" target="_blank" rel="noopener">GitHub</a>
+    <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Toggle dark mode">
+      <span id="theme-icon">◐</span>
+    </button>
+  </div>
+</nav>
+
+<div class="wiki">
+<aside class="sidebar">
+
+  <h4>Overview</h4>
+
+  <a href="index.html">Wiki Home</a>
+
+  <a href="getting-started.html" class=&#34;active&#34;>Getting Started</a>
+
+  <a href="project-config.html">Projects &amp; ume.toml</a>
+
+  <a href="modules.html">Modules &amp; Imports</a>
+
+  <h4>Language</h4>
+
+  <a href="types.html">Primitive Types</a>
+
+  <a href="variables.html">Variables &amp; Scope</a>
+
+  <a href="strings.html">Strings &amp; Interpolation</a>
+
+  <a href="expressions.html">Expressions &amp; Operators</a>
+
+  <a href="functions.html">Functions</a>
+
+  <a href="control-flow.html">Control Flow</a>
+
+  <a href="classes.html">Classes</a>
+
+  <a href="interfaces.html">Interfaces &amp; Abstract</a>
+
+  <a href="enums.html">Enums &amp; Structs</a>
+
+  <a href="generics.html">Generics</a>
+
+  <a href="properties.html">Properties &amp; Indexers</a>
+
+  <a href="attributes.html">Attributes</a>
+
+  <a href="exceptions.html">Exceptions</a>
+
+  <a href="lambdas.html">Lambdas &amp; Closures</a>
+
+  <a href="operators.html">Operator Overloading</a>
+
+  <a href="unsafe.html">Unsafe Blocks</a>
+
+  <h4>Standard Library</h4>
+
+  <a href="stdlib-core.html">Core (Prelude)</a>
+
+  <a href="stdlib-io.html">Console &amp; File</a>
+
+  <a href="stdlib-collections.html">Collections</a>
+
+  <a href="stdlib-string.html">String Utilities</a>
+
+  <a href="stdlib-math.html">Math &amp; Random</a>
+
+  <a href="stdlib-json.html">JSON</a>
+
+  <a href="stdlib-thread.html">Concurrency</a>
+
+  <a href="stdlib-audio.html">Audio</a>
+
+  <a href="stdlib-net.html">Networking</a>
+
+  <a href="stdlib-system.html">System &amp; FileSystem</a>
+
+  <a href="stdlib-time.html">Time &amp; Timestep</a>
+
+  <a href="stdlib-graphics.html">Graphics</a>
+
+  <a href="stdlib-vector.html">Vectors</a>
+
+  <a href="stdlib-matrix.html">Matrices</a>
+
+</aside>
+
+<main class="content">
+
+<span class="eyebrow">Setup</span>
+<h1>Getting Started</h1>
+<p class="lead">Build the compiler, write your first program, and learn the project layout and CLI.</p>
+
+<h2 id="prereq">Prerequisites</h2>
+<p>To compile and run Ume, you need CMake and a C++ toolchain (Visual Studio with C++ on Windows):</p>
+
+<table>
+  <thead><tr><th>Tool</th><th>Version</th><th>Purpose</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Visual Studio</strong></td><td>2022+ (Community OK)</td><td>MSVC C++ compiler + Windows SDK</td></tr>
+    <tr><td><strong>CMake</strong></td><td>3.20+</td><td>Build system generator</td></tr>
+    <tr><td><strong>Git</strong></td><td>Any</td><td>Clone the repository</td></tr>
+  </tbody>
+</table>
+
+<div class="callout callout-info">
+  <div class="callout-title">1-Line Setup for New Windows PCs</div>
+  <p>If you don't have Visual Studio or CMake installed yet, you can install both in one command via Windows Package Manager (PowerShell / Command Prompt):</p>
+  <code>winget install Kitware.CMake && winget install Microsoft.VisualStudio.2022.Community --override "--add Microsoft.VisualStudio.Workload.NativeDesktop --passive"</code>
+</div>
+
+<h2 id="build">⚡ One-Click Automated Build (<code>build.bat</code>)</h2>
+<p>Clone the repository and run <code>build.bat</code>. The automated script automatically discovers CMake and Visual Studio C++ toolchains, initializes environment variables, compiles the compiler (<code>ume.exe</code>), interpreter, and graphics subsystems in <strong>Release mode</strong>, and deploys everything to <code>bin\release\</code>.</p>
+<pre><code class="language-bash">git clone https://github.com/your-org/ume-language.git
+cd ume-language
+.\build.bat</code></pre>
+
+<h2 id="hello">Hello, World</h2>
+<p>Create a file called <code>hello.ume</code>. Ume programs start from a static <code>main</code> function — it can live in a free function or inside a class. The simplest form is a free function:</p>
+<pre><code class="language-ume">func void main() {
+    Console.println(&quot;Hello, World!&quot;);
+}</code></pre>
+
+<p>Run it two ways. During development you'll usually interpret directly with <code>-run</code> — it skips native code generation and starts immediately, which makes iteration fast. When you want a shippable binary, use <code>-compile</code> to transpile to C++17 and invoke the host C++ compiler:</p>
+<pre><code class="language-bash"># Interpret directly (fast for development)
+ume.exe -run hello.ume
+
+# Or compile to a native binary
+ume.exe -compile hello.ume -o hello
+.\hello.exe</code></pre>
+
+<h2 id="cli">CLI reference</h2>
+<p>The <code>ume</code> command takes a subcommand-style flag. <code>-run</code> and <code>-compile</code> are the two you'll use most; the others scaffold and manage projects.</p>
+<table>
+  <thead><tr><th>Command</th><th>Description</th></tr></thead>
+  <tbody>
+    <tr><td><code>ume -run file.ume</code></td><td>Interpret and run a <code>.ume</code> file directly (no binary output).</td></tr>
+    <tr><td><code>ume -compile file.ume</code></td><td>Transpile to C++17 and invoke the host compiler. Produces a native binary.</td></tr>
+    <tr><td><code>ume -compile file.ume -o out</code></td><td>Compile and name the output binary.</td></tr>
+    <tr><td><code>ume new MyApp</code></td><td>Scaffold a new project (creates <code>src/</code>, <code>stdlib/</code>, <code>build.bat</code>).</td></tr>
+    <tr><td><code>ume build [dir]</code></td><td>Build a project in the current or given directory.</td></tr>
+    <tr><td><code>ume run [dir]</code></td><td>Build and immediately run a project.</td></tr>
+    <tr><td><code>ume repl</code></td><td>Start an interactive read-eval-print loop.</td></tr>
+    <tr><td><code>ume version</code> / <code>-v</code></td><td>Print version information.</td></tr>
+    <tr><td><code>ume help</code></td><td>Show help.</td></tr>
+  </tbody>
+</table>
+
+<h2 id="layout">Project structure &amp; ume.toml</h2>
+<p>A scaffolded Ume project contains a <code>ume.toml</code> configuration manifest, an entry point in <code>src/</code>, and an automated build directory. Projects can configure compiler backends and asset copying pipelines (e.g. <code>assets = "textures, audio"</code>) directly in <code>ume.toml</code>.</p>
+<pre><code class="language-ume">MyApp/
+├── ume.toml          ← Project manifest (entry, backend, assets)
+├── src/
+│   └── main.ume      ← Main entry point
+└── build/            ← Compiled binaries &amp; copied assets</code></pre>
+<p>For complete details on configuration options, asset mapping syntax (<code>src -&gt; dst</code>), and project commands, see the <a href="project-config.html">Projects &amp; ume.toml</a> guide.</p>
+
+<h2 id="imports">Importing modules</h2>
+<p>Ume has <strong>two complementary mechanisms</strong> for bringing in external code. The first is the AST-level <code>import</code> statement, which resolves packages by name and injects only the requested symbols. The second is the C-style <code>#include</code> preprocessor directive, which textually splices a file's source into yours before lexing.</p>
+<pre><code class="language-ume">import std.collections.*;
+import std.thread.*;
+import std.math.*;
+
+func void main() {
+    var nums = new List&lt;int&gt;();
+    nums.add(42);
+    Console.println(nums.size());
+}</code></pre>
+<p>The details — package declarations, namespace blocks, selective symbol imports, wildcards, include guards, and when to use each mechanism — are covered in depth on the <a href="modules.html">Modules &amp; Imports</a> page.</p>
+
+<div class="callout callout-info">
+  <div class="callout-title">Tip</div>
+  <p>During development prefer <code>-run</code>. Switch to <code>-compile</code> only when you need a distributable binary or want to measure real performance.</p>
+</div>
+
+<p><a class="next-link" href="types.html">Primitive Types →</a></p>
+</main>
+</div>
+<footer>
+  <div class="container">
+    <p>Ume Language &nbsp;·&nbsp; <a href="../index.html">Home</a> &nbsp;·&nbsp;
+       <a href="index.html">Wiki</a> &nbsp;·&nbsp; MIT License</p>
+  </div>
+</footer>
+<script>
+(function() {
+  // Theme toggle (persisted, respects OS preference on first load)
+  var root = document.documentElement;
+  var stored = localStorage.getItem('ume-theme');
+  if (!stored) {
+    stored = (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches)
+      ? 'dark' : 'light';
+  }
+  root.setAttribute('data-theme', stored);
+  var icon = document.getElementById('theme-icon');
+  if (icon) icon.textContent = stored === 'dark' ? '◑' : '◐';
+
+  document.getElementById('theme-toggle').addEventListener('click', function() {
+    var cur = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    root.setAttribute('data-theme', cur);
+    localStorage.setItem('ume-theme', cur);
+    if (icon) icon.textContent = cur === 'dark' ? '◑' : '◐';
+  });
+
+  // Highlight + copy button
+  function setup() {
+    if (!window.hljs) { setTimeout(setup, 30); return; }
+    try { hljs.registerAliases(['ume','Ume'], { languageName: 'csharp' }); } catch(e) {}
+    document.querySelectorAll('pre code').forEach(function(block) {
+      try { hljs.highlightElement(block); } catch(e) {}
+      if (block.parentElement.querySelector('.copy-btn')) return;
+      var btn = document.createElement('button');
+      btn.className = 'copy-btn';
+      btn.type = 'button';
+      btn.textContent = 'Copy';
+      btn.addEventListener('click', function() {
+        var txt = block.innerText;
+        navigator.clipboard.writeText(txt).then(function() {
+          btn.classList.add('copied');
+          btn.textContent = 'Copied!';
+          setTimeout(function() {
+            btn.classList.remove('copied');
+            btn.textContent = 'Copy';
+          }, 1600);
+        }, function() {
+          var ta = document.createElement('textarea');
+          ta.value = txt; document.body.appendChild(ta); ta.select();
+          try { document.execCommand('copy'); } catch(e) {}
+          document.body.removeChild(ta);
+          btn.textContent = 'Copied!';
+          setTimeout(function() { btn.textContent = 'Copy'; }, 1600);
+        });
+      });
+      block.parentElement.appendChild(btn);
+    });
+  }
+  setup();
+})();
+</script>
+</body>
+</html>
+

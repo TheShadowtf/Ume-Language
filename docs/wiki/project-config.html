@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Projects &amp; ume.toml — Ume Language</title>
+<link rel="stylesheet" href="../style.css"/>
+<link rel="icon" href="../img/logo.png"/>
+<link rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css"
+      referrerpolicy="no-referrer"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/csharp.min.js" defer></script>
+</head>
+<body>
+
+<nav class="topnav">
+  <a class="nav-brand" href="../index.html">
+    <img src="../img/logo.png" alt="Ume"/>
+    <span>Ume</span>
+  </a>
+  <div class="nav-links">
+    <a href="../index.html">Home</a>
+    <a href="index.html">Wiki</a>
+    <a href="https://github.com" target="_blank" rel="noopener">GitHub</a>
+    <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Toggle dark mode">
+      <span id="theme-icon">◐</span>
+    </button>
+  </div>
+</nav>
+
+<div class="wiki">
+<aside class="sidebar">
+
+  <h4>Overview</h4>
+
+  <a href="index.html">Wiki Home</a>
+
+  <a href="getting-started.html">Getting Started</a>
+
+  <a href="project-config.html" class=&#34;active&#34;>Projects &amp; ume.toml</a>
+
+  <a href="modules.html">Modules &amp; Imports</a>
+
+  <h4>Language</h4>
+
+  <a href="types.html">Primitive Types</a>
+
+  <a href="variables.html">Variables &amp; Scope</a>
+
+  <a href="strings.html">Strings &amp; Interpolation</a>
+
+  <a href="expressions.html">Expressions &amp; Operators</a>
+
+  <a href="functions.html">Functions</a>
+
+  <a href="control-flow.html">Control Flow</a>
+
+  <a href="classes.html">Classes</a>
+
+  <a href="interfaces.html">Interfaces &amp; Abstract</a>
+
+  <a href="enums.html">Enums &amp; Structs</a>
+
+  <a href="generics.html">Generics</a>
+
+  <a href="properties.html">Properties &amp; Indexers</a>
+
+  <a href="attributes.html">Attributes</a>
+
+  <a href="exceptions.html">Exceptions</a>
+
+  <a href="lambdas.html">Lambdas &amp; Closures</a>
+
+  <a href="operators.html">Operator Overloading</a>
+
+  <a href="unsafe.html">Unsafe Blocks</a>
+
+  <h4>Standard Library</h4>
+
+  <a href="stdlib-core.html">Core (Prelude)</a>
+
+  <a href="stdlib-io.html">Console &amp; File</a>
+
+  <a href="stdlib-collections.html">Collections</a>
+
+  <a href="stdlib-string.html">String Utilities</a>
+
+  <a href="stdlib-math.html">Math &amp; Random</a>
+
+  <a href="stdlib-json.html">JSON</a>
+
+  <a href="stdlib-thread.html">Concurrency</a>
+
+  <a href="stdlib-audio.html">Audio</a>
+
+  <a href="stdlib-net.html">Networking</a>
+
+  <a href="stdlib-system.html">System &amp; FileSystem</a>
+
+  <a href="stdlib-time.html">Time &amp; Timestep</a>
+
+  <a href="stdlib-graphics.html">Graphics</a>
+
+  <a href="stdlib-vector.html">Vectors</a>
+
+  <a href="stdlib-matrix.html">Matrices</a>
+
+</aside>
+
+<main class="content">
+
+<span class="eyebrow">Projects &amp; Tooling</span>
+<h1>Project Configuration (<code>ume.toml</code>)</h1>
+<p class="lead">Ume projects use a <code>ume.toml</code> manifest at the project root to configure project metadata, entry points, compilation backends, and asset bundling pipelines.</p>
+
+<h2 id="quick-start">Scaffolding a new project</h2>
+<p>To scaffold a fresh project with standard directory structure, run <code>ume new &lt;ProjectName&gt;</code>:</p>
+<pre><code class="language-bash">ume new MyGame
+cd MyGame</code></pre>
+
+<p>This creates the standard Ume project structure:</p>
+<pre><code class="language-text">MyGame/
+├── ume.toml          ← Project configuration file
+├── src/
+│   └── main.ume      ← Entry point source file
+├── build/            ← Generated binaries &amp; copied assets
+└── .gitignore        ← Ignores build/ and binaries</code></pre>
+
+<h2 id="manifest-structure"><code>ume.toml</code> Reference</h2>
+<p>A complete <code>ume.toml</code> file supports the following keys:</p>
+
+<pre><code class="language-toml">name    = &quot;MyGame&quot;
+version = &quot;1.0.0&quot;
+
+# Path to the main entry point .ume file (relative to project root)
+entry   = &quot;src/main.ume&quot;
+
+# Compiler backend: &quot;cpp&quot; (default) or &quot;llvm&quot; (requires clang on PATH)
+backend = &quot;cpp&quot;
+
+# Asset bundling pipeline: folders, files, or explicit rename mappings
+assets  = &quot;textures, shaders, audio, config/game.json -&gt; game.json&quot;</code></pre>
+
+<h2 id="fields">Configuration Keys &amp; Options</h2>
+
+<table>
+  <thead>
+    <tr>
+      <th>Key</th>
+      <th>Type</th>
+      <th>Default</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>name</code></td>
+      <td><code>string</code></td>
+      <td><code>"out"</code></td>
+      <td>The name of the compiled binary output (e.g. produces <code>build/MyGame.exe</code>).</td>
+    </tr>
+    <tr>
+      <td><code>version</code></td>
+      <td><code>string</code></td>
+      <td><code>"1.0.0"</code></td>
+      <td>SemVer version string for your application or package.</td>
+    </tr>
+    <tr>
+      <td><code>entry</code></td>
+      <td><code>string</code></td>
+      <td><code>"src/main.ume"</code></td>
+      <td>Path to the main <code>.ume</code> source file containing the <code>main()</code> entry point.</td>
+    </tr>
+    <tr>
+      <td><code>backend</code></td>
+      <td><code>string</code></td>
+      <td><code>"cpp"</code></td>
+      <td>The transpiler backend: <code>"cpp"</code> (transpiles to C++17 and invokes MSVC/Clang) or <code>"llvm"</code> (LLVM IR).</td>
+    </tr>
+    <tr>
+      <td><code>assets</code></td>
+      <td><code>string</code></td>
+      <td><code>""</code></td>
+      <td>Comma-separated list of folders and files to automatically copy into <code>build/</code> during <code>ume build</code>. Supports direct copies and rename/target mappings (<code>src -&gt; dst</code>).</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2 id="assets-pipeline">Asset Bundling Pipeline (<code>assets</code>)</h2>
+<p>When compiling games, GUI applications, or web servers, your compiled executable usually needs runtime assets (textures, audio files, configuration files, 3D models, shaders) placed next to it in the <code>build/</code> directory.</p>
+
+<p>Ume provides a built-in asset copy pipeline via the <code>assets</code> configuration key:</p>
+
+<h3 id="asset-simple">1. Direct Directory / File Copy</h3>
+<p>Specifying a folder or file name copies it directly into <code>build/</code> with the same relative name:</p>
+<pre><code class="language-toml">assets = &quot;textures, audio, shaders, icon.png&quot;</code></pre>
+<p>When you run <code>ume build</code>, the compiler will automatically copy:</p>
+<ul>
+  <li><code>textures/</code> → <code>build/textures/</code></li>
+  <li><code>audio/</code> → <code>build/audio/</code></li>
+  <li><code>shaders/</code> → <code>build/shaders/</code></li>
+  <li><code>icon.png</code> → <code>build/icon.png</code></li>
+</ul>
+
+<h3 id="asset-mapping">2. Source-to-Destination Mapping (<code>src -&gt; dst</code>)</h3>
+<p>You can also map a source path to a custom destination subfolder inside <code>build/</code> using the arrow (<code>-&gt;</code>) syntax:</p>
+<pre><code class="language-toml">assets = &quot;resources/assets -&gt; assets, config/release_settings.json -&gt; settings.json&quot;</code></pre>
+<ul>
+  <li>Copies <code>resources/assets/</code> into <code>build/assets/</code></li>
+  <li>Copies <code>config/release_settings.json</code> into <code>build/settings.json</code></li>
+</ul>
+
+<h3 id="asset-mixed">3. Mixed Asset Declarations</h3>
+<p>You can freely combine simple names and arrow mappings in a single comma-separated string:</p>
+<pre><code class="language-toml">name    = &quot;MinecraftClone&quot;
+entry   = &quot;src/main.ume&quot;
+backend = &quot;cpp&quot;
+assets  = &quot;assets, shaders -&gt; shaders, config/blocks.json -&gt; blocks.json&quot;</code></pre>
+
+<h2 id="building-and-running">Building &amp; Running Projects</h2>
+
+<h3 id="build-cmd"><code>ume build [projectDir]</code></h3>
+<p>Compiles the project specified by <code>ume.toml</code> and copies all declared assets into the <code>build/</code> folder:</p>
+<pre><code class="language-bash">ume build</code></pre>
+
+<h3 id="run-cmd"><code>ume run [projectDir]</code></h3>
+<p>Interprets and immediately runs the project using the <code>entry</code> file specified in <code>ume.toml</code>:</p>
+<pre><code class="language-bash">ume run</code></pre>
+
+<div class="callout callout-info">
+  <div class="callout-title">Asset Deployment Guarantee</div>
+  <p>All directory hierarchies are preserved recursively, and existing files in <code>build/</code> are cleanly overwritten with the newest versions upon every <code>ume build</code>.</p>
+</div>
+
+<p><a class="next-link" href="modules.html">Modules &amp; Imports →</a></p>
+</main>
+</div>
+<footer>
+  <div class="container">
+    <p>Ume Language &nbsp;·&nbsp; <a href="../index.html">Home</a> &nbsp;·&nbsp;
+       <a href="index.html">Wiki</a> &nbsp;·&nbsp; MIT License</p>
+  </div>
+</footer>
+<script>
+(function() {
+  // Theme toggle (persisted, respects OS preference on first load)
+  var root = document.documentElement;
+  var stored = localStorage.getItem('ume-theme');
+  if (!stored) {
+    stored = (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches)
+      ? 'dark' : 'light';
+  }
+  root.setAttribute('data-theme', stored);
+  var icon = document.getElementById('theme-icon');
+  if (icon) icon.textContent = stored === 'dark' ? '◑' : '◐';
+
+  document.getElementById('theme-toggle').addEventListener('click', function() {
+    var cur = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    root.setAttribute('data-theme', cur);
+    localStorage.setItem('ume-theme', cur);
+    if (icon) icon.textContent = cur === 'dark' ? '◑' : '◐';
+  });
+
+  // Highlight + copy button
+  function setup() {
+    if (!window.hljs) { setTimeout(setup, 30); return; }
+    try { hljs.registerAliases(['ume','Ume'], { languageName: 'csharp' }); } catch(e) {}
+    document.querySelectorAll('pre code').forEach(function(block) {
+      try { hljs.highlightElement(block); } catch(e) {}
+      if (block.parentElement.querySelector('.copy-btn')) return;
+      var btn = document.createElement('button');
+      btn.className = 'copy-btn';
+      btn.type = 'button';
+      btn.textContent = 'Copy';
+      btn.addEventListener('click', function() {
+        var txt = block.innerText;
+        navigator.clipboard.writeText(txt).then(function() {
+          btn.classList.add('copied');
+          btn.textContent = 'Copied!';
+          setTimeout(function() {
+            btn.classList.remove('copied');
+            btn.textContent = 'Copy';
+          }, 1600);
+        }, function() {
+          var ta = document.createElement('textarea');
+          ta.value = txt; document.body.appendChild(ta); ta.select();
+          try { document.execCommand('copy'); } catch(e) {}
+          document.body.removeChild(ta);
+          btn.textContent = 'Copied!';
+          setTimeout(function() { btn.textContent = 'Copy'; }, 1600);
+        });
+      });
+      block.parentElement.appendChild(btn);
+    });
+  }
+  setup();
+})();
+</script>
+</body>
+</html>
+

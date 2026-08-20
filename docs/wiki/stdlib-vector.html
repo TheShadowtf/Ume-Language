@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Vectors — Ume Language</title>
+<link rel="stylesheet" href="../style.css"/>
+<link rel="icon" href="../img/logo.png"/>
+<link rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css"
+      referrerpolicy="no-referrer"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/csharp.min.js" defer></script>
+</head>
+<body>
+
+<nav class="topnav">
+  <a class="nav-brand" href="../index.html">
+    <img src="../img/logo.png" alt="Ume"/>
+    <span>Ume</span>
+  </a>
+  <div class="nav-links">
+    <a href="../index.html">Home</a>
+    <a href="index.html">Wiki</a>
+    <a href="https://github.com" target="_blank" rel="noopener">GitHub</a>
+    <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Toggle dark mode">
+      <span id="theme-icon">◐</span>
+    </button>
+  </div>
+</nav>
+
+<div class="wiki">
+<aside class="sidebar">
+
+  <h4>Overview</h4>
+
+  <a href="index.html">Wiki Home</a>
+
+  <a href="getting-started.html">Getting Started</a>
+
+  <a href="project-config.html">Projects &amp; ume.toml</a>
+
+  <a href="modules.html">Modules &amp; Imports</a>
+
+  <h4>Language</h4>
+
+  <a href="types.html">Primitive Types</a>
+
+  <a href="variables.html">Variables &amp; Scope</a>
+
+  <a href="strings.html">Strings &amp; Interpolation</a>
+
+  <a href="expressions.html">Expressions &amp; Operators</a>
+
+  <a href="functions.html">Functions</a>
+
+  <a href="control-flow.html">Control Flow</a>
+
+  <a href="classes.html">Classes</a>
+
+  <a href="interfaces.html">Interfaces &amp; Abstract</a>
+
+  <a href="enums.html">Enums &amp; Structs</a>
+
+  <a href="generics.html">Generics</a>
+
+  <a href="properties.html">Properties &amp; Indexers</a>
+
+  <a href="attributes.html">Attributes</a>
+
+  <a href="exceptions.html">Exceptions</a>
+
+  <a href="lambdas.html">Lambdas &amp; Closures</a>
+
+  <a href="operators.html">Operator Overloading</a>
+
+  <a href="unsafe.html">Unsafe Blocks</a>
+
+  <h4>Standard Library</h4>
+
+  <a href="stdlib-core.html">Core (Prelude)</a>
+
+  <a href="stdlib-io.html">Console &amp; File</a>
+
+  <a href="stdlib-collections.html">Collections</a>
+
+  <a href="stdlib-string.html">String Utilities</a>
+
+  <a href="stdlib-math.html">Math &amp; Random</a>
+
+  <a href="stdlib-json.html">JSON</a>
+
+  <a href="stdlib-thread.html">Concurrency</a>
+
+  <a href="stdlib-audio.html">Audio</a>
+
+  <a href="stdlib-net.html">Networking</a>
+
+  <a href="stdlib-system.html">System &amp; FileSystem</a>
+
+  <a href="stdlib-time.html">Time &amp; Timestep</a>
+
+  <a href="stdlib-graphics.html">Graphics</a>
+
+  <a href="stdlib-vector.html" class=&#34;active&#34;>Vectors</a>
+
+  <a href="stdlib-matrix.html">Matrices</a>
+
+</aside>
+
+<main class="content">
+
+<span class="eyebrow">Standard Library</span>
+<h1>Vectors</h1>
+<p class="lead">Two- and three-dimensional float vector types with arithmetic, dot product, cross product (3D), length, and normalization.</p>
+
+<div class="callout callout-info">
+  <div class="callout-title">Two ways to import</div>
+  <pre><code class="language-ume">import std.vector.*;   // AST-level (recommended)
+#include &lt;vector.ume&gt;   // textual include (C-style)</code></pre>
+</div>
+
+<h2 id="vector2"><code>Vector2</code></h2>
+<p>A 2D vector with <code>float</code> components <code>x</code> and <code>y</code>.</p>
+<table>
+  <thead><tr><th>Member</th><th>Signature</th><th>Description</th></tr></thead>
+  <tbody>
+    <tr><td>fields</td><td><code>public float x, y</code></td><td>Directly accessible.</td></tr>
+    <tr><td>constructor</td><td><code>public func void constructor(float x, float y)</code></td><td></td></tr>
+    <tr><td><code>add</code></td><td><code>public func Vector2 add(Vector2 other)</code></td><td>Component-wise addition.</td></tr>
+    <tr><td><code>sub</code></td><td><code>public func Vector2 sub(Vector2 other)</code></td><td>Component-wise subtraction.</td></tr>
+    <tr><td><code>mul</code></td><td><code>public func Vector2 mul(float scalar)</code></td><td>Scalar multiplication.</td></tr>
+    <tr><td><code>dot</code></td><td><code>public func float dot(Vector2 other)</code></td><td>Dot product.</td></tr>
+    <tr><td><code>length</code></td><td><code>public func float length()</code></td><td>Magnitude.</td></tr>
+    <tr><td><code>normalized</code></td><td><code>public func Vector2 normalized()</code></td><td>Unit vector in the same direction; returns (0,0) if length is 0.</td></tr>
+  </tbody>
+</table>
+<pre><code class="language-ume">import std.vector.*;
+
+Vector2 a = new Vector2(3.0, 4.0);
+Vector2 b = new Vector2(1.0, 1.0);
+
+Console.println(a.length());         // 5.0  (3-4-5 triangle)
+
+Vector2 sum = a.add(b);
+Console.println($&quot;({sum.x}, {sum.y})&quot;);   // (4.0, 5.0)
+
+Vector2 dir = a.normalized();
+Console.println($&quot;({dir.x}, {dir.y})&quot;);   // (0.6, 0.8)
+
+float d = a.dot(b);
+Console.println(d);                  // 7.0</code></pre>
+
+<h2 id="vector3"><code>Vector3</code></h2>
+<p>A 3D vector with <code>float</code> components <code>x</code>, <code>y</code>, <code>z</code>. Adds the cross product (which is only meaningful in 3D).</p>
+<table>
+  <thead><tr><th>Member</th><th>Signature</th><th>Description</th></tr></thead>
+  <tbody>
+    <tr><td>fields</td><td><code>public float x, y, z</code></td><td></td></tr>
+    <tr><td>constructor</td><td><code>public func void constructor(float x, float y, float z)</code></td><td></td></tr>
+    <tr><td><code>add</code></td><td><code>public func Vector3 add(Vector3 other)</code></td><td></td></tr>
+    <tr><td><code>sub</code></td><td><code>public func Vector3 sub(Vector3 other)</code></td><td></td></tr>
+    <tr><td><code>mul</code></td><td><code>public func Vector3 mul(float scalar)</code></td><td></td></tr>
+    <tr><td><code>dot</code></td><td><code>public func float dot(Vector3 other)</code></td><td></td></tr>
+    <tr><td><code>cross</code></td><td><code>public func Vector3 cross(Vector3 other)</code></td><td>Cross product — yields a vector perpendicular to both inputs.</td></tr>
+    <tr><td><code>length</code></td><td><code>public func float length()</code></td><td></td></tr>
+    <tr><td><code>normalized</code></td><td><code>public func Vector3 normalized()</code></td><td></td></tr>
+  </tbody>
+</table>
+<pre><code class="language-ume">import std.vector.*;
+
+Vector3 x = new Vector3(1.0, 0.0, 0.0);
+Vector3 y = new Vector3(0.0, 1.0, 0.0);
+
+// Cross product: x × y = z
+Vector3 z = x.cross(y);
+Console.println($&quot;({z.x}, {z.y}, {z.z})&quot;);   // (0.0, 0.0, 1.0)
+
+// Length and normalization
+Vector3 v = new Vector3(3.0, 4.0, 12.0);   // 5-12-13 pyramid: length = 13
+Console.println(v.length());               // 13.0
+
+Vector3 unit = v.normalized();
+Console.println(unit.length());            // 1.0</code></pre>
+
+<h2 id="usage">When to use these</h2>
+<p>The <code>Vector2</code>/<code>Vector3</code> classes are convenient for game logic, physics calculations, and geometry. They use <code>float</code> precision, which is the standard choice for real-time graphics. For double-precision work, write your own equivalent class — or use the techniques from <a href="operators.html">Operator Overloading</a> to build a richer vector type that supports <code>+</code>, <code>-</code>, <code>*</code> directly.</p>
+
+<p><a class="next-link" href="index.html">Back to Wiki Home →</a></p>
+</main>
+</div>
+<footer>
+  <div class="container">
+    <p>Ume Language &nbsp;·&nbsp; <a href="../index.html">Home</a> &nbsp;·&nbsp;
+       <a href="index.html">Wiki</a> &nbsp;·&nbsp; MIT License</p>
+  </div>
+</footer>
+<script>
+(function() {
+  // Theme toggle (persisted, respects OS preference on first load)
+  var root = document.documentElement;
+  var stored = localStorage.getItem('ume-theme');
+  if (!stored) {
+    stored = (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches)
+      ? 'dark' : 'light';
+  }
+  root.setAttribute('data-theme', stored);
+  var icon = document.getElementById('theme-icon');
+  if (icon) icon.textContent = stored === 'dark' ? '◑' : '◐';
+
+  document.getElementById('theme-toggle').addEventListener('click', function() {
+    var cur = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    root.setAttribute('data-theme', cur);
+    localStorage.setItem('ume-theme', cur);
+    if (icon) icon.textContent = cur === 'dark' ? '◑' : '◐';
+  });
+
+  // Highlight + copy button
+  function setup() {
+    if (!window.hljs) { setTimeout(setup, 30); return; }
+    try { hljs.registerAliases(['ume','Ume'], { languageName: 'csharp' }); } catch(e) {}
+    document.querySelectorAll('pre code').forEach(function(block) {
+      try { hljs.highlightElement(block); } catch(e) {}
+      if (block.parentElement.querySelector('.copy-btn')) return;
+      var btn = document.createElement('button');
+      btn.className = 'copy-btn';
+      btn.type = 'button';
+      btn.textContent = 'Copy';
+      btn.addEventListener('click', function() {
+        var txt = block.innerText;
+        navigator.clipboard.writeText(txt).then(function() {
+          btn.classList.add('copied');
+          btn.textContent = 'Copied!';
+          setTimeout(function() {
+            btn.classList.remove('copied');
+            btn.textContent = 'Copy';
+          }, 1600);
+        }, function() {
+          var ta = document.createElement('textarea');
+          ta.value = txt; document.body.appendChild(ta); ta.select();
+          try { document.execCommand('copy'); } catch(e) {}
+          document.body.removeChild(ta);
+          btn.textContent = 'Copied!';
+          setTimeout(function() { btn.textContent = 'Copy'; }, 1600);
+        });
+      });
+      block.parentElement.appendChild(btn);
+    });
+  }
+  setup();
+})();
+</script>
+</body>
+</html>
+

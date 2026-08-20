@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Not Found — Ume Language</title>
+<link rel="stylesheet" href="style.css"/>
+<link rel="icon" href="img/logo.png"/>
+<link rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css"
+      referrerpolicy="no-referrer"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/csharp.min.js" defer></script>
+</head>
+<body>
+
+<nav class="topnav">
+  <a class="nav-brand" href="index.html">
+    <img src="img/logo.png" alt="Ume"/>
+    <span>Ume</span>
+  </a>
+  <div class="nav-links">
+    <a href="index.html">Home</a>
+    <a href="wiki/index.html">Wiki</a>
+    <a href="https://github.com" target="_blank" rel="noopener">GitHub</a>
+    <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Toggle dark mode">
+      <span id="theme-icon">◐</span>
+    </button>
+  </div>
+</nav>
+
+<div class="wiki">
+<aside class="sidebar">
+
+  <h4>Overview</h4>
+
+  <a href="wiki/index.html">Wiki Home</a>
+
+  <a href="wiki/getting-started.html">Getting Started</a>
+
+  <a href="wiki/project-config.html">Projects &amp; ume.toml</a>
+
+  <a href="wiki/modules.html">Modules &amp; Imports</a>
+
+  <h4>Language</h4>
+
+  <a href="wiki/types.html">Primitive Types</a>
+
+  <a href="wiki/variables.html">Variables &amp; Scope</a>
+
+  <a href="wiki/strings.html">Strings &amp; Interpolation</a>
+
+  <a href="wiki/expressions.html">Expressions &amp; Operators</a>
+
+  <a href="wiki/functions.html">Functions</a>
+
+  <a href="wiki/control-flow.html">Control Flow</a>
+
+  <a href="wiki/classes.html">Classes</a>
+
+  <a href="wiki/interfaces.html">Interfaces &amp; Abstract</a>
+
+  <a href="wiki/enums.html">Enums &amp; Structs</a>
+
+  <a href="wiki/generics.html">Generics</a>
+
+  <a href="wiki/properties.html">Properties &amp; Indexers</a>
+
+  <a href="wiki/attributes.html">Attributes</a>
+
+  <a href="wiki/exceptions.html">Exceptions</a>
+
+  <a href="wiki/lambdas.html">Lambdas &amp; Closures</a>
+
+  <a href="wiki/operators.html">Operator Overloading</a>
+
+  <a href="wiki/unsafe.html">Unsafe Blocks</a>
+
+  <h4>Standard Library</h4>
+
+  <a href="wiki/stdlib-core.html">Core (Prelude)</a>
+
+  <a href="wiki/stdlib-io.html">Console &amp; File</a>
+
+  <a href="wiki/stdlib-collections.html">Collections</a>
+
+  <a href="wiki/stdlib-string.html">String Utilities</a>
+
+  <a href="wiki/stdlib-math.html">Math &amp; Random</a>
+
+  <a href="wiki/stdlib-json.html">JSON</a>
+
+  <a href="wiki/stdlib-thread.html">Concurrency</a>
+
+  <a href="wiki/stdlib-audio.html">Audio</a>
+
+  <a href="wiki/stdlib-net.html">Networking</a>
+
+  <a href="wiki/stdlib-system.html">System &amp; FileSystem</a>
+
+  <a href="wiki/stdlib-time.html">Time &amp; Timestep</a>
+
+  <a href="wiki/stdlib-graphics.html">Graphics</a>
+
+  <a href="wiki/stdlib-vector.html">Vectors</a>
+
+  <a href="wiki/stdlib-matrix.html">Matrices</a>
+
+</aside>
+
+<main class="content">
+<span class="eyebrow">404</span>
+<h1>Page not found</h1>
+<p class="lead">That page doesn't exist. Try the <a href="wiki/index.html">wiki home</a> to find what you're looking for.</p>
+</main>
+</div>
+</main>
+</div>
+<footer>
+  <div class="container">
+    <p>Ume Language &nbsp;·&nbsp; <a href="index.html">Home</a> &nbsp;·&nbsp;
+       <a href="wiki/index.html">Wiki</a> &nbsp;·&nbsp; MIT License</p>
+  </div>
+</footer>
+<script>
+(function() {
+  // Theme toggle (persisted, respects OS preference on first load)
+  var root = document.documentElement;
+  var stored = localStorage.getItem('ume-theme');
+  if (!stored) {
+    stored = (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches)
+      ? 'dark' : 'light';
+  }
+  root.setAttribute('data-theme', stored);
+  var icon = document.getElementById('theme-icon');
+  if (icon) icon.textContent = stored === 'dark' ? '◑' : '◐';
+
+  document.getElementById('theme-toggle').addEventListener('click', function() {
+    var cur = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    root.setAttribute('data-theme', cur);
+    localStorage.setItem('ume-theme', cur);
+    if (icon) icon.textContent = cur === 'dark' ? '◑' : '◐';
+  });
+
+  // Highlight + copy button
+  function setup() {
+    if (!window.hljs) { setTimeout(setup, 30); return; }
+    try { hljs.registerAliases(['ume','Ume'], { languageName: 'csharp' }); } catch(e) {}
+    document.querySelectorAll('pre code').forEach(function(block) {
+      try { hljs.highlightElement(block); } catch(e) {}
+      if (block.parentElement.querySelector('.copy-btn')) return;
+      var btn = document.createElement('button');
+      btn.className = 'copy-btn';
+      btn.type = 'button';
+      btn.textContent = 'Copy';
+      btn.addEventListener('click', function() {
+        var txt = block.innerText;
+        navigator.clipboard.writeText(txt).then(function() {
+          btn.classList.add('copied');
+          btn.textContent = 'Copied!';
+          setTimeout(function() {
+            btn.classList.remove('copied');
+            btn.textContent = 'Copy';
+          }, 1600);
+        }, function() {
+          var ta = document.createElement('textarea');
+          ta.value = txt; document.body.appendChild(ta); ta.select();
+          try { document.execCommand('copy'); } catch(e) {}
+          document.body.removeChild(ta);
+          btn.textContent = 'Copied!';
+          setTimeout(function() { btn.textContent = 'Copy'; }, 1600);
+        });
+      });
+      block.parentElement.appendChild(btn);
+    });
+  }
+  setup();
+})();
+</script>
+</body>
+</html>
+

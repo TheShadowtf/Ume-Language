@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Unsafe Blocks — Ume Language</title>
+<link rel="stylesheet" href="../style.css"/>
+<link rel="icon" href="../img/logo.png"/>
+<link rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css"
+      referrerpolicy="no-referrer"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/csharp.min.js" defer></script>
+</head>
+<body>
+
+<nav class="topnav">
+  <a class="nav-brand" href="../index.html">
+    <img src="../img/logo.png" alt="Ume"/>
+    <span>Ume</span>
+  </a>
+  <div class="nav-links">
+    <a href="../index.html">Home</a>
+    <a href="index.html">Wiki</a>
+    <a href="https://github.com" target="_blank" rel="noopener">GitHub</a>
+    <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Toggle dark mode">
+      <span id="theme-icon">◐</span>
+    </button>
+  </div>
+</nav>
+
+<div class="wiki">
+<aside class="sidebar">
+
+  <h4>Overview</h4>
+
+  <a href="index.html">Wiki Home</a>
+
+  <a href="getting-started.html">Getting Started</a>
+
+  <a href="project-config.html">Projects &amp; ume.toml</a>
+
+  <a href="modules.html">Modules &amp; Imports</a>
+
+  <h4>Language</h4>
+
+  <a href="types.html">Primitive Types</a>
+
+  <a href="variables.html">Variables &amp; Scope</a>
+
+  <a href="strings.html">Strings &amp; Interpolation</a>
+
+  <a href="expressions.html">Expressions &amp; Operators</a>
+
+  <a href="functions.html">Functions</a>
+
+  <a href="control-flow.html">Control Flow</a>
+
+  <a href="classes.html">Classes</a>
+
+  <a href="interfaces.html">Interfaces &amp; Abstract</a>
+
+  <a href="enums.html">Enums &amp; Structs</a>
+
+  <a href="generics.html">Generics</a>
+
+  <a href="properties.html">Properties &amp; Indexers</a>
+
+  <a href="attributes.html">Attributes</a>
+
+  <a href="exceptions.html">Exceptions</a>
+
+  <a href="lambdas.html">Lambdas &amp; Closures</a>
+
+  <a href="operators.html">Operator Overloading</a>
+
+  <a href="unsafe.html" class=&#34;active&#34;>Unsafe Blocks</a>
+
+  <h4>Standard Library</h4>
+
+  <a href="stdlib-core.html">Core (Prelude)</a>
+
+  <a href="stdlib-io.html">Console &amp; File</a>
+
+  <a href="stdlib-collections.html">Collections</a>
+
+  <a href="stdlib-string.html">String Utilities</a>
+
+  <a href="stdlib-math.html">Math &amp; Random</a>
+
+  <a href="stdlib-json.html">JSON</a>
+
+  <a href="stdlib-thread.html">Concurrency</a>
+
+  <a href="stdlib-audio.html">Audio</a>
+
+  <a href="stdlib-net.html">Networking</a>
+
+  <a href="stdlib-system.html">System &amp; FileSystem</a>
+
+  <a href="stdlib-time.html">Time &amp; Timestep</a>
+
+  <a href="stdlib-graphics.html">Graphics</a>
+
+  <a href="stdlib-vector.html">Vectors</a>
+
+  <a href="stdlib-matrix.html">Matrices</a>
+
+</aside>
+
+<main class="content">
+
+<span class="eyebrow">Language</span>
+<h1>Unsafe Blocks</h1>
+<p class="lead">Ume is memory-safe by default, but it provides an escape hatch for cases where you need raw pointer manipulation, manual memory management, or direct C++ interop. These operations are confined to <code>unsafe</code> blocks so that the rest of your code can rely on the safety guarantees.</p>
+
+<h2 id="syntax"><code>unsafe</code> block syntax</h2>
+<p>The <code>unsafe</code> keyword introduces a block (in braces) inside which pointer operations, <code>alloc</code>, <code>free</code>, dereference, and address-of are legal. Outside an <code>unsafe</code> block, these operations are rejected at compile time. The block doesn't change runtime behavior — it's a compile-time gate that confines dangerous operations to clearly-marked regions.</p>
+<pre><code class="language-ume">unsafe {
+    int* ptr = alloc&lt;int&gt;();
+    *ptr = 42;
+    Console.println(*ptr);   // 42
+    free(ptr);
+}</code></pre>
+
+<h2 id="alloc-free"><code>alloc&lt;T&gt;</code> and <code>free</code></h2>
+<p><code>alloc&lt;T&gt;(count)</code> allocates a contiguous block of memory big enough for <code>count</code> values of type <code>T</code> and returns a <code>T*</code> pointing at the start. If you omit the count, it defaults to 1. The memory is <strong>not</strong> initialized. <code>free(ptr)</code> releases the memory; the pointer is then invalid and must not be used again.</p>
+<pre><code class="language-ume">unsafe {
+    // Allocate space for 1024 bytes
+    byte* buf = alloc&lt;byte&gt;(1024);
+
+    // Use the buffer...
+    buf[0] = 0xFF;
+    buf[1] = 0xAA;
+
+    // Release it
+    free(buf);
+}</code></pre>
+
+<p>This is raw heap memory with no automatic cleanup — you are responsible for calling <code>free</code> exactly once per allocation. Forgetting to free causes a memory leak; freeing twice or using freed memory causes undefined behavior. There is no garbage collector for <code>alloc</code>'d memory.</p>
+
+<h2 id="pointer-types">Pointer types <code>T*</code></h2>
+<p>A pointer holds the address of a value of type <code>T</code>. Pointers can be stacked (<code>int**</code> is a pointer to a pointer to int). They're declared by appending <code>*</code> to a type, and multiple <code>*</code>s stack. Pointers are only usable inside <code>unsafe</code> blocks.</p>
+<pre><code class="language-ume">unsafe {
+    int*  p;        // pointer to int
+    int** pp;       // pointer to pointer to int
+    byte* bytes;    // pointer to byte
+}</code></pre>
+
+<h2 id="deref">Dereference <code>*ptr</code></h2>
+<p>The prefix <code>*</code> operator reads or writes the value a pointer points at. On the left of an assignment it stores a new value; in an expression it reads the current value.</p>
+<pre><code class="language-ume">unsafe {
+    int* p = alloc&lt;int&gt;();
+    *p = 100;          // store 100 at the address p points to
+    int v = *p;        // read the value back
+    Console.println(v);   // 100
+    free(p);
+}</code></pre>
+
+<h2 id="address-of">Address-of <code>&value</code></h2>
+<p>The prefix <code>&</code> operator yields a pointer to an existing variable. This lets you obtain a pointer without allocating — the pointer aliases the variable's storage. Modifying through the pointer affects the original variable, and vice versa.</p>
+<pre><code class="language-ume">int value = 99;
+
+unsafe {
+    int* p = &amp;value;
+    *p = 200;          // modifies &#39;value&#39; through the pointer
+}
+
+Console.println(value);   // 200</code></pre>
+
+<div class="callout callout-warn">
+  <div class="callout-title">Dangling pointers</div>
+  <p>Be careful with <code>&</code> on local variables. If you store the pointer somewhere and the local goes out of scope, the pointer becomes <strong>dangling</strong> — using it is undefined behavior. Only take the address of locals whose lifetime you can guarantee exceeds the pointer's use.</p>
+</div>
+
+<h2 id="pointer-arithmetic">Pointer indexing</h2>
+<p>You can index a pointer with <code>[]</code> as if it were an array. <code>ptr[i]</code> is equivalent to <code>*(ptr + i)</code> — it accesses the <code>i</code>-th value past the pointer. This is the standard way to work with <code>alloc</code>'d buffers:</p>
+<pre><code class="language-ume">unsafe {
+    double* arr = alloc&lt;double&gt;(5);
+    arr[0] = 1.0;
+    arr[1] = 2.0;
+    arr[2] = 3.0;
+    arr[3] = 4.0;
+    arr[4] = 5.0;
+
+    double sum = 0.0;
+    for (int i = 0; i &lt; 5; i++) {
+        sum += arr[i];
+    }
+    Console.println(sum);   // 15.0
+
+    free(arr);
+}</code></pre>
+
+<h2 id="interop">C++ interop</h2>
+<p>Unsafe blocks are also the boundary for calling into C++ code that Ume's runtime doesn't natively wrap. The exact interop mechanism depends on the runtime bindings available in your build; the general principle is that any operation involving raw addresses, manual memory, or unmanaged resources belongs in <code>unsafe</code>.</p>
+
+<h2 id="when">When to use unsafe</h2>
+<p>The standard library already covers most common needs safely: <code>List&lt;T&gt;</code> instead of manual buffers, <code>Map&lt;K,V&gt;</code> instead of pointer-based lookup tables, <code>File</code> instead of raw file descriptors. Reach for <code>unsafe</code> only when:</p>
+<ul>
+  <li>You're implementing a low-level data structure (a custom allocator, a ring buffer) and need raw memory control.</li>
+  <li>You're interfacing with a C/C++ library that exposes pointer-based APIs.</li>
+  <li>You have a proven performance bottleneck that manual memory management would resolve, and you've measured it.</li>
+</ul>
+
+<div class="callout callout-warn">
+  <div class="callout-title">Use sparingly</div>
+  <p>Unsafe code bypasses Ume's safety guarantees. A single dangling pointer or double-free can corrupt memory in ways that are extremely hard to debug. Keep unsafe regions <strong>small and well-tested</strong>, and prefer the safe standard library whenever possible.</p>
+</div>
+
+<p><a class="next-link" href="stdlib-core.html">Standard Library → Core (Prelude) →</a></p>
+</main>
+</div>
+<footer>
+  <div class="container">
+    <p>Ume Language &nbsp;·&nbsp; <a href="../index.html">Home</a> &nbsp;·&nbsp;
+       <a href="index.html">Wiki</a> &nbsp;·&nbsp; MIT License</p>
+  </div>
+</footer>
+<script>
+(function() {
+  // Theme toggle (persisted, respects OS preference on first load)
+  var root = document.documentElement;
+  var stored = localStorage.getItem('ume-theme');
+  if (!stored) {
+    stored = (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches)
+      ? 'dark' : 'light';
+  }
+  root.setAttribute('data-theme', stored);
+  var icon = document.getElementById('theme-icon');
+  if (icon) icon.textContent = stored === 'dark' ? '◑' : '◐';
+
+  document.getElementById('theme-toggle').addEventListener('click', function() {
+    var cur = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    root.setAttribute('data-theme', cur);
+    localStorage.setItem('ume-theme', cur);
+    if (icon) icon.textContent = cur === 'dark' ? '◑' : '◐';
+  });
+
+  // Highlight + copy button
+  function setup() {
+    if (!window.hljs) { setTimeout(setup, 30); return; }
+    try { hljs.registerAliases(['ume','Ume'], { languageName: 'csharp' }); } catch(e) {}
+    document.querySelectorAll('pre code').forEach(function(block) {
+      try { hljs.highlightElement(block); } catch(e) {}
+      if (block.parentElement.querySelector('.copy-btn')) return;
+      var btn = document.createElement('button');
+      btn.className = 'copy-btn';
+      btn.type = 'button';
+      btn.textContent = 'Copy';
+      btn.addEventListener('click', function() {
+        var txt = block.innerText;
+        navigator.clipboard.writeText(txt).then(function() {
+          btn.classList.add('copied');
+          btn.textContent = 'Copied!';
+          setTimeout(function() {
+            btn.classList.remove('copied');
+            btn.textContent = 'Copy';
+          }, 1600);
+        }, function() {
+          var ta = document.createElement('textarea');
+          ta.value = txt; document.body.appendChild(ta); ta.select();
+          try { document.execCommand('copy'); } catch(e) {}
+          document.body.removeChild(ta);
+          btn.textContent = 'Copied!';
+          setTimeout(function() { btn.textContent = 'Copy'; }, 1600);
+        });
+      });
+      block.parentElement.appendChild(btn);
+    });
+  }
+  setup();
+})();
+</script>
+</body>
+</html>
+

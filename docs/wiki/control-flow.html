@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Control Flow — Ume Language</title>
+<link rel="stylesheet" href="../style.css"/>
+<link rel="icon" href="../img/logo.png"/>
+<link rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css"
+      referrerpolicy="no-referrer"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/csharp.min.js" defer></script>
+</head>
+<body>
+
+<nav class="topnav">
+  <a class="nav-brand" href="../index.html">
+    <img src="../img/logo.png" alt="Ume"/>
+    <span>Ume</span>
+  </a>
+  <div class="nav-links">
+    <a href="../index.html">Home</a>
+    <a href="index.html">Wiki</a>
+    <a href="https://github.com" target="_blank" rel="noopener">GitHub</a>
+    <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Toggle dark mode">
+      <span id="theme-icon">◐</span>
+    </button>
+  </div>
+</nav>
+
+<div class="wiki">
+<aside class="sidebar">
+
+  <h4>Overview</h4>
+
+  <a href="index.html">Wiki Home</a>
+
+  <a href="getting-started.html">Getting Started</a>
+
+  <a href="project-config.html">Projects &amp; ume.toml</a>
+
+  <a href="modules.html">Modules &amp; Imports</a>
+
+  <h4>Language</h4>
+
+  <a href="types.html">Primitive Types</a>
+
+  <a href="variables.html">Variables &amp; Scope</a>
+
+  <a href="strings.html">Strings &amp; Interpolation</a>
+
+  <a href="expressions.html">Expressions &amp; Operators</a>
+
+  <a href="functions.html">Functions</a>
+
+  <a href="control-flow.html" class=&#34;active&#34;>Control Flow</a>
+
+  <a href="classes.html">Classes</a>
+
+  <a href="interfaces.html">Interfaces &amp; Abstract</a>
+
+  <a href="enums.html">Enums &amp; Structs</a>
+
+  <a href="generics.html">Generics</a>
+
+  <a href="properties.html">Properties &amp; Indexers</a>
+
+  <a href="attributes.html">Attributes</a>
+
+  <a href="exceptions.html">Exceptions</a>
+
+  <a href="lambdas.html">Lambdas &amp; Closures</a>
+
+  <a href="operators.html">Operator Overloading</a>
+
+  <a href="unsafe.html">Unsafe Blocks</a>
+
+  <h4>Standard Library</h4>
+
+  <a href="stdlib-core.html">Core (Prelude)</a>
+
+  <a href="stdlib-io.html">Console &amp; File</a>
+
+  <a href="stdlib-collections.html">Collections</a>
+
+  <a href="stdlib-string.html">String Utilities</a>
+
+  <a href="stdlib-math.html">Math &amp; Random</a>
+
+  <a href="stdlib-json.html">JSON</a>
+
+  <a href="stdlib-thread.html">Concurrency</a>
+
+  <a href="stdlib-audio.html">Audio</a>
+
+  <a href="stdlib-net.html">Networking</a>
+
+  <a href="stdlib-system.html">System &amp; FileSystem</a>
+
+  <a href="stdlib-time.html">Time &amp; Timestep</a>
+
+  <a href="stdlib-graphics.html">Graphics</a>
+
+  <a href="stdlib-vector.html">Vectors</a>
+
+  <a href="stdlib-matrix.html">Matrices</a>
+
+</aside>
+
+<main class="content">
+
+<span class="eyebrow">Language</span>
+<h1>Control Flow</h1>
+<p class="lead">Ume has the standard set of structured control-flow constructs: <code>if</code>/<code>else</code> for branching, <code>while</code> and <code>do/while</code> for pre- and post-condition loops, <code>for</code> for C-style counting loops, <code>foreach</code> for iteration, and <code>switch</code> for multi-way dispatch.</p>
+
+<h2 id="if"><code>if</code> / <code>else</code></h2>
+<p>An <code>if</code> statement evaluates a boolean condition and runs the then-branch if it's true. An optional <code>else</code> clause runs when the condition is false. <code>else if</code> chains are just an <code>else</code> containing another <code>if</code> — there's no separate keyword.</p>
+<pre><code class="language-ume">int x = 10;
+
+if (x &gt; 0) {
+    Console.println(&quot;positive&quot;);
+} else if (x &lt; 0) {
+    Console.println(&quot;negative&quot;);
+} else {
+    Console.println(&quot;zero&quot;);
+}
+
+// Single-statement bodies can omit braces (braces preferred for readability)
+if (x &gt; 100) Console.println(&quot;big&quot;);</code></pre>
+
+<p>The condition must be a <code>bool</code> — there's no implicit int-to-bool conversion. <code>if (x)</code> where <code>x</code> is an <code>int</code> is a compile error; you must write <code>if (x != 0)</code>.</p>
+
+<h2 id="while"><code>while</code></h2>
+<p>A <code>while</code> loop evaluates its condition before each iteration. If the condition is false on the first check, the body never runs. The condition must be a <code>bool</code>.</p>
+<pre><code class="language-ume">int i = 0;
+while (i &lt; 5) {
+    Console.println(i);
+    i++;
+}</code></pre>
+
+<h2 id="do-while"><code>do / while</code></h2>
+<p>A <code>do/while</code> loop runs its body first, then checks the condition. This guarantees the body executes at least once, even if the condition is initially false. The condition follows <code>while</code> and the statement ends with a semicolon.</p>
+<pre><code class="language-ume">int n = 0;
+do {
+    Console.println(&quot;executed at least once&quot;);
+    n++;
+} while (n &lt; 3);</code></pre>
+
+<h2 id="for"><code>for</code> (C-style)</h2>
+<p>The classic three-part <code>for</code> loop: initializer, condition, update. The initializer runs once before the first iteration; the condition is checked before each iteration (including the first); the update runs after each iteration. Any of the three parts can be omitted.</p>
+<pre><code class="language-ume">for (int i = 0; i &lt; 5; i++) {
+    Console.println(i);
+}
+
+// Multiple variables in the initializer
+for (int i = 0, j = 10; i &lt; j; i++, j--) {
+    Console.println($&quot;i={i}, j={j}&quot;);
+}
+
+// Omitted condition means an infinite loop (use break to exit)
+for (int i = 0; ; i++) {
+    if (i &gt;= 100) break;
+}</code></pre>
+
+<h2 id="foreach"><code>foreach</code></h2>
+<p>A <code>foreach</code> loop iterates over every element of a collection — arrays, <code>List&lt;T&gt;</code>, <code>Set&lt;T&gt;</code>, the <code>keys()</code>/<code>values()</code> of a <code>Map</code>, and any other iterable type. The element type and a variable name are declared, then <code>in</code>, then the iterable expression.</p>
+<pre><code class="language-ume">List&lt;string&gt; names = new List&lt;string&gt;();
+names.add(&quot;Alice&quot;);
+names.add(&quot;Bob&quot;);
+names.add(&quot;Charlie&quot;);
+
+foreach (string name in names) {
+    Console.println(&quot;Hello, &quot; + name);
+}
+
+// Works on arrays too
+int[] nums = [10, 20, 30];
+foreach (int n in nums) {
+    Console.println(n);
+}</code></pre>
+
+<p>You can use <code>var</code> as the element type to let the compiler infer it:</p>
+<pre><code class="language-ume">foreach (var item in mixedList) {
+    Console.println(item.toString());
+}</code></pre>
+
+<h2 id="switch"><code>switch</code></h2>
+<p>A <code>switch</code> statement evaluates an expression and jumps to the matching <code>case</code> label. Cases compare by equality. Each case ends with <code>break</code> (or another terminating statement like <code>return</code>) to prevent fall-through; if you forget the <code>break</code>, execution continues into the next case. A <code>default</code> case handles values that don't match any case.</p>
+<pre><code class="language-ume">int day = 2;
+switch (day) {
+    case 1: Console.println(&quot;Monday&quot;);    break;
+    case 2: Console.println(&quot;Tuesday&quot;);   break;
+    case 3: Console.println(&quot;Wednesday&quot;); break;
+    case 4: Console.println(&quot;Thursday&quot;);  break;
+    case 5: Console.println(&quot;Friday&quot;);    break;
+    default: Console.println(&quot;Weekend&quot;);
+}</code></pre>
+
+<p>Switch works on strings too:</p>
+<pre><code class="language-ume">string cmd = &quot;go&quot;;
+switch (cmd) {
+    case &quot;go&quot;:   startEngine(); break;
+    case &quot;stop&quot;: stopEngine();  break;
+    case &quot;quit&quot;: exit(0);       break;
+    default: Console.println(&quot;unknown command&quot;);
+}</code></pre>
+
+<h2 id="break"><code>break</code></h2>
+<p>Exits the innermost enclosing <code>while</code>, <code>do/while</code>, <code>for</code>, <code>foreach</code>, or <code>switch</code>. Execution continues at the statement after the loop or switch.</p>
+<pre><code class="language-ume">for (int i = 0; i &lt; 100; i++) {
+    if (i == 42) {
+        Console.println(&quot;found it&quot;);
+        break;
+    }
+}</code></pre>
+
+<h2 id="continue"><code>continue</code></h2>
+<p>Skips the rest of the current iteration of the innermost loop and proceeds to the next iteration. In a <code>for</code> loop, the update part runs before the next condition check.</p>
+<pre><code class="language-ume">for (int i = 0; i &lt; 10; i++) {
+    if (i % 2 == 0) continue;   // skip even numbers
+    Console.println(i);         // prints 1, 3, 5, 7, 9
+}</code></pre>
+
+<h2 id="return">Early <code>return</code></h2>
+<p>A <code>return</code> statement exits the enclosing function immediately, regardless of any surrounding loops. It's the idiomatic way to short-circuit out of a function when a condition is met.</p>
+<pre><code class="language-ume">func int indexOf(int[] arr, int target) {
+    for (int i = 0; i &lt; arr.length(); i++) {
+        if (arr[i] == target) {
+            return i;   // exit immediately
+        }
+    }
+    return -1;          // not found
+}</code></pre>
+
+<h2 id="throw"><code>throw</code></h2>
+<p>A <code>throw</code> statement raises an exception, immediately unwinding the call stack until a matching <code>catch</code> is found (or the program terminates). See <a href="exceptions.html">Exceptions</a> for the full story.</p>
+<pre><code class="language-ume">func int divide(int a, int b) {
+    if (b == 0) {
+        throw new Exception(&quot;Division by zero&quot;);
+    }
+    return a / b;
+}</code></pre>
+
+<h2 id="nested">Nested control flow</h2>
+<p>All control-flow constructs can be nested arbitrarily. Loops inside loops, <code>if</code> inside <code>switch</code> inside <code>for</code> — anything goes. The <code>break</code> and <code>continue</code> keywords always refer to the innermost enclosing loop or switch.</p>
+<pre><code class="language-ume">List&lt;int&gt; grid = new List&lt;int&gt;();
+for (int row = 0; row &lt; 3; row++) {
+    for (int col = 0; col &lt; 3; col++) {
+        if (row == col) continue;     // skips diagonal
+        grid.add(row * 10 + col);
+    }
+}
+// grid contains: 1, 2, 10, 12, 20, 21</code></pre>
+
+<p><a class="next-link" href="classes.html">Classes →</a></p>
+</main>
+</div>
+<footer>
+  <div class="container">
+    <p>Ume Language &nbsp;·&nbsp; <a href="../index.html">Home</a> &nbsp;·&nbsp;
+       <a href="index.html">Wiki</a> &nbsp;·&nbsp; MIT License</p>
+  </div>
+</footer>
+<script>
+(function() {
+  // Theme toggle (persisted, respects OS preference on first load)
+  var root = document.documentElement;
+  var stored = localStorage.getItem('ume-theme');
+  if (!stored) {
+    stored = (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches)
+      ? 'dark' : 'light';
+  }
+  root.setAttribute('data-theme', stored);
+  var icon = document.getElementById('theme-icon');
+  if (icon) icon.textContent = stored === 'dark' ? '◑' : '◐';
+
+  document.getElementById('theme-toggle').addEventListener('click', function() {
+    var cur = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    root.setAttribute('data-theme', cur);
+    localStorage.setItem('ume-theme', cur);
+    if (icon) icon.textContent = cur === 'dark' ? '◑' : '◐';
+  });
+
+  // Highlight + copy button
+  function setup() {
+    if (!window.hljs) { setTimeout(setup, 30); return; }
+    try { hljs.registerAliases(['ume','Ume'], { languageName: 'csharp' }); } catch(e) {}
+    document.querySelectorAll('pre code').forEach(function(block) {
+      try { hljs.highlightElement(block); } catch(e) {}
+      if (block.parentElement.querySelector('.copy-btn')) return;
+      var btn = document.createElement('button');
+      btn.className = 'copy-btn';
+      btn.type = 'button';
+      btn.textContent = 'Copy';
+      btn.addEventListener('click', function() {
+        var txt = block.innerText;
+        navigator.clipboard.writeText(txt).then(function() {
+          btn.classList.add('copied');
+          btn.textContent = 'Copied!';
+          setTimeout(function() {
+            btn.classList.remove('copied');
+            btn.textContent = 'Copy';
+          }, 1600);
+        }, function() {
+          var ta = document.createElement('textarea');
+          ta.value = txt; document.body.appendChild(ta); ta.select();
+          try { document.execCommand('copy'); } catch(e) {}
+          document.body.removeChild(ta);
+          btn.textContent = 'Copied!';
+          setTimeout(function() { btn.textContent = 'Copy'; }, 1600);
+        });
+      });
+      block.parentElement.appendChild(btn);
+    });
+  }
+  setup();
+})();
+</script>
+</body>
+</html>
+

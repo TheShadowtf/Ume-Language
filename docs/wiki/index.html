@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Ume Language Wiki — Ume Language</title>
+<link rel="stylesheet" href="../style.css"/>
+<link rel="icon" href="../img/logo.png"/>
+<link rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css"
+      referrerpolicy="no-referrer"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/csharp.min.js" defer></script>
+</head>
+<body>
+
+<nav class="topnav">
+  <a class="nav-brand" href="../index.html">
+    <img src="../img/logo.png" alt="Ume"/>
+    <span>Ume</span>
+  </a>
+  <div class="nav-links">
+    <a href="../index.html">Home</a>
+    <a href="index.html">Wiki</a>
+    <a href="https://github.com" target="_blank" rel="noopener">GitHub</a>
+    <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Toggle dark mode">
+      <span id="theme-icon">◐</span>
+    </button>
+  </div>
+</nav>
+
+<div class="wiki">
+<aside class="sidebar">
+
+  <h4>Overview</h4>
+
+  <a href="index.html" class=&#34;active&#34;>Wiki Home</a>
+
+  <a href="getting-started.html">Getting Started</a>
+
+  <a href="project-config.html">Projects &amp; ume.toml</a>
+
+  <a href="modules.html">Modules &amp; Imports</a>
+
+  <h4>Language</h4>
+
+  <a href="types.html">Primitive Types</a>
+
+  <a href="variables.html">Variables &amp; Scope</a>
+
+  <a href="strings.html">Strings &amp; Interpolation</a>
+
+  <a href="expressions.html">Expressions &amp; Operators</a>
+
+  <a href="functions.html">Functions</a>
+
+  <a href="control-flow.html">Control Flow</a>
+
+  <a href="classes.html">Classes</a>
+
+  <a href="interfaces.html">Interfaces &amp; Abstract</a>
+
+  <a href="enums.html">Enums &amp; Structs</a>
+
+  <a href="generics.html">Generics</a>
+
+  <a href="properties.html">Properties &amp; Indexers</a>
+
+  <a href="attributes.html">Attributes</a>
+
+  <a href="exceptions.html">Exceptions</a>
+
+  <a href="lambdas.html">Lambdas &amp; Closures</a>
+
+  <a href="operators.html">Operator Overloading</a>
+
+  <a href="unsafe.html">Unsafe Blocks</a>
+
+  <h4>Standard Library</h4>
+
+  <a href="stdlib-core.html">Core (Prelude)</a>
+
+  <a href="stdlib-io.html">Console &amp; File</a>
+
+  <a href="stdlib-collections.html">Collections</a>
+
+  <a href="stdlib-string.html">String Utilities</a>
+
+  <a href="stdlib-math.html">Math &amp; Random</a>
+
+  <a href="stdlib-json.html">JSON</a>
+
+  <a href="stdlib-thread.html">Concurrency</a>
+
+  <a href="stdlib-audio.html">Audio</a>
+
+  <a href="stdlib-net.html">Networking</a>
+
+  <a href="stdlib-system.html">System &amp; FileSystem</a>
+
+  <a href="stdlib-time.html">Time &amp; Timestep</a>
+
+  <a href="stdlib-graphics.html">Graphics</a>
+
+  <a href="stdlib-vector.html">Vectors</a>
+
+  <a href="stdlib-matrix.html">Matrices</a>
+
+</aside>
+
+<main class="content">
+
+<span class="eyebrow">Documentation</span>
+<h1>Ume Language Wiki</h1>
+<p class="lead">A complete reference for the Ume programming language — from primitive types and control flow to concurrency, audio, graphics, and the module system. Every page includes runnable examples with copy buttons.</p>
+
+<h2>Start here</h2>
+<table>
+  <thead><tr><th>Page</th><th>What you'll learn</th></tr></thead>
+  <tbody>
+    <tr><td><a href="getting-started.html">Getting Started</a></td>
+        <td>Build the compiler, run Hello World, the CLI, and project layout.</td></tr>
+    <tr><td><a href="project-config.html">Projects &amp; ume.toml</a></td>
+        <td>Project structure, <code>ume.toml</code> keys, build targets, and the <code>assets</code> copy pipeline.</td></tr>
+    <tr><td><a href="modules.html">Modules &amp; Imports</a></td>
+        <td>The two ways to bring code in: <code>import std.collections.*</code> (AST-level) and <code>#include "file.ume"</code> (textual).</td></tr>
+    <tr><td><a href="types.html">Primitive Types</a></td>
+        <td>int, long, short, byte, float, double, bool, char, string, void, any, nullable <code>T?</code>.</td></tr>
+    <tr><td><a href="classes.html">Classes</a></td>
+        <td>OOP, inheritance, abstract, final, static, constructors, <code>this</code>/<code>super</code>.</td></tr>
+    <tr><td><a href="stdlib-collections.html">Collections</a></td>
+        <td><code>List&lt;T&gt;</code>, <code>Map&lt;K,V&gt;</code>, <code>Set&lt;T&gt;</code>, <code>Stack&lt;T&gt;</code>, <code>Queue&lt;T&gt;</code>.</td></tr>
+  </tbody>
+</table>
+
+<h2>Language reference</h2>
+<table>
+  <thead><tr><th>Page</th><th>Summary</th></tr></thead>
+  <tbody>
+    <tr><td><a href="types.html">Primitive Types</a></td><td>Built-in value and reference types, nullable <code>T?</code>, <code>any</code>.</td></tr>
+    <tr><td><a href="variables.html">Variables &amp; Scope</a></td><td><code>var</code> inference, <code>const</code>, typed declarations, block scope.</td></tr>
+    <tr><td><a href="strings.html">Strings &amp; Interpolation</a></td><td>String literals, escapes, <code>$"…{expr}…"</code>, concatenation.</td></tr>
+    <tr><td><a href="expressions.html">Expressions &amp; Operators</a></td><td>Arithmetic, logical, bitwise, ternary, <code>??</code>, <code>?.</code>, <code>as</code>, <code>cast&lt;T&gt;</code>, precedence.</td></tr>
+    <tr><td><a href="functions.html">Functions</a></td><td><code>func</code>, parameters, defaults, variadic, overloading, generic functions.</td></tr>
+    <tr><td><a href="control-flow.html">Control Flow</a></td><td><code>if</code>, <code>while</code>, <code>do/while</code>, <code>for</code>, <code>foreach</code>, <code>switch</code>, <code>break</code>, <code>continue</code>.</td></tr>
+    <tr><td><a href="classes.html">Classes</a></td><td>Fields, methods, constructors, inheritance, abstract, final, static.</td></tr>
+    <tr><td><a href="interfaces.html">Interfaces &amp; Abstract</a></td><td><code>interface</code>, <code>implements</code>, default methods, constants.</td></tr>
+    <tr><td><a href="enums.html">Enums &amp; Structs</a></td><td><code>enum</code> with values &amp; methods, <code>struct</code> value types, struct init.</td></tr>
+    <tr><td><a href="generics.html">Generics</a></td><td><code>Class&lt;T&gt;</code>, <code>Map&lt;K,V&gt;</code>, generic methods, <code>func&lt;T&gt;</code>.</td></tr>
+    <tr><td><a href="properties.html">Properties &amp; Indexers</a></td><td><code>get</code>/<code>set</code>, fat-arrow <code>=&gt;</code>, auto-properties, <code>this[i]</code>.</td></tr>
+    <tr><td><a href="attributes.html">Attributes</a></td><td><code>[Serializable]</code>, <code>[JsonProperty("…")]</code>, custom attributes.</td></tr>
+    <tr><td><a href="exceptions.html">Exceptions</a></td><td><code>try</code>/<code>catch</code>/<code>finally</code>, <code>throw</code>, custom exceptions.</td></tr>
+    <tr><td><a href="lambdas.html">Lambdas &amp; Closures</a></td><td><code>() -&gt; {…}</code>, <code>x -&gt; x*2</code>, the <code>func&lt;…&gt;</code> type, closures.</td></tr>
+    <tr><td><a href="operators.html">Operator Overloading</a></td><td>Custom <code>+</code>, <code>-</code>, <code>*</code>, <code>==</code>, <code>[]</code>, …</td></tr>
+    <tr><td><a href="unsafe.html">Unsafe Blocks</a></td><td><code>unsafe { }</code>, <code>alloc&lt;T&gt;</code>, <code>free</code>, pointers, dereference.</td></tr>
+  </tbody>
+</table>
+
+<h2>Standard library</h2>
+<table>
+  <thead><tr><th>Page</th><th>Summary</th></tr></thead>
+  <tbody>
+    <tr><td><a href="stdlib-core.html">Core (Prelude)</a></td><td>Auto-loaded: <code>Exception</code>, <code>Pair</code>, <code>range()</code>, <code>repeat()</code>, legacy <code>StringBuilder</code>/<code>Stack</code>/<code>Queue</code>.</td></tr>
+    <tr><td><a href="stdlib-io.html">Console &amp; File</a></td><td><code>Console</code>, <code>File</code> read/write/append.</td></tr>
+    <tr><td><a href="stdlib-collections.html">Collections</a></td><td><code>List</code>, <code>Map</code>, <code>Set</code>, <code>Stack</code>, <code>Queue</code> (generic).</td></tr>
+    <tr><td><a href="stdlib-string.html">String Utilities</a></td><td><code>StringUtils</code>, <code>StringBuilder</code>.</td></tr>
+    <tr><td><a href="stdlib-math.html">Math &amp; Random</a></td><td><code>Math</code> (PI, sin, cos, sqrt, …), <code>Random</code>.</td></tr>
+    <tr><td><a href="stdlib-json.html">JSON</a></td><td><code>[Serializable]</code>, <code>toJsonString()</code>, <code>fromJsonString()</code>.</td></tr>
+    <tr><td><a href="stdlib-thread.html">Concurrency</a></td><td><code>Thread</code>, <code>Mutex</code>, <code>ConditionVariable</code>, <code>AtomicInt</code>, <code>Task&lt;T&gt;</code>.</td></tr>
+    <tr><td><a href="stdlib-audio.html">Audio</a></td><td><code>AudioEngine</code>, <code>Sound</code>.</td></tr>
+    <tr><td><a href="stdlib-net.html">Networking</a></td><td><code>HttpClient</code>, <code>TcpSocket</code>, <code>TcpListener</code>, <code>Url</code>.</td></tr>
+    <tr><td><a href="stdlib-system.html">System &amp; FileSystem</a></td><td><code>System</code> (env, exec, args, cwd), <code>FileSystem</code>.</td></tr>
+    <tr><td><a href="stdlib-time.html">Time &amp; Timestep</a></td><td><code>Time</code> (millis, seconds).</td></tr>
+    <tr><td><a href="stdlib-graphics.html">Graphics</a></td><td><code>Window</code>, <code>Color</code>, <code>Shader</code>, <code>Mesh</code>, input (OpenGL/GLFW).</td></tr>
+    <tr><td><a href="stdlib-vector.html">Vectors</a></td><td><code>Vector2</code>, <code>Vector3</code> math.</td></tr>
+    <tr><td><a href="stdlib-matrix.html">Matrices</a></td><td><code>Matrix2x2</code>, <code>Matrix3x3</code>, <code>Matrix4x4</code> math &amp; transformations.</td></tr>
+  </tbody>
+</table>
+
+<p><a class="next-link" href="getting-started.html">Getting Started →</a></p>
+</main>
+</div>
+<footer>
+  <div class="container">
+    <p>Ume Language &nbsp;·&nbsp; <a href="../index.html">Home</a> &nbsp;·&nbsp;
+       <a href="index.html">Wiki</a> &nbsp;·&nbsp; MIT License</p>
+  </div>
+</footer>
+<script>
+(function() {
+  // Theme toggle (persisted, respects OS preference on first load)
+  var root = document.documentElement;
+  var stored = localStorage.getItem('ume-theme');
+  if (!stored) {
+    stored = (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches)
+      ? 'dark' : 'light';
+  }
+  root.setAttribute('data-theme', stored);
+  var icon = document.getElementById('theme-icon');
+  if (icon) icon.textContent = stored === 'dark' ? '◑' : '◐';
+
+  document.getElementById('theme-toggle').addEventListener('click', function() {
+    var cur = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    root.setAttribute('data-theme', cur);
+    localStorage.setItem('ume-theme', cur);
+    if (icon) icon.textContent = cur === 'dark' ? '◑' : '◐';
+  });
+
+  // Highlight + copy button
+  function setup() {
+    if (!window.hljs) { setTimeout(setup, 30); return; }
+    try { hljs.registerAliases(['ume','Ume'], { languageName: 'csharp' }); } catch(e) {}
+    document.querySelectorAll('pre code').forEach(function(block) {
+      try { hljs.highlightElement(block); } catch(e) {}
+      if (block.parentElement.querySelector('.copy-btn')) return;
+      var btn = document.createElement('button');
+      btn.className = 'copy-btn';
+      btn.type = 'button';
+      btn.textContent = 'Copy';
+      btn.addEventListener('click', function() {
+        var txt = block.innerText;
+        navigator.clipboard.writeText(txt).then(function() {
+          btn.classList.add('copied');
+          btn.textContent = 'Copied!';
+          setTimeout(function() {
+            btn.classList.remove('copied');
+            btn.textContent = 'Copy';
+          }, 1600);
+        }, function() {
+          var ta = document.createElement('textarea');
+          ta.value = txt; document.body.appendChild(ta); ta.select();
+          try { document.execCommand('copy'); } catch(e) {}
+          document.body.removeChild(ta);
+          btn.textContent = 'Copied!';
+          setTimeout(function() { btn.textContent = 'Copy'; }, 1600);
+        });
+      });
+      block.parentElement.appendChild(btn);
+    });
+  }
+  setup();
+})();
+</script>
+</body>
+</html>
+

@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>String Utilities — Ume Language</title>
+<link rel="stylesheet" href="../style.css"/>
+<link rel="icon" href="../img/logo.png"/>
+<link rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css"
+      referrerpolicy="no-referrer"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/csharp.min.js" defer></script>
+</head>
+<body>
+
+<nav class="topnav">
+  <a class="nav-brand" href="../index.html">
+    <img src="../img/logo.png" alt="Ume"/>
+    <span>Ume</span>
+  </a>
+  <div class="nav-links">
+    <a href="../index.html">Home</a>
+    <a href="index.html">Wiki</a>
+    <a href="https://github.com" target="_blank" rel="noopener">GitHub</a>
+    <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Toggle dark mode">
+      <span id="theme-icon">◐</span>
+    </button>
+  </div>
+</nav>
+
+<div class="wiki">
+<aside class="sidebar">
+
+  <h4>Overview</h4>
+
+  <a href="index.html">Wiki Home</a>
+
+  <a href="getting-started.html">Getting Started</a>
+
+  <a href="project-config.html">Projects &amp; ume.toml</a>
+
+  <a href="modules.html">Modules &amp; Imports</a>
+
+  <h4>Language</h4>
+
+  <a href="types.html">Primitive Types</a>
+
+  <a href="variables.html">Variables &amp; Scope</a>
+
+  <a href="strings.html">Strings &amp; Interpolation</a>
+
+  <a href="expressions.html">Expressions &amp; Operators</a>
+
+  <a href="functions.html">Functions</a>
+
+  <a href="control-flow.html">Control Flow</a>
+
+  <a href="classes.html">Classes</a>
+
+  <a href="interfaces.html">Interfaces &amp; Abstract</a>
+
+  <a href="enums.html">Enums &amp; Structs</a>
+
+  <a href="generics.html">Generics</a>
+
+  <a href="properties.html">Properties &amp; Indexers</a>
+
+  <a href="attributes.html">Attributes</a>
+
+  <a href="exceptions.html">Exceptions</a>
+
+  <a href="lambdas.html">Lambdas &amp; Closures</a>
+
+  <a href="operators.html">Operator Overloading</a>
+
+  <a href="unsafe.html">Unsafe Blocks</a>
+
+  <h4>Standard Library</h4>
+
+  <a href="stdlib-core.html">Core (Prelude)</a>
+
+  <a href="stdlib-io.html">Console &amp; File</a>
+
+  <a href="stdlib-collections.html">Collections</a>
+
+  <a href="stdlib-string.html" class=&#34;active&#34;>String Utilities</a>
+
+  <a href="stdlib-math.html">Math &amp; Random</a>
+
+  <a href="stdlib-json.html">JSON</a>
+
+  <a href="stdlib-thread.html">Concurrency</a>
+
+  <a href="stdlib-audio.html">Audio</a>
+
+  <a href="stdlib-net.html">Networking</a>
+
+  <a href="stdlib-system.html">System &amp; FileSystem</a>
+
+  <a href="stdlib-time.html">Time &amp; Timestep</a>
+
+  <a href="stdlib-graphics.html">Graphics</a>
+
+  <a href="stdlib-vector.html">Vectors</a>
+
+  <a href="stdlib-matrix.html">Matrices</a>
+
+</aside>
+
+<main class="content">
+
+<span class="eyebrow">Standard Library</span>
+<h1>String Utilities</h1>
+<p class="lead"><code>StringUtils</code> provides parsing, padding, joining, and formatting. <code>StringBuilder</code> is the efficient way to build long strings from many pieces.</p>
+
+<div class="callout callout-info">
+  <div class="callout-title">Two ways to import</div>
+  <pre><code class="language-ume">import std.string.*;   // AST-level (recommended)
+#include &lt;string.ume&gt;   // textual include (C-style)</code></pre>
+</div>
+
+<p>Note: <code>StringBuilder</code> is also available natively without any import — it is always in scope as part of the prelude.</p>
+
+<h2 id="stringutils"><code>StringUtils</code></h2>
+<p>A static class with utility methods for working with strings. All methods are static — call them on the class name, not on an instance.</p>
+<table>
+  <thead><tr><th>Method</th><th>Signature</th><th>Description</th></tr></thead>
+  <tbody>
+    <tr><td><code>parseInt</code></td><td><code>public static func int parseInt(string s)</code></td><td>Parse an integer. Throws if the string isn't a valid int.</td></tr>
+    <tr><td><code>parseDouble</code></td><td><code>public static func double parseDouble(string s)</code></td><td>Parse a double.</td></tr>
+    <tr><td><code>parseBool</code></td><td><code>public static func bool parseBool(string s)</code></td><td>Parse "true"/"false" (case-insensitive).</td></tr>
+    <tr><td><code>isInt</code></td><td><code>public static func bool isInt(string s)</code></td><td>True if the string is a valid integer.</td></tr>
+    <tr><td><code>isNumber</code></td><td><code>public static func bool isNumber(string s)</code></td><td>True if the string is a valid number (int or float).</td></tr>
+    <tr><td><code>repeat</code></td><td><code>public static func string repeat(string s, int n)</code></td><td><code>s</code> concatenated <code>n</code> times.</td></tr>
+    <tr><td><code>padLeft</code></td><td><code>public static func string padLeft(string s, int width, char pad)</code></td><td>Left-pad <code>s</code> to <code>width</code> with <code>pad</code>.</td></tr>
+    <tr><td><code>padRight</code></td><td><code>public static func string padRight(string s, int width, char pad)</code></td><td>Right-pad <code>s</code> to <code>width</code> with <code>pad</code>.</td></tr>
+    <tr><td><code>join</code></td><td><code>public static func string join(List&lt;string&gt; parts, string separator)</code></td><td>Join strings with a separator.</td></tr>
+    <tr><td><code>format</code></td><td><code>public static func string format(string template, ...any args)</code></td><td>Replace <code>{0}</code>, <code>{1}</code>, … with args.</td></tr>
+  </tbody>
+</table>
+<pre><code class="language-ume">import std.string.*;
+
+// Parsing
+int    n = StringUtils.parseInt(&quot;42&quot;);
+double d = StringUtils.parseDouble(&quot;3.14&quot;);
+bool   b = StringUtils.parseBool(&quot;true&quot;);
+
+// Validation
+Console.println(StringUtils.isInt(&quot;123&quot;));     // true
+Console.println(StringUtils.isInt(&quot;12.3&quot;));    // false
+Console.println(StringUtils.isNumber(&quot;12.3&quot;)); // true
+
+// Padding
+Console.println(StringUtils.padLeft(&quot;42&quot;, 5, &#39;0&#39;));    // 00042
+Console.println(StringUtils.padRight(&quot;hi&quot;, 6, &#39;.&#39;));   // hi....
+
+// Join
+List&lt;string&gt; parts = new List&lt;string&gt;();
+parts.add(&quot;a&quot;); parts.add(&quot;b&quot;); parts.add(&quot;c&quot;);
+Console.println(StringUtils.join(parts, &quot;, &quot;));   // a, b, c
+
+// Format with {0}, {1}, ... placeholders
+string msg = StringUtils.format(&quot;Hello, {0}! You are {1} years old.&quot;, &quot;Alice&quot;, 30);
+Console.println(msg);
+// Hello, Alice! You are 30 years old.
+
+// format() supports both {0}, {1} (indexed) and {} (sequential) placeholders.</code></pre>
+
+<h2 id="stringbuilder"><code>StringBuilder</code></h2>
+<p>For building long strings from many pieces. Repeated <code>+</code> concatenation creates a new string each time, which is O(n²) for n concatenations. <code>StringBuilder</code> accumulates pieces internally and only materializes the final string when you call <code>toString()</code>, making it O(n).</p>
+<table>
+  <thead><tr><th>Method</th><th>Signature</th><th>Description</th></tr></thead>
+  <tbody>
+    <tr><td>constructor</td><td><code>public func void constructor()</code></td><td>Empty builder.</td></tr>
+    <tr><td><code>append</code></td><td><code>public func StringBuilder append(any value)</code></td><td>Append <code>value.toString()</code>. Returns <code>this</code> for chaining.</td></tr>
+    <tr><td><code>appendLine</code></td><td><code>public func StringBuilder appendLine(any value)</code></td><td>Append value + newline.</td></tr>
+    <tr><td><code>clear</code></td><td><code>public func void clear()</code></td><td>Reset to empty.</td></tr>
+    <tr><td><code>length</code></td><td><code>public func int length()</code></td><td>Total character count.</td></tr>
+    <tr><td><code>toString</code></td><td><code>public func string toString()</code></td><td>Materialize the accumulated string.</td></tr>
+  </tbody>
+</table>
+<pre><code class="language-ume">import std.string.*;
+
+// Building a report
+StringBuilder sb = new StringBuilder();
+sb.appendLine(&quot;=== Report ===&quot;);
+sb.append(&quot;Name: &quot;).appendLine(&quot;Alice&quot;);
+sb.append(&quot;Score: &quot;).append(95).append(&quot;/&quot;).appendLine(100);
+sb.appendLine(&quot;---&quot;);
+
+Console.println(sb.toString());
+// === Report ===
+// Name: Alice
+// Score: 95/100
+// ---</code></pre>
+
+<p>Method chaining works because <code>append</code> and <code>appendLine</code> return <code>this</code>:</p>
+<pre><code class="language-ume">string csv = new StringBuilder()
+    .append(&quot;a,b,c\n&quot;)
+    .append(&quot;1,2,3\n&quot;)
+    .append(&quot;4,5,6\n&quot;)
+    .toString();
+Console.println(csv);</code></pre>
+
+<p><a class="next-link" href="stdlib-math.html">Math &amp; Random →</a></p>
+</main>
+</div>
+<footer>
+  <div class="container">
+    <p>Ume Language &nbsp;·&nbsp; <a href="../index.html">Home</a> &nbsp;·&nbsp;
+       <a href="index.html">Wiki</a> &nbsp;·&nbsp; MIT License</p>
+  </div>
+</footer>
+<script>
+(function() {
+  // Theme toggle (persisted, respects OS preference on first load)
+  var root = document.documentElement;
+  var stored = localStorage.getItem('ume-theme');
+  if (!stored) {
+    stored = (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches)
+      ? 'dark' : 'light';
+  }
+  root.setAttribute('data-theme', stored);
+  var icon = document.getElementById('theme-icon');
+  if (icon) icon.textContent = stored === 'dark' ? '◑' : '◐';
+
+  document.getElementById('theme-toggle').addEventListener('click', function() {
+    var cur = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    root.setAttribute('data-theme', cur);
+    localStorage.setItem('ume-theme', cur);
+    if (icon) icon.textContent = cur === 'dark' ? '◑' : '◐';
+  });
+
+  // Highlight + copy button
+  function setup() {
+    if (!window.hljs) { setTimeout(setup, 30); return; }
+    try { hljs.registerAliases(['ume','Ume'], { languageName: 'csharp' }); } catch(e) {}
+    document.querySelectorAll('pre code').forEach(function(block) {
+      try { hljs.highlightElement(block); } catch(e) {}
+      if (block.parentElement.querySelector('.copy-btn')) return;
+      var btn = document.createElement('button');
+      btn.className = 'copy-btn';
+      btn.type = 'button';
+      btn.textContent = 'Copy';
+      btn.addEventListener('click', function() {
+        var txt = block.innerText;
+        navigator.clipboard.writeText(txt).then(function() {
+          btn.classList.add('copied');
+          btn.textContent = 'Copied!';
+          setTimeout(function() {
+            btn.classList.remove('copied');
+            btn.textContent = 'Copy';
+          }, 1600);
+        }, function() {
+          var ta = document.createElement('textarea');
+          ta.value = txt; document.body.appendChild(ta); ta.select();
+          try { document.execCommand('copy'); } catch(e) {}
+          document.body.removeChild(ta);
+          btn.textContent = 'Copied!';
+          setTimeout(function() { btn.textContent = 'Copy'; }, 1600);
+        });
+      });
+      block.parentElement.appendChild(btn);
+    });
+  }
+  setup();
+})();
+</script>
+</body>
+</html>
+

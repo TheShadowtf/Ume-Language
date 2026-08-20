@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Collections — Ume Language</title>
+<link rel="stylesheet" href="../style.css"/>
+<link rel="icon" href="../img/logo.png"/>
+<link rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css"
+      referrerpolicy="no-referrer"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/csharp.min.js" defer></script>
+</head>
+<body>
+
+<nav class="topnav">
+  <a class="nav-brand" href="../index.html">
+    <img src="../img/logo.png" alt="Ume"/>
+    <span>Ume</span>
+  </a>
+  <div class="nav-links">
+    <a href="../index.html">Home</a>
+    <a href="index.html">Wiki</a>
+    <a href="https://github.com" target="_blank" rel="noopener">GitHub</a>
+    <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Toggle dark mode">
+      <span id="theme-icon">◐</span>
+    </button>
+  </div>
+</nav>
+
+<div class="wiki">
+<aside class="sidebar">
+
+  <h4>Overview</h4>
+
+  <a href="index.html">Wiki Home</a>
+
+  <a href="getting-started.html">Getting Started</a>
+
+  <a href="project-config.html">Projects &amp; ume.toml</a>
+
+  <a href="modules.html">Modules &amp; Imports</a>
+
+  <h4>Language</h4>
+
+  <a href="types.html">Primitive Types</a>
+
+  <a href="variables.html">Variables &amp; Scope</a>
+
+  <a href="strings.html">Strings &amp; Interpolation</a>
+
+  <a href="expressions.html">Expressions &amp; Operators</a>
+
+  <a href="functions.html">Functions</a>
+
+  <a href="control-flow.html">Control Flow</a>
+
+  <a href="classes.html">Classes</a>
+
+  <a href="interfaces.html">Interfaces &amp; Abstract</a>
+
+  <a href="enums.html">Enums &amp; Structs</a>
+
+  <a href="generics.html">Generics</a>
+
+  <a href="properties.html">Properties &amp; Indexers</a>
+
+  <a href="attributes.html">Attributes</a>
+
+  <a href="exceptions.html">Exceptions</a>
+
+  <a href="lambdas.html">Lambdas &amp; Closures</a>
+
+  <a href="operators.html">Operator Overloading</a>
+
+  <a href="unsafe.html">Unsafe Blocks</a>
+
+  <h4>Standard Library</h4>
+
+  <a href="stdlib-core.html">Core (Prelude)</a>
+
+  <a href="stdlib-io.html">Console &amp; File</a>
+
+  <a href="stdlib-collections.html" class=&#34;active&#34;>Collections</a>
+
+  <a href="stdlib-string.html">String Utilities</a>
+
+  <a href="stdlib-math.html">Math &amp; Random</a>
+
+  <a href="stdlib-json.html">JSON</a>
+
+  <a href="stdlib-thread.html">Concurrency</a>
+
+  <a href="stdlib-audio.html">Audio</a>
+
+  <a href="stdlib-net.html">Networking</a>
+
+  <a href="stdlib-system.html">System &amp; FileSystem</a>
+
+  <a href="stdlib-time.html">Time &amp; Timestep</a>
+
+  <a href="stdlib-graphics.html">Graphics</a>
+
+  <a href="stdlib-vector.html">Vectors</a>
+
+  <a href="stdlib-matrix.html">Matrices</a>
+
+</aside>
+
+<main class="content">
+
+<span class="eyebrow">Standard Library</span>
+<h1>Collections</h1>
+<p class="lead">Generic, type-safe collection types: <code>List&lt;T&gt;</code> (ordered, indexable), <code>Map&lt;K,V&gt;</code> (key-value), <code>Set&lt;T&gt;</code> (unique values), <code>Stack&lt;T&gt;</code> (LIFO), and <code>Queue&lt;T&gt;</code> (FIFO).</p>
+
+<div class="callout callout-info">
+  <div class="callout-title">Two ways to import</div>
+  <pre><code class="language-ume">import std.collections.*;   // AST-level (recommended)
+#include &lt;collections.ume&gt;  // textual include (C-style)</code></pre>
+</div>
+
+<h2 id="list"><code>List&lt;T&gt;</code></h2>
+<p>A dynamic array — the workhorse collection. Elements are stored contiguously and accessible by integer index. Adding to the end is amortized O(1); inserting or removing from the middle is O(n).</p>
+<table>
+  <thead><tr><th>Method</th><th>Signature</th><th>Description</th></tr></thead>
+  <tbody>
+    <tr><td>constructor</td><td><code>public func void constructor()</code></td><td>Empty list.</td></tr>
+    <tr><td><code>add</code></td><td><code>public func void add(T item)</code></td><td>Append to end.</td></tr>
+    <tr><td><code>get</code></td><td><code>public func T get(int index)</code></td><td>Read element at index (throws if out of range).</td></tr>
+    <tr><td><code>set</code></td><td><code>public func void set(int index, T item)</code></td><td>Overwrite element at index.</td></tr>
+    <tr><td><code>size</code></td><td><code>public func int size()</code></td><td>Number of elements.</td></tr>
+    <tr><td><code>isEmpty</code></td><td><code>public func bool isEmpty()</code></td><td>True if size is 0.</td></tr>
+    <tr><td><code>contains</code></td><td><code>public func bool contains(T item)</code></td><td>Linear search for equality.</td></tr>
+    <tr><td><code>remove</code></td><td><code>public func void remove(int index)</code></td><td>Remove element at index, shifting later elements left.</td></tr>
+    <tr><td><code>removeItem</code></td><td><code>public func void removeItem(T item)</code></td><td>Remove first element equal to <code>item</code>.</td></tr>
+    <tr><td><code>clear</code></td><td><code>public func void clear()</code></td><td>Remove all elements.</td></tr>
+    <tr><td><code>indexOf</code></td><td><code>public func int indexOf(T item)</code></td><td>Index of first equal element, or -1.</td></tr>
+    <tr><td><code>slice</code></td><td><code>public func List&lt;T&gt; slice(int start, int end)</code></td><td>New list with elements <code>[start, end)</code>.</td></tr>
+    <tr><td><code>sort</code></td><td><code>public func void sort(func int (T, T)? comparator)</code></td><td>In-place sort; null comparator uses natural order.</td></tr>
+    <tr><td><code>forEach</code></td><td><code>public func void forEach(func void (T) action)</code></td><td>Apply action to each element.</td></tr>
+    <tr><td><code>filter</code></td><td><code>public func List&lt;T&gt; filter(func bool (T) predicate)</code></td><td>New list with elements matching predicate.</td></tr>
+    <tr><td><code>map</code></td><td><code>public func List&lt;R&gt; map&lt;R&gt;(func R (T) transform)</code></td><td>New list of transformed values.</td></tr>
+    <tr><td><code>reduce</code></td><td><code>public func R reduce&lt;R&gt;(R initial, func R (R, T) accumulator)</code></td><td>Fold left over the list.</td></tr>
+  </tbody>
+</table>
+<pre><code class="language-ume">import std.collections.*;
+
+List&lt;int&gt; nums = new List&lt;int&gt;();
+nums.add(1); nums.add(2); nums.add(3); nums.add(4); nums.add(5);
+
+Console.println(nums.size());      // 5
+Console.println(nums.get(2));      // 3
+nums.set(0, 99);
+Console.println(nums.get(0));      // 99
+
+// Functional pipeline
+List&lt;int&gt; evens   = nums.filter(n -&gt; n % 2 == 0);   // [2, 4]
+List&lt;int&gt; doubled = nums.map(n -&gt; n * 2);       // [198, 4, 6, 8, 10]
+int sum          = nums.reduce(0, (acc, n) -&gt; acc + n);  // 113
+
+// Sort with a comparator
+List&lt;int&gt; messy = new List&lt;int&gt;();
+messy.add(3); messy.add(1); messy.add(4); messy.add(1); messy.add(5);
+messy.sort((a, b) -&gt; a - b);    // ascending
+Console.println(messy.get(0));   // 1</code></pre>
+
+<h2 id="map"><code>Map&lt;K, V&gt;</code></h2>
+<p>A key-value mapping. Looking up by key is O(1) average. Keys must be hashable (strings, integers, and other built-in types work). Insertion order is not guaranteed.</p>
+<table>
+  <thead><tr><th>Method</th><th>Signature</th><th>Description</th></tr></thead>
+  <tbody>
+    <tr><td>constructor</td><td><code>public func void constructor()</code></td><td>Empty map.</td></tr>
+    <tr><td><code>put</code></td><td><code>public func void put(K key, V value)</code></td><td>Insert or overwrite.</td></tr>
+    <tr><td><code>get</code></td><td><code>public func V get(K key)</code></td><td>Fetch value; throws if absent.</td></tr>
+    <tr><td><code>getOrNull</code></td><td><code>public func V? getOrNull(K key)</code></td><td>Fetch value or null.</td></tr>
+    <tr><td><code>containsKey</code></td><td><code>public func bool containsKey(K key)</code></td><td>True if key exists.</td></tr>
+    <tr><td><code>containsValue</code></td><td><code>public func bool containsValue(V value)</code></td><td>Linear search over values.</td></tr>
+    <tr><td><code>remove</code></td><td><code>public func void remove(K key)</code></td><td>Delete entry by key.</td></tr>
+    <tr><td><code>size</code></td><td><code>public func int size()</code></td><td>Number of entries.</td></tr>
+    <tr><td><code>isEmpty</code></td><td><code>public func bool isEmpty()</code></td><td>True if empty.</td></tr>
+    <tr><td><code>clear</code></td><td><code>public func void clear()</code></td><td>Remove all entries.</td></tr>
+    <tr><td><code>keys</code></td><td><code>public func List&lt;K&gt; keys()</code></td><td>All keys as a list.</td></tr>
+    <tr><td><code>values</code></td><td><code>public func List&lt;V&gt; values()</code></td><td>All values as a list.</td></tr>
+    <tr><td><code>forEach</code></td><td><code>public func void forEach(func void (K, V) action)</code></td><td>Iterate over (key, value) pairs.</td></tr>
+  </tbody>
+</table>
+<pre><code class="language-ume">Map&lt;string, int&gt; scores = new Map&lt;string, int&gt;();
+scores.put(&quot;Alice&quot;, 95);
+scores.put(&quot;Bob&quot;, 82);
+scores.put(&quot;Charlie&quot;, 78);
+
+Console.println(scores.get(&quot;Alice&quot;));        // 95
+Console.println(scores.containsKey(&quot;Bob&quot;));  // true
+Console.println(scores.size());              // 3
+
+// Safe lookup
+int? maybe = scores.getOrNull(&quot;Dave&quot;);
+if (maybe == null) {
+    Console.println(&quot;Dave not found&quot;);
+}
+
+// Iterate
+scores.forEach((k, v) -&gt; {
+    Console.println(k + &quot;: &quot; + v);
+});</code></pre>
+
+<h2 id="set"><code>Set&lt;T&gt;</code></h2>
+<p>A collection of unique values. Adding a value that's already present has no effect. Membership checks are O(1) average.</p>
+<table>
+  <thead><tr><th>Method</th><th>Signature</th><th>Description</th></tr></thead>
+  <tbody>
+    <tr><td>constructor</td><td><code>public func void constructor()</code></td><td>Empty set.</td></tr>
+    <tr><td><code>add</code></td><td><code>public func void add(T item)</code></td><td>Add if not present.</td></tr>
+    <tr><td><code>contains</code></td><td><code>public func bool contains(T item)</code></td><td>O(1) membership.</td></tr>
+    <tr><td><code>remove</code></td><td><code>public func void remove(T item)</code></td><td>Remove if present.</td></tr>
+    <tr><td><code>size</code></td><td><code>public func int size()</code></td><td>Number of elements.</td></tr>
+    <tr><td><code>isEmpty</code></td><td><code>public func bool isEmpty()</code></td><td>True if empty.</td></tr>
+    <tr><td><code>clear</code></td><td><code>public func void clear()</code></td><td>Remove all.</td></tr>
+    <tr><td><code>toList</code></td><td><code>public func List&lt;T&gt; toList()</code></td><td>Snapshot as a list.</td></tr>
+    <tr><td><code>forEach</code></td><td><code>public func void forEach(func void (T) action)</code></td><td>Iterate.</td></tr>
+    <tr><td><code>union</code></td><td><code>public func Set&lt;T&gt; union(Set&lt;T&gt; other)</code></td><td>New set with elements from both.</td></tr>
+    <tr><td><code>intersect</code></td><td><code>public func Set&lt;T&gt; intersect(Set&lt;T&gt; other)</code></td><td>New set with elements in both.</td></tr>
+    <tr><td><code>difference</code></td><td><code>public func Set&lt;T&gt; difference(Set&lt;T&gt; other)</code></td><td>New set with elements in this but not other.</td></tr>
+  </tbody>
+</table>
+<pre><code class="language-ume">Set&lt;string&gt; tags = new Set&lt;string&gt;();
+tags.add(&quot;ume&quot;);
+tags.add(&quot;language&quot;);
+tags.add(&quot;ume&quot;);          // duplicate — ignored
+
+Console.println(tags.size());      // 2
+Console.println(tags.contains(&quot;ume&quot;));   // true
+
+// Set operations
+Set&lt;int&gt; a = new Set&lt;int&gt;();
+a.add(1); a.add(2); a.add(3);
+Set&lt;int&gt; b = new Set&lt;int&gt;();
+b.add(2); b.add(3); b.add(4);
+
+Set&lt;int&gt; u = a.union(b);          // {1, 2, 3, 4}
+Set&lt;int&gt; i = a.intersect(b);      // {2, 3}
+Set&lt;int&gt; d = a.difference(b);     // {1}</code></pre>
+
+<h2 id="stack"><code>Stack&lt;T&gt;</code></h2>
+<p>Last-in, first-out. <code>push</code> adds to the top, <code>pop</code> removes from the top.</p>
+<table>
+  <thead><tr><th>Method</th><th>Signature</th></tr></thead>
+  <tbody>
+    <tr><td>constructor</td><td><code>public func void constructor()</code></td></tr>
+    <tr><td><code>push</code></td><td><code>public func void push(T item)</code></td></tr>
+    <tr><td><code>pop</code></td><td><code>public func T pop()</code> — throws if empty</td></tr>
+    <tr><td><code>peek</code></td><td><code>public func T peek()</code> — throws if empty</td></tr>
+    <tr><td><code>isEmpty</code></td><td><code>public func bool isEmpty()</code></td></tr>
+    <tr><td><code>size</code></td><td><code>public func int size()</code></td></tr>
+    <tr><td><code>clear</code></td><td><code>public func void clear()</code></td></tr>
+  </tbody>
+</table>
+<pre><code class="language-ume">Stack&lt;int&gt; s = new Stack&lt;int&gt;();
+s.push(10);
+s.push(20);
+s.push(30);
+Console.println(s.pop());    // 30
+Console.println(s.peek());   // 20
+
+// Note: Stack and Queue are natively backed as List objects.
+// You can also use the prelude&#39;s untyped Stack/Queue (any elements):
+//   Stack ps = new Stack();  // prelude version, stores any
+//   ps.push(10); ps.push(&quot;hi&quot;);</code></pre>
+
+<h2 id="queue"><code>Queue&lt;T&gt;</code></h2>
+<p>First-in, first-out. <code>enqueue</code> adds to the back, <code>dequeue</code> removes from the front.</p>
+<table>
+  <thead><tr><th>Method</th><th>Signature</th></tr></thead>
+  <tbody>
+    <tr><td>constructor</td><td><code>public func void constructor()</code></td></tr>
+    <tr><td><code>enqueue</code></td><td><code>public func void enqueue(T item)</code></td></tr>
+    <tr><td><code>dequeue</code></td><td><code>public func T dequeue()</code> — throws if empty</td></tr>
+    <tr><td><code>front</code></td><td><code>public func T front()</code> — throws if empty</td></tr>
+    <tr><td><code>isEmpty</code></td><td><code>public func bool isEmpty()</code></td></tr>
+    <tr><td><code>size</code></td><td><code>public func int size()</code></td></tr>
+    <tr><td><code>clear</code></td><td><code>public func void clear()</code></td></tr>
+  </tbody>
+</table>
+<pre><code class="language-ume">Queue&lt;string&gt; q = new Queue&lt;string&gt;();
+q.enqueue(&quot;first&quot;);
+q.enqueue(&quot;second&quot;);
+q.enqueue(&quot;third&quot;);
+Console.println(q.dequeue());   // first
+Console.println(q.front());     // second</code></pre>
+
+<p><a class="next-link" href="stdlib-string.html">String Utilities →</a></p>
+</main>
+</div>
+<footer>
+  <div class="container">
+    <p>Ume Language &nbsp;·&nbsp; <a href="../index.html">Home</a> &nbsp;·&nbsp;
+       <a href="index.html">Wiki</a> &nbsp;·&nbsp; MIT License</p>
+  </div>
+</footer>
+<script>
+(function() {
+  // Theme toggle (persisted, respects OS preference on first load)
+  var root = document.documentElement;
+  var stored = localStorage.getItem('ume-theme');
+  if (!stored) {
+    stored = (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches)
+      ? 'dark' : 'light';
+  }
+  root.setAttribute('data-theme', stored);
+  var icon = document.getElementById('theme-icon');
+  if (icon) icon.textContent = stored === 'dark' ? '◑' : '◐';
+
+  document.getElementById('theme-toggle').addEventListener('click', function() {
+    var cur = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    root.setAttribute('data-theme', cur);
+    localStorage.setItem('ume-theme', cur);
+    if (icon) icon.textContent = cur === 'dark' ? '◑' : '◐';
+  });
+
+  // Highlight + copy button
+  function setup() {
+    if (!window.hljs) { setTimeout(setup, 30); return; }
+    try { hljs.registerAliases(['ume','Ume'], { languageName: 'csharp' }); } catch(e) {}
+    document.querySelectorAll('pre code').forEach(function(block) {
+      try { hljs.highlightElement(block); } catch(e) {}
+      if (block.parentElement.querySelector('.copy-btn')) return;
+      var btn = document.createElement('button');
+      btn.className = 'copy-btn';
+      btn.type = 'button';
+      btn.textContent = 'Copy';
+      btn.addEventListener('click', function() {
+        var txt = block.innerText;
+        navigator.clipboard.writeText(txt).then(function() {
+          btn.classList.add('copied');
+          btn.textContent = 'Copied!';
+          setTimeout(function() {
+            btn.classList.remove('copied');
+            btn.textContent = 'Copy';
+          }, 1600);
+        }, function() {
+          var ta = document.createElement('textarea');
+          ta.value = txt; document.body.appendChild(ta); ta.select();
+          try { document.execCommand('copy'); } catch(e) {}
+          document.body.removeChild(ta);
+          btn.textContent = 'Copied!';
+          setTimeout(function() { btn.textContent = 'Copy'; }, 1600);
+        });
+      });
+      block.parentElement.appendChild(btn);
+    });
+  }
+  setup();
+})();
+</script>
+</body>
+</html>
+

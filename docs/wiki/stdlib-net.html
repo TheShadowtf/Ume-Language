@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Networking — Ume Language</title>
+<link rel="stylesheet" href="../style.css"/>
+<link rel="icon" href="../img/logo.png"/>
+<link rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css"
+      referrerpolicy="no-referrer"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/csharp.min.js" defer></script>
+</head>
+<body>
+
+<nav class="topnav">
+  <a class="nav-brand" href="../index.html">
+    <img src="../img/logo.png" alt="Ume"/>
+    <span>Ume</span>
+  </a>
+  <div class="nav-links">
+    <a href="../index.html">Home</a>
+    <a href="index.html">Wiki</a>
+    <a href="https://github.com" target="_blank" rel="noopener">GitHub</a>
+    <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Toggle dark mode">
+      <span id="theme-icon">◐</span>
+    </button>
+  </div>
+</nav>
+
+<div class="wiki">
+<aside class="sidebar">
+
+  <h4>Overview</h4>
+
+  <a href="index.html">Wiki Home</a>
+
+  <a href="getting-started.html">Getting Started</a>
+
+  <a href="project-config.html">Projects &amp; ume.toml</a>
+
+  <a href="modules.html">Modules &amp; Imports</a>
+
+  <h4>Language</h4>
+
+  <a href="types.html">Primitive Types</a>
+
+  <a href="variables.html">Variables &amp; Scope</a>
+
+  <a href="strings.html">Strings &amp; Interpolation</a>
+
+  <a href="expressions.html">Expressions &amp; Operators</a>
+
+  <a href="functions.html">Functions</a>
+
+  <a href="control-flow.html">Control Flow</a>
+
+  <a href="classes.html">Classes</a>
+
+  <a href="interfaces.html">Interfaces &amp; Abstract</a>
+
+  <a href="enums.html">Enums &amp; Structs</a>
+
+  <a href="generics.html">Generics</a>
+
+  <a href="properties.html">Properties &amp; Indexers</a>
+
+  <a href="attributes.html">Attributes</a>
+
+  <a href="exceptions.html">Exceptions</a>
+
+  <a href="lambdas.html">Lambdas &amp; Closures</a>
+
+  <a href="operators.html">Operator Overloading</a>
+
+  <a href="unsafe.html">Unsafe Blocks</a>
+
+  <h4>Standard Library</h4>
+
+  <a href="stdlib-core.html">Core (Prelude)</a>
+
+  <a href="stdlib-io.html">Console &amp; File</a>
+
+  <a href="stdlib-collections.html">Collections</a>
+
+  <a href="stdlib-string.html">String Utilities</a>
+
+  <a href="stdlib-math.html">Math &amp; Random</a>
+
+  <a href="stdlib-json.html">JSON</a>
+
+  <a href="stdlib-thread.html">Concurrency</a>
+
+  <a href="stdlib-audio.html">Audio</a>
+
+  <a href="stdlib-net.html" class=&#34;active&#34;>Networking</a>
+
+  <a href="stdlib-system.html">System &amp; FileSystem</a>
+
+  <a href="stdlib-time.html">Time &amp; Timestep</a>
+
+  <a href="stdlib-graphics.html">Graphics</a>
+
+  <a href="stdlib-vector.html">Vectors</a>
+
+  <a href="stdlib-matrix.html">Matrices</a>
+
+</aside>
+
+<main class="content">
+
+<span class="eyebrow">Standard Library</span>
+<h1>Networking</h1>
+<p class="lead">HTTP and TCP clients for network operations. <code>HttpClient</code> for high-level request/response, <code>TcpSocket</code>/<code>TcpListener</code> for raw TCP, and <code>Url</code> for URL encoding and query-string parsing.</p>
+
+<div class="callout callout-info">
+  <div class="callout-title">Two ways to import</div>
+  <pre><code class="language-ume">import std.net.*;   // AST-level (recommended)
+#include &lt;net.ume&gt;   // textual include (C-style)</code></pre>
+</div>
+
+<h2 id="httpresponse"><code>HttpResponse</code></h2>
+<p>A simple struct holding the result of an HTTP request. The <code>statusCode</code> is the HTTP status (200, 404, etc.); <code>body</code> is the response body as a string; <code>headers</code> is a map of response headers.</p>
+<table>
+  <thead><tr><th>Field</th><th>Type</th></tr></thead>
+  <tbody>
+    <tr><td><code>statusCode</code></td><td><code>public int</code></td></tr>
+    <tr><td><code>body</code></td><td><code>public string</code></td></tr>
+    <tr><td><code>headers</code></td><td><code>public Map&lt;string, string&gt;</code></td></tr>
+  </tbody>
+</table>
+
+<h2 id="httpclient"><code>HttpClient</code></h2>
+<p>A high-level HTTP client supporting GET and POST requests, custom headers, and timeouts. Construct an instance, optionally configure default headers and timeout, then call <code>get</code> or <code>post</code>.</p>
+<table>
+  <thead><tr><th>Method</th><th>Signature</th><th>Description</th></tr></thead>
+  <tbody>
+    <tr><td>constructor</td><td><code>public func void constructor()</code></td><td>Default settings.</td></tr>
+    <tr><td><code>get</code></td><td><code>public func HttpResponse get(string url)</code></td><td>GET request.</td></tr>
+    <tr><td><code>get</code></td><td><code>public func HttpResponse get(string url, Map&lt;string,string&gt; headers)</code></td><td>GET with custom headers.</td></tr>
+    <tr><td><code>post</code></td><td><code>public func HttpResponse post(string url, string body)</code></td><td>POST with body.</td></tr>
+    <tr><td><code>postJson</code></td><td><code>public func HttpResponse postJson(string url, string jsonBody)</code></td><td>POST with <code>Content-Type: application/json</code>.</td></tr>
+    <tr><td><code>setHeader</code></td><td><code>public func void setHeader(string name, string value)</code></td><td>Default header for all subsequent requests.</td></tr>
+    <tr><td><code>setTimeout</code></td><td><code>public func void setTimeout(int milliseconds)</code></td><td>Per-request timeout.</td></tr>
+  </tbody>
+</table>
+<pre><code class="language-ume">import std.net.*;
+import std.collections.*;
+
+func void main() {
+    var client = new HttpClient();
+    client.setTimeout(5000);
+
+    // Simple GET
+    HttpResponse resp = client.get(&quot;https://httpbin.org/get&quot;);
+    Console.println(&quot;Status: &quot; + resp.statusCode);
+    Console.println(&quot;Body: &quot; + resp.body);
+
+    // GET with custom headers
+    Map&lt;string, string&gt; headers = new Map&lt;string, string&gt;();
+    headers.put(&quot;Authorization&quot;, &quot;Bearer mytoken&quot;);
+    HttpResponse authResp = client.get(&quot;https://api.example.com/me&quot;, headers);
+
+    // POST JSON
+    string json = &quot;{\&quot;name\&quot;:\&quot;Alice\&quot;,\&quot;age\&quot;:30}&quot;;
+    HttpResponse postResp = client.postJson(&quot;https://api.example.com/users&quot;, json);
+    Console.println(&quot;Created: &quot; + postResp.statusCode);
+}</code></pre>
+
+<h2 id="tcpsocket"><code>TcpSocket</code></h2>
+<p>A raw TCP client. Connect to a host and port, send and receive strings, then close. Use this for protocols that aren't HTTP, or when you need fine-grained control over the connection.</p>
+<table>
+  <thead><tr><th>Method</th><th>Signature</th><th>Description</th></tr></thead>
+  <tbody>
+    <tr><td>constructor</td><td><code>public func void constructor()</code></td><td>Unconnected socket.</td></tr>
+    <tr><td><code>connect</code></td><td><code>public func void connect(string host, int port)</code></td><td>Establish a connection.</td></tr>
+    <tr><td><code>close</code></td><td><code>public func void close()</code></td><td>Close the connection.</td></tr>
+    <tr><td><code>send</code></td><td><code>public func void send(string data)</code></td><td>Send a string.</td></tr>
+    <tr><td><code>receive</code></td><td><code>public func string receive(int maxBytes)</code></td><td>Read up to maxBytes.</td></tr>
+    <tr><td><code>isConnected</code></td><td><code>public func bool isConnected()</code></td><td>Connection state.</td></tr>
+  </tbody>
+</table>
+<pre><code class="language-ume">import std.net.*;
+
+func void main() {
+    var sock = new TcpSocket();
+    sock.connect(&quot;example.com&quot;, 80);
+
+    sock.send(&quot;GET / HTTP/1.1\r\nHost: example.com\r\nConnection: close\r\n\r\n&quot;);
+
+    string response = &quot;&quot;;
+    while (sock.isConnected()) {
+        string chunk = sock.receive(4096);
+        if (chunk.length() == 0) break;
+        response = response + chunk;
+    }
+
+    Console.println(response);
+    sock.close();
+}</code></pre>
+
+<h2 id="tcplistener"><code>TcpListener</code></h2>
+<p>A TCP server. Bind to a port, call <code>accept()</code> to wait for incoming connections, and get a <code>TcpSocket</code> for each client. Typical use: a loop that accepts connections and hands them off to worker threads.</p>
+<table>
+  <thead><tr><th>Method</th><th>Signature</th></tr></thead>
+  <tbody>
+    <tr><td>constructor</td><td><code>public func void constructor(int port)</code></td></tr>
+    <tr><td><code>start</code></td><td><code>public func void start()</code> — begin listening</td></tr>
+    <tr><td><code>accept</code></td><td><code>public func TcpSocket accept()</code> — blocks until a client connects</td></tr>
+    <tr><td><code>close</code></td><td><code>public func void close()</code></td></tr>
+  </tbody>
+</table>
+<pre><code class="language-ume">import std.net.*;
+import std.thread.*;
+
+func void main() {
+    var server = new TcpListener(8080);
+    server.start();
+    Console.println(&quot;Listening on :8080&quot;);
+
+    while (true) {
+        TcpSocket client = server.accept();
+        Console.println(&quot;Client connected&quot;);
+
+        // Handle in a worker thread
+        var handler = () -&gt; {
+            string req = client.receive(4096);
+            client.send(&quot;HTTP/1.1 200 OK\r\nContent-Length: 12\r\n\r\nHello, client&quot;);
+            client.close();
+        };
+        new Thread(handler).start();
+    }
+}</code></pre>
+
+<h2 id="url"><code>Url</code></h2>
+<p>Static utilities for URL encoding, decoding, and parsing query strings.</p>
+<table>
+  <thead><tr><th>Method</th><th>Signature</th><th>Description</th></tr></thead>
+  <tbody>
+    <tr><td><code>encode</code></td><td><code>public static func string encode(string raw)</code></td><td>URL-encode (percent-encode) a string.</td></tr>
+    <tr><td><code>decode</code></td><td><code>public static func string decode(string encoded)</code></td><td>URL-decode a percent-encoded string.</td></tr>
+    <tr><td><code>parseQuery</code></td><td><code>public static func Map&lt;string, string&gt; parseQuery(string queryString)</code></td><td>Parse <code>key=value&key=value</code> into a map.</td></tr>
+  </tbody>
+</table>
+<pre><code class="language-ume">import std.net.*;
+import std.collections.*;
+
+string encoded = Url.encode(&quot;hello world &amp; friends&quot;);
+Console.println(encoded);   // hello+world+%26+friends
+
+string decoded = Url.decode(encoded);
+Console.println(decoded);   // hello world &amp; friends
+
+Map&lt;string, string&gt; params = Url.parseQuery(&quot;name=Alice&amp;age=30&amp;city=NYC&quot;);
+Console.println(params.get(&quot;name&quot;));   // Alice
+Console.println(params.get(&quot;age&quot;));    // 30</code></pre>
+
+<p><a class="next-link" href="stdlib-system.html">System &amp; FileSystem →</a></p>
+</main>
+</div>
+<footer>
+  <div class="container">
+    <p>Ume Language &nbsp;·&nbsp; <a href="../index.html">Home</a> &nbsp;·&nbsp;
+       <a href="index.html">Wiki</a> &nbsp;·&nbsp; MIT License</p>
+  </div>
+</footer>
+<script>
+(function() {
+  // Theme toggle (persisted, respects OS preference on first load)
+  var root = document.documentElement;
+  var stored = localStorage.getItem('ume-theme');
+  if (!stored) {
+    stored = (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches)
+      ? 'dark' : 'light';
+  }
+  root.setAttribute('data-theme', stored);
+  var icon = document.getElementById('theme-icon');
+  if (icon) icon.textContent = stored === 'dark' ? '◑' : '◐';
+
+  document.getElementById('theme-toggle').addEventListener('click', function() {
+    var cur = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    root.setAttribute('data-theme', cur);
+    localStorage.setItem('ume-theme', cur);
+    if (icon) icon.textContent = cur === 'dark' ? '◑' : '◐';
+  });
+
+  // Highlight + copy button
+  function setup() {
+    if (!window.hljs) { setTimeout(setup, 30); return; }
+    try { hljs.registerAliases(['ume','Ume'], { languageName: 'csharp' }); } catch(e) {}
+    document.querySelectorAll('pre code').forEach(function(block) {
+      try { hljs.highlightElement(block); } catch(e) {}
+      if (block.parentElement.querySelector('.copy-btn')) return;
+      var btn = document.createElement('button');
+      btn.className = 'copy-btn';
+      btn.type = 'button';
+      btn.textContent = 'Copy';
+      btn.addEventListener('click', function() {
+        var txt = block.innerText;
+        navigator.clipboard.writeText(txt).then(function() {
+          btn.classList.add('copied');
+          btn.textContent = 'Copied!';
+          setTimeout(function() {
+            btn.classList.remove('copied');
+            btn.textContent = 'Copy';
+          }, 1600);
+        }, function() {
+          var ta = document.createElement('textarea');
+          ta.value = txt; document.body.appendChild(ta); ta.select();
+          try { document.execCommand('copy'); } catch(e) {}
+          document.body.removeChild(ta);
+          btn.textContent = 'Copied!';
+          setTimeout(function() { btn.textContent = 'Copy'; }, 1600);
+        });
+      });
+      block.parentElement.appendChild(btn);
+    });
+  }
+  setup();
+})();
+</script>
+</body>
+</html>
+

@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Math &amp; Random — Ume Language</title>
+<link rel="stylesheet" href="../style.css"/>
+<link rel="icon" href="../img/logo.png"/>
+<link rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css"
+      referrerpolicy="no-referrer"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/csharp.min.js" defer></script>
+</head>
+<body>
+
+<nav class="topnav">
+  <a class="nav-brand" href="../index.html">
+    <img src="../img/logo.png" alt="Ume"/>
+    <span>Ume</span>
+  </a>
+  <div class="nav-links">
+    <a href="../index.html">Home</a>
+    <a href="index.html">Wiki</a>
+    <a href="https://github.com" target="_blank" rel="noopener">GitHub</a>
+    <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Toggle dark mode">
+      <span id="theme-icon">◐</span>
+    </button>
+  </div>
+</nav>
+
+<div class="wiki">
+<aside class="sidebar">
+
+  <h4>Overview</h4>
+
+  <a href="index.html">Wiki Home</a>
+
+  <a href="getting-started.html">Getting Started</a>
+
+  <a href="project-config.html">Projects &amp; ume.toml</a>
+
+  <a href="modules.html">Modules &amp; Imports</a>
+
+  <h4>Language</h4>
+
+  <a href="types.html">Primitive Types</a>
+
+  <a href="variables.html">Variables &amp; Scope</a>
+
+  <a href="strings.html">Strings &amp; Interpolation</a>
+
+  <a href="expressions.html">Expressions &amp; Operators</a>
+
+  <a href="functions.html">Functions</a>
+
+  <a href="control-flow.html">Control Flow</a>
+
+  <a href="classes.html">Classes</a>
+
+  <a href="interfaces.html">Interfaces &amp; Abstract</a>
+
+  <a href="enums.html">Enums &amp; Structs</a>
+
+  <a href="generics.html">Generics</a>
+
+  <a href="properties.html">Properties &amp; Indexers</a>
+
+  <a href="attributes.html">Attributes</a>
+
+  <a href="exceptions.html">Exceptions</a>
+
+  <a href="lambdas.html">Lambdas &amp; Closures</a>
+
+  <a href="operators.html">Operator Overloading</a>
+
+  <a href="unsafe.html">Unsafe Blocks</a>
+
+  <h4>Standard Library</h4>
+
+  <a href="stdlib-core.html">Core (Prelude)</a>
+
+  <a href="stdlib-io.html">Console &amp; File</a>
+
+  <a href="stdlib-collections.html">Collections</a>
+
+  <a href="stdlib-string.html">String Utilities</a>
+
+  <a href="stdlib-math.html" class=&#34;active&#34;>Math &amp; Random</a>
+
+  <a href="stdlib-json.html">JSON</a>
+
+  <a href="stdlib-thread.html">Concurrency</a>
+
+  <a href="stdlib-audio.html">Audio</a>
+
+  <a href="stdlib-net.html">Networking</a>
+
+  <a href="stdlib-system.html">System &amp; FileSystem</a>
+
+  <a href="stdlib-time.html">Time &amp; Timestep</a>
+
+  <a href="stdlib-graphics.html">Graphics</a>
+
+  <a href="stdlib-vector.html">Vectors</a>
+
+  <a href="stdlib-matrix.html">Matrices</a>
+
+</aside>
+
+<main class="content">
+
+<span class="eyebrow">Standard Library</span>
+<h1>Math &amp; Random</h1>
+<p class="lead">The <code>Math</code> static class provides standard mathematical functions and constants. <code>Random</code> is a pseudo-random number generator. Both have a basic always-available form (natively backed) and an extended form via <code>import std.math.*;</code>.</p>
+
+<div class="callout callout-info">
+  <div class="callout-title">Two ways to import the extended Math</div>
+  <pre><code class="language-ume">import std.math.*;   // AST-level (recommended) — adds E, TAU, absi, log2, etc.
+#include &lt;math.ume&gt;   // textual include (C-style)</code></pre>
+  <p>Basic <code>Math</code> (PI, sqrt, pow, abs, floor, ceil, round, sin, cos, tan, log, log10, min, max, clamp) is always available without any import.</p>
+</div>
+
+<h2 id="math"><code>Math</code></h2>
+<p>The basic <code>Math</code> is always available without an import — it provides PI, sqrt, pow, abs, floor/ceil/round, sin/cos/tan, log, and min/max. Importing <code>std.math.*</code> replaces it with an extended version that adds E, TAU, cbrt, exp, log2, log10, asin/acos/atan/atan2, minf/maxf, clamp, lerp, toRadians/toDegrees, isNaN, and isInfinite.</p>
+
+<h3 id="math-constants">Constants</h3>
+<table>
+  <thead><tr><th>Constant</th><th>Value</th><th>Available</th></tr></thead>
+  <tbody>
+    <tr><td><code>Math.PI</code></td><td>3.14159265358979…</td><td>always</td></tr>
+    <tr><td><code>Math.E</code></td><td>2.71828182845904…</td><td>with <code>std.math</code></td></tr>
+    <tr><td><code>Math.TAU</code></td><td>6.28318530717958… (2π)</td><td>with <code>std.math</code></td></tr>
+  </tbody>
+</table>
+
+<h3 id="math-functions">Functions</h3>
+<table>
+  <thead><tr><th>Method</th><th>Signature</th><th>Notes</th></tr></thead>
+  <tbody>
+    <tr><td><code>sqrt</code></td><td><code>static func double sqrt(double x)</code></td><td>Square root.</td></tr>
+    <tr><td><code>cbrt</code></td><td><code>static func double cbrt(double x)</code></td><td>Cube root. (extended)</td></tr>
+    <tr><td><code>pow</code></td><td><code>static func double pow(double base, double exp)</code></td><td><code>base^exp</code>.</td></tr>
+    <tr><td><code>exp</code></td><td><code>static func double exp(double x)</code></td><td><code>e^x</code>. (extended)</td></tr>
+    <tr><td><code>log</code></td><td><code>static func double log(double x)</code></td><td>Natural log.</td></tr>
+    <tr><td><code>log2</code></td><td><code>static func double log2(double x)</code></td><td>Base-2 log. (extended)</td></tr>
+    <tr><td><code>log10</code></td><td><code>static func double log10(double x)</code></td><td>Base-10 log.</td></tr>
+    <tr><td><code>abs</code></td><td><code>static func double abs(double x)</code></td><td>Absolute value (double).</td></tr>
+    <tr><td><code>absi</code></td><td><code>static func int absi(int x)</code></td><td>Absolute value (int). (extended)</td></tr>
+    <tr><td><code>floor</code></td><td><code>static func double floor(double x)</code></td><td>Rounds toward negative infinity.</td></tr>
+    <tr><td><code>ceil</code></td><td><code>static func double ceil(double x)</code></td><td>Rounds toward positive infinity.</td></tr>
+    <tr><td><code>round</code></td><td><code>static func double round(double x)</code></td><td>Rounds to nearest integer.</td></tr>
+    <tr><td><code>trunc</code></td><td><code>static func double trunc(double x)</code></td><td>Truncates toward zero. (extended)</td></tr>
+    <tr><td><code>sin</code> <code>cos</code> <code>tan</code></td><td><code>static func double sin/cos/tan(double x)</code></td><td>x in radians.</td></tr>
+    <tr><td><code>asin</code> <code>acos</code> <code>atan</code></td><td><code>static func double asin/acos/atan(double x)</code></td><td>Inverse trig. (extended)</td></tr>
+    <tr><td><code>atan2</code></td><td><code>static func double atan2(double y, double x)</code></td><td>Quadrant-aware atan. (extended)</td></tr>
+    <tr><td><code>min</code> / <code>max</code></td><td><code>static func int min/max(int, int)</code></td><td>Integer min/max.</td></tr>
+    <tr><td><code>minf</code> / <code>maxf</code></td><td><code>static func double minf/maxf(double, double)</code></td><td>Double min/max.</td></tr>
+    <tr><td><code>clamp</code></td><td><code>static func double clamp(double v, double lo, double hi)</code></td><td>Clamp v to [lo, hi].</td></tr>
+    <tr><td><code>lerp</code></td><td><code>static func double lerp(double a, double b, double t)</code></td><td>Linear interpolation. (extended)</td></tr>
+    <tr><td><code>toRadians</code></td><td><code>static func double toRadians(double degrees)</code></td><td>(extended)</td></tr>
+    <tr><td><code>toDegrees</code></td><td><code>static func double toDegrees(double radians)</code></td><td>(extended)</td></tr>
+    <tr><td><code>isNaN</code></td><td><code>static func bool isNaN(double x)</code></td><td>(extended)</td></tr>
+    <tr><td><code>isInfinite</code></td><td><code>static func bool isInfinite(double x)</code></td><td>(extended)</td></tr>
+  </tbody>
+</table>
+<pre><code class="language-ume">// Basic Math is always available
+Console.println(Math.PI);           // 3.14159...
+Console.println(Math.sqrt(16.0));   // 4.0
+Console.println(Math.pow(2, 10));   // 1024.0
+Console.println(Math.abs(-5.5));    // 5.5
+Console.println(Math.floor(3.7));   // 3.0
+Console.println(Math.ceil(3.2));    // 4.0
+Console.println(Math.round(3.5));   // 4.0
+
+Console.println(Math.min(3, 7));    // 3
+Console.println(Math.max(3, 7));    // 7
+Console.println(Math.clamp(15, 0, 10));  // 10
+
+// Trig (angles in radians)
+double angle = Math.PI / 4;         // 45 degrees
+Console.println(Math.sin(angle));   // 0.707...
+Console.println(Math.cos(angle));   // 0.707...</code></pre>
+
+<p>With the import, the extended functions become available:</p>
+<pre><code class="language-ume">import std.math.*;
+
+Console.println(Math.E);            // 2.71828...
+Console.println(Math.log(Math.E));  // 1.0  (natural log of e)
+Console.println(Math.exp(1.0));     // 2.71828...  (e^1)
+Console.println(Math.absi(-42));    // 42
+
+double deg = 90.0;
+double rad = Math.toRadians(deg);
+Console.println(Math.sin(rad));     // 1.0
+
+// Linear interpolation
+double t = 0.5;
+Console.println(Math.lerp(0.0, 100.0, t));   // 50.0</code></pre>
+
+<h2 id="random"><code>Random</code></h2>
+<p>A pseudo-random number generator. Construct with a seed for deterministic output (useful for tests and reproducible procedural generation), or without a seed to seed from the system clock. The extended <code>Random</code> in <code>std.math</code> adds overloads for range-bounded ints and doubles.</p>
+<table>
+  <thead><tr><th>Method</th><th>Signature</th><th>Description</th></tr></thead>
+  <tbody>
+    <tr><td>constructor</td><td><code>public func void constructor(int? seed)</code></td><td>Null seed = clock; non-null = fixed seed.</td></tr>
+    <tr><td><code>nextInt</code></td><td><code>public func int nextInt()</code></td><td>Random non-negative int.</td></tr>
+    <tr><td><code>nextInt</code></td><td><code>public func int nextInt(int max)</code></td><td>Random int in [0, max).</td></tr>
+    <tr><td><code>nextInt</code></td><td><code>public func int nextInt(int min, int max)</code></td><td>Random int in [min, max). (extended)</td></tr>
+    <tr><td><code>nextDouble</code></td><td><code>public func double nextDouble()</code></td><td>Random double in [0.0, 1.0).</td></tr>
+    <tr><td><code>nextBool</code></td><td><code>public func bool nextBool()</code></td><td>Random true/false.</td></tr>
+  </tbody>
+</table>
+<pre><code class="language-ume">import std.math.*;
+
+// Seeded — same sequence every run
+Random rng = new Random(42);
+Console.println(rng.nextInt(100));   // e.g. 33
+Console.println(rng.nextInt(100));   // e.g. 71
+Console.println(rng.nextInt(100));   // e.g. 5
+
+// Unseeded — different each run
+Random dice = new Random(null);
+int roll = dice.nextInt(1, 7);       // 1 to 6 inclusive
+Console.println($&quot;You rolled a {roll}&quot;);
+
+bool lucky = dice.nextBool();
+double fraction = dice.nextDouble();
+Console.println($&quot;lucky={lucky}, fraction={fraction}&quot;);</code></pre>
+
+<h2 id="random-separate">The <code>std.random</code> package</h2>
+<p>There's also a separate <code>std.random</code> package providing an alternate <code>Random</code> class implemented entirely in Ume source (a 64-bit linear congruential generator). It exposes a few extra methods (<code>nextIntMax</code>, <code>nextIntRange</code>, <code>nextDoubleRange</code>, <code>shuffleInts</code>). Use it if you want a pure-Ume implementation you can inspect or modify:</p>
+<pre><code class="language-ume">import std.random.*;
+
+Random rng = new Random();                 // clock-seeded
+int die = rng.nextIntRange(1, 6);          // [1, 6)
+double pct = rng.nextDoubleRange(0.0, 100.0);
+
+int[] cards = [1, 2, 3, 4, 5, 6, 7, 8];
+rng.shuffleInts(cards);                    // Fisher-Yates in-place</code></pre>
+
+<p><a class="next-link" href="stdlib-json.html">JSON →</a></p>
+</main>
+</div>
+<footer>
+  <div class="container">
+    <p>Ume Language &nbsp;·&nbsp; <a href="../index.html">Home</a> &nbsp;·&nbsp;
+       <a href="index.html">Wiki</a> &nbsp;·&nbsp; MIT License</p>
+  </div>
+</footer>
+<script>
+(function() {
+  // Theme toggle (persisted, respects OS preference on first load)
+  var root = document.documentElement;
+  var stored = localStorage.getItem('ume-theme');
+  if (!stored) {
+    stored = (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches)
+      ? 'dark' : 'light';
+  }
+  root.setAttribute('data-theme', stored);
+  var icon = document.getElementById('theme-icon');
+  if (icon) icon.textContent = stored === 'dark' ? '◑' : '◐';
+
+  document.getElementById('theme-toggle').addEventListener('click', function() {
+    var cur = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    root.setAttribute('data-theme', cur);
+    localStorage.setItem('ume-theme', cur);
+    if (icon) icon.textContent = cur === 'dark' ? '◑' : '◐';
+  });
+
+  // Highlight + copy button
+  function setup() {
+    if (!window.hljs) { setTimeout(setup, 30); return; }
+    try { hljs.registerAliases(['ume','Ume'], { languageName: 'csharp' }); } catch(e) {}
+    document.querySelectorAll('pre code').forEach(function(block) {
+      try { hljs.highlightElement(block); } catch(e) {}
+      if (block.parentElement.querySelector('.copy-btn')) return;
+      var btn = document.createElement('button');
+      btn.className = 'copy-btn';
+      btn.type = 'button';
+      btn.textContent = 'Copy';
+      btn.addEventListener('click', function() {
+        var txt = block.innerText;
+        navigator.clipboard.writeText(txt).then(function() {
+          btn.classList.add('copied');
+          btn.textContent = 'Copied!';
+          setTimeout(function() {
+            btn.classList.remove('copied');
+            btn.textContent = 'Copy';
+          }, 1600);
+        }, function() {
+          var ta = document.createElement('textarea');
+          ta.value = txt; document.body.appendChild(ta); ta.select();
+          try { document.execCommand('copy'); } catch(e) {}
+          document.body.removeChild(ta);
+          btn.textContent = 'Copied!';
+          setTimeout(function() { btn.textContent = 'Copy'; }, 1600);
+        });
+      });
+      block.parentElement.appendChild(btn);
+    });
+  }
+  setup();
+})();
+</script>
+</body>
+</html>
+

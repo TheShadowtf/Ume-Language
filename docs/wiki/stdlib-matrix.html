@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Matrices — Ume Language</title>
+<link rel="stylesheet" href="../style.css"/>
+<link rel="icon" href="../img/logo.png"/>
+<link rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css"
+      referrerpolicy="no-referrer"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/csharp.min.js" defer></script>
+</head>
+<body>
+
+<nav class="topnav">
+  <a class="nav-brand" href="../index.html">
+    <img src="../img/logo.png" alt="Ume"/>
+    <span>Ume</span>
+  </a>
+  <div class="nav-links">
+    <a href="../index.html">Home</a>
+    <a href="index.html">Wiki</a>
+    <a href="https://github.com" target="_blank" rel="noopener">GitHub</a>
+    <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Toggle dark mode">
+      <span id="theme-icon">◐</span>
+    </button>
+  </div>
+</nav>
+
+<div class="wiki">
+<aside class="sidebar">
+
+  <h4>Overview</h4>
+
+  <a href="index.html">Wiki Home</a>
+
+  <a href="getting-started.html">Getting Started</a>
+
+  <a href="project-config.html">Projects &amp; ume.toml</a>
+
+  <a href="modules.html">Modules &amp; Imports</a>
+
+  <h4>Language</h4>
+
+  <a href="types.html">Primitive Types</a>
+
+  <a href="variables.html">Variables &amp; Scope</a>
+
+  <a href="strings.html">Strings &amp; Interpolation</a>
+
+  <a href="expressions.html">Expressions &amp; Operators</a>
+
+  <a href="functions.html">Functions</a>
+
+  <a href="control-flow.html">Control Flow</a>
+
+  <a href="classes.html">Classes</a>
+
+  <a href="interfaces.html">Interfaces &amp; Abstract</a>
+
+  <a href="enums.html">Enums &amp; Structs</a>
+
+  <a href="generics.html">Generics</a>
+
+  <a href="properties.html">Properties &amp; Indexers</a>
+
+  <a href="attributes.html">Attributes</a>
+
+  <a href="exceptions.html">Exceptions</a>
+
+  <a href="lambdas.html">Lambdas &amp; Closures</a>
+
+  <a href="operators.html">Operator Overloading</a>
+
+  <a href="unsafe.html">Unsafe Blocks</a>
+
+  <h4>Standard Library</h4>
+
+  <a href="stdlib-core.html">Core (Prelude)</a>
+
+  <a href="stdlib-io.html">Console &amp; File</a>
+
+  <a href="stdlib-collections.html">Collections</a>
+
+  <a href="stdlib-string.html">String Utilities</a>
+
+  <a href="stdlib-math.html">Math &amp; Random</a>
+
+  <a href="stdlib-json.html">JSON</a>
+
+  <a href="stdlib-thread.html">Concurrency</a>
+
+  <a href="stdlib-audio.html">Audio</a>
+
+  <a href="stdlib-net.html">Networking</a>
+
+  <a href="stdlib-system.html">System &amp; FileSystem</a>
+
+  <a href="stdlib-time.html">Time &amp; Timestep</a>
+
+  <a href="stdlib-graphics.html">Graphics</a>
+
+  <a href="stdlib-vector.html">Vectors</a>
+
+  <a href="stdlib-matrix.html" class=&#34;active&#34;>Matrices</a>
+
+</aside>
+
+<main class="content">
+
+<span class="eyebrow">Standard Library</span>
+<h1>Matrices</h1>
+<p class="lead">Column-major matrix types for 2D and 3D transformations, projections, view matrices, and matrix math (<code>Matrix2x2</code>, <code>Matrix3x3</code>, <code>Matrix4x4</code>).</p>
+
+<div class="callout callout-info">
+  <div class="callout-title">Importing</div>
+  <pre><code class="language-ume">import std.matrix.*;</code></pre>
+</div>
+
+<h2 id="matrix4x4"><code>Matrix4x4</code></h2>
+<p>A 4×4 column-major matrix stored as a 16-element <code>float</code> array. Provides full transformation pipelines for 3D graphics including perspective, orthographic, look-at camera, translation, scaling, and rotations.</p>
+
+<table>
+  <thead><tr><th>Method / Member</th><th>Signature / Description</th></tr></thead>
+  <tbody>
+    <tr><td><code>m</code></td><td><code>public float[] m</code> — 16-element float array storing matrix data in column-major order.</td></tr>
+    <tr><td>constructor</td><td><code>public Matrix4x4()</code> / <code>public Matrix4x4(float[] values)</code></td></tr>
+    <tr><td><code>get</code> / <code>set</code></td><td><code>public float get(int col, int row)</code> / <code>public void set(int col, int row, float val)</code></td></tr>
+    <tr><td>Operators</td><td><code>operator *</code> (matrix multiply), <code>operator +</code> (matrix add), <code>operator ==</code></td></tr>
+    <tr><td><code>transposed</code></td><td><code>public func Matrix4x4 transposed()</code></td></tr>
+    <tr><td><code>toArray</code></td><td><code>public func float[] toArray()</code> — Returns the internal 16-element float array (useful for <code>Shader.setMat4</code>).</td></tr>
+    <tr><td><code>identity</code></td><td><code>public static func Matrix4x4 identity()</code></td></tr>
+    <tr><td><code>translation</code></td><td><code>public static func Matrix4x4 translation(float tx, float ty, float tz)</code></td></tr>
+    <tr><td><code>scale</code></td><td><code>public static func Matrix4x4 scale(float sx, float sy, float sz)</code></td></tr>
+    <tr><td><code>rotationX/Y/Z</code></td><td><code>public static func Matrix4x4 rotationX(float angle)</code> (also <code>rotationY</code>, <code>rotationZ</code>)</td></tr>
+    <tr><td><code>perspective</code></td><td><code>public static func Matrix4x4 perspective(double fov, double aspect, double near, double far)</code></td></tr>
+    <tr><td><code>ortho</code></td><td><code>public static func Matrix4x4 ortho(double left, double right, double bottom, double top, double near, double far)</code></td></tr>
+    <tr><td><code>lookAt</code></td><td><code>public static func Matrix4x4 lookAt(double ex, double ey, double ez, double cx, double cy, double cz, double ux, double uy, double uz)</code></td></tr>
+  </tbody>
+</table>
+
+<h3 id="matrix4x4-example">Example Usage</h3>
+<pre><code class="language-ume">import std.graphics.*;
+import std.matrix.*;
+
+// Setup View and Projection matrices
+Matrix4x4 view = Matrix4x4.lookAt(0.0, 5.0, 10.0,  0.0, 0.0, 0.0,  0.0, 1.0, 0.0);
+Matrix4x4 proj = Matrix4x4.perspective(1.15, 1.33, 0.1, 100.0);
+
+// Combine matrices using operator overloading (*)
+Matrix4x4 mvp = proj * view;
+
+// Pass matrix to shader uniform
+shader.setMat4(&quot;mvp&quot;, mvp.toArray());</code></pre>
+
+<h2 id="matrix3x3"><code>Matrix3x3</code></h2>
+<p>A 3×3 column-major matrix stored as a 9-element <code>float</code> array. Used for 2D affine transformations (translation, scale, rotation) or 3D orientation/normal transformation matrices.</p>
+
+<table>
+  <thead><tr><th>Method / Member</th><th>Signature / Description</th></tr></thead>
+  <tbody>
+    <tr><td>constructor</td><td><code>public Matrix3x3()</code> / <code>public Matrix3x3(float[] values)</code></td></tr>
+    <tr><td><code>get</code> / <code>set</code></td><td><code>public float get(int col, int row)</code> / <code>public void set(int col, int row, float val)</code></td></tr>
+    <tr><td>Operators</td><td><code>operator *</code>, <code>operator ==</code></td></tr>
+    <tr><td><code>transposed</code> / <code>determinant</code></td><td><code>public func Matrix3x3 transposed()</code> / <code>public func float determinant()</code></td></tr>
+    <tr><td>Static Factories</td><td><code>identity()</code>, <code>translation(tx, ty)</code>, <code>scale(sx, sy)</code>, <code>rotationZ(angle)</code></td></tr>
+  </tbody>
+</table>
+
+<h2 id="matrix2x2"><code>Matrix2x2</code></h2>
+<p>A 2×2 column-major matrix stored as a 4-element <code>float</code> array for 2D rotations and scaling.</p>
+
+<table>
+  <thead><tr><th>Method / Member</th><th>Signature / Description</th></tr></thead>
+  <tbody>
+    <tr><td>constructor</td><td><code>public Matrix2x2()</code> / <code>public Matrix2x2(m00, m01, m10, m11)</code></td></tr>
+    <tr><td>Operators</td><td><code>operator *</code>, <code>operator ==</code></td></tr>
+    <tr><td>Static Factories</td><td><code>identity()</code>, <code>scale(sx, sy)</code>, <code>rotation(angle)</code></td></tr>
+  </tbody>
+</table>
+
+<p><a class="next-link" href="stdlib-graphics.html">← Graphics</a></p>
+</main>
+</div>
+<footer>
+  <div class="container">
+    <p>Ume Language &nbsp;·&nbsp; <a href="../index.html">Home</a> &nbsp;·&nbsp;
+       <a href="index.html">Wiki</a> &nbsp;·&nbsp; MIT License</p>
+  </div>
+</footer>
+<script>
+(function() {
+  // Theme toggle (persisted, respects OS preference on first load)
+  var root = document.documentElement;
+  var stored = localStorage.getItem('ume-theme');
+  if (!stored) {
+    stored = (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches)
+      ? 'dark' : 'light';
+  }
+  root.setAttribute('data-theme', stored);
+  var icon = document.getElementById('theme-icon');
+  if (icon) icon.textContent = stored === 'dark' ? '◑' : '◐';
+
+  document.getElementById('theme-toggle').addEventListener('click', function() {
+    var cur = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    root.setAttribute('data-theme', cur);
+    localStorage.setItem('ume-theme', cur);
+    if (icon) icon.textContent = cur === 'dark' ? '◑' : '◐';
+  });
+
+  // Highlight + copy button
+  function setup() {
+    if (!window.hljs) { setTimeout(setup, 30); return; }
+    try { hljs.registerAliases(['ume','Ume'], { languageName: 'csharp' }); } catch(e) {}
+    document.querySelectorAll('pre code').forEach(function(block) {
+      try { hljs.highlightElement(block); } catch(e) {}
+      if (block.parentElement.querySelector('.copy-btn')) return;
+      var btn = document.createElement('button');
+      btn.className = 'copy-btn';
+      btn.type = 'button';
+      btn.textContent = 'Copy';
+      btn.addEventListener('click', function() {
+        var txt = block.innerText;
+        navigator.clipboard.writeText(txt).then(function() {
+          btn.classList.add('copied');
+          btn.textContent = 'Copied!';
+          setTimeout(function() {
+            btn.classList.remove('copied');
+            btn.textContent = 'Copy';
+          }, 1600);
+        }, function() {
+          var ta = document.createElement('textarea');
+          ta.value = txt; document.body.appendChild(ta); ta.select();
+          try { document.execCommand('copy'); } catch(e) {}
+          document.body.removeChild(ta);
+          btn.textContent = 'Copied!';
+          setTimeout(function() { btn.textContent = 'Copy'; }, 1600);
+        });
+      });
+      block.parentElement.appendChild(btn);
+    });
+  }
+  setup();
+})();
+</script>
+</body>
+</html>
+

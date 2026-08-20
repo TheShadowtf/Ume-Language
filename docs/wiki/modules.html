@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Modules &amp; Imports — Ume Language</title>
+<link rel="stylesheet" href="../style.css"/>
+<link rel="icon" href="../img/logo.png"/>
+<link rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css"
+      referrerpolicy="no-referrer"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/csharp.min.js" defer></script>
+</head>
+<body>
+
+<nav class="topnav">
+  <a class="nav-brand" href="../index.html">
+    <img src="../img/logo.png" alt="Ume"/>
+    <span>Ume</span>
+  </a>
+  <div class="nav-links">
+    <a href="../index.html">Home</a>
+    <a href="index.html">Wiki</a>
+    <a href="https://github.com" target="_blank" rel="noopener">GitHub</a>
+    <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Toggle dark mode">
+      <span id="theme-icon">◐</span>
+    </button>
+  </div>
+</nav>
+
+<div class="wiki">
+<aside class="sidebar">
+
+  <h4>Overview</h4>
+
+  <a href="index.html">Wiki Home</a>
+
+  <a href="getting-started.html">Getting Started</a>
+
+  <a href="project-config.html">Projects &amp; ume.toml</a>
+
+  <a href="modules.html" class=&#34;active&#34;>Modules &amp; Imports</a>
+
+  <h4>Language</h4>
+
+  <a href="types.html">Primitive Types</a>
+
+  <a href="variables.html">Variables &amp; Scope</a>
+
+  <a href="strings.html">Strings &amp; Interpolation</a>
+
+  <a href="expressions.html">Expressions &amp; Operators</a>
+
+  <a href="functions.html">Functions</a>
+
+  <a href="control-flow.html">Control Flow</a>
+
+  <a href="classes.html">Classes</a>
+
+  <a href="interfaces.html">Interfaces &amp; Abstract</a>
+
+  <a href="enums.html">Enums &amp; Structs</a>
+
+  <a href="generics.html">Generics</a>
+
+  <a href="properties.html">Properties &amp; Indexers</a>
+
+  <a href="attributes.html">Attributes</a>
+
+  <a href="exceptions.html">Exceptions</a>
+
+  <a href="lambdas.html">Lambdas &amp; Closures</a>
+
+  <a href="operators.html">Operator Overloading</a>
+
+  <a href="unsafe.html">Unsafe Blocks</a>
+
+  <h4>Standard Library</h4>
+
+  <a href="stdlib-core.html">Core (Prelude)</a>
+
+  <a href="stdlib-io.html">Console &amp; File</a>
+
+  <a href="stdlib-collections.html">Collections</a>
+
+  <a href="stdlib-string.html">String Utilities</a>
+
+  <a href="stdlib-math.html">Math &amp; Random</a>
+
+  <a href="stdlib-json.html">JSON</a>
+
+  <a href="stdlib-thread.html">Concurrency</a>
+
+  <a href="stdlib-audio.html">Audio</a>
+
+  <a href="stdlib-net.html">Networking</a>
+
+  <a href="stdlib-system.html">System &amp; FileSystem</a>
+
+  <a href="stdlib-time.html">Time &amp; Timestep</a>
+
+  <a href="stdlib-graphics.html">Graphics</a>
+
+  <a href="stdlib-vector.html">Vectors</a>
+
+  <a href="stdlib-matrix.html">Matrices</a>
+
+</aside>
+
+<main class="content">
+
+<span class="eyebrow">Language</span>
+<h1>Modules &amp; Imports</h1>
+<p class="lead">Ume has two independent mechanisms for bringing external code into a file: an AST-level <code>import</code> statement that resolves packages by name (Java/C# style), and a C-style <code>#include</code> preprocessor directive that textually splices a file's source. This page covers both, in full.</p>
+
+<h2 id="overview">The two mechanisms at a glance</h2>
+<p>Both let you reuse code across files, but they operate at completely different stages of the pipeline and have very different semantics. Understanding the difference matters because mixing them up is the most common source of "why can't the compiler find my symbol" bugs.</p>
+<table>
+  <thead><tr><th></th><th><code>import</code></th><th><code>#include</code></th></tr></thead>
+  <tbody>
+    <tr><td>Processing stage</td><td>After parsing — operates on the AST.</td><td>Before lexing — raw text substitution.</td></tr>
+    <tr><td>What it targets</td><td>A <strong>package/namespace name</strong>.</td><td>A <strong>file path</strong>.</td></tr>
+    <tr><td>File discovery</td><td>Automatic — the resolver scans your project for <code>package</code>/<code>namespace</code> declarations.</td><td>Manual — the path must point to an existing file.</td></tr>
+    <tr><td>Symbol isolation</td><td>High — you can import a single symbol (<code>import pkg.Foo</code>) or all (<code>import pkg.*</code>).</td><td>None — the whole file is pasted in verbatim.</td></tr>
+    <tr><td>Wildcard</td><td>Yes (<code>.*</code>)</td><td>No</td></tr>
+    <tr><td>Duplicate guard</td><td>Symbol-table deduplication (same class imported twice is fine).</td><td>File-path tracking (each file is included at most once).</td></tr>
+    <tr><td>Typical use</td><td>Application code, library APIs, stdlib.</td><td>Textual macros, sharing config, C-style header inclusion.</td></tr>
+  </tbody>
+</table>
+
+<h2 id="package">Declaring a package</h2>
+<p>A <code>package</code> declaration at the top of a <code>.ume</code> file gives that file a logical module name. The name can be dotted. The package resolver scans every <code>.ume</code> file under your project's search paths (the current directory, the directory of the entry file, and any <code>-I</code> include paths) and builds a map from package name → file. When you later write <code>import mypkg</code>, the resolver looks the name up in that map — it does <em>not</em> care about the file's location on disk, only its declared package name.</p>
+<pre><code class="language-ume">package MyApp;
+
+public class Greeter {
+    public func string hello(string name) {
+        return $&quot;Hello, {name}!&quot;;
+    }
+}</code></pre>
+
+<p>The <code>namespace</code> keyword works the same way and is interchangeable for the purpose of imports — <code>namespace</code> is provided as a keyword for developers coming from C++/Kotlin. The resolver treats both identically when scanning.</p>
+<pre><code class="language-ume">// File-level — same as `package MyApp;`
+namespace MyApp;
+
+// Block-level — groups several declarations under one name
+namespace MyApp.Models {
+    public class User {
+        public int id;
+        public string name;
+    }
+}</code></pre>
+
+<p>When using a block-level namespace, the resolver recurses into the block and registers every top-level declaration inside it as belonging to that namespace. So <code>User</code> above is reachable as <code>MyApp.Models.User</code>.</p>
+
+<div class="callout callout-info">
+  <div class="callout-title">Automatic file discovery</div>
+  <p>You do <strong>not</strong> need to place files in rigid directory layouts that mirror the package name. The resolver scans the whole project tree for <code>package</code>/<code>namespace</code> declarations, so a file declaring <code>package MyApp.Models;</code> can live anywhere — even flat in <code>src/</code>. The name is what matters, not the path.</p>
+</div>
+
+<h2 id="import">Importing symbols with <code>import</code></h2>
+<p>The <code>import</code> statement is the primary way to reference code from other packages. There are three forms.</p>
+
+<h3 id="import-selective">Selective symbol import</h3>
+<p>Import only one specific class, function, struct, enum, or interface from a package. Other declarations in that package are <strong>not</strong> pulled in and cannot be referenced unless you import them too. This keeps your file's scope clean.</p>
+<pre><code class="language-ume">package Main;
+
+import MyApp.Models.User;   // only User is brought in
+
+func void main() {
+    var u = new User();
+    u.id   = 1;
+    u.name = &quot;Alice&quot;;
+    Console.println(u.name);
+}</code></pre>
+
+<h3 id="import-wildcard">Wildcard import</h3>
+<p>Import <em>all</em> public declarations from a package. Convenient for quick scripts and when you genuinely want everything.</p>
+<pre><code class="language-ume">import std.collections.*;
+import std.thread.*;
+import std.math.*;
+
+func void main() {
+    var nums = new List&lt;int&gt;();
+    var m    = new Mutex();
+    var pi   = Math.PI;
+}</code></pre>
+
+<h3 id="import-module">Whole-module import</h3>
+<p>If you write <code>import pkg;</code> without a trailing symbol or wildcard, the resolver loads the package file and injects its declarations, but they're referenced through the package path rather than dumped into your scope. This form is rarely used directly — selective and wildcard imports cover almost all real cases.</p>
+<pre><code class="language-ume">import MyApp.Models;
+
+func void main() {
+    var u = new MyApp.Models.User();
+}</code></pre>
+
+<h3 id="import-string">String-form import</h3>
+<p>You can also pass the import path as a string literal. This is occasionally useful when the package name contains characters that would otherwise need escaping, but it's uncommon.</p>
+<pre><code class="language-ume">import &quot;MyApp.Models.User&quot;;</code></pre>
+
+<h2 id="include">Textual inclusion with <code>#include</code></h2>
+<p><code>#include</code> is a <strong>preprocessor directive</strong>. Before the lexer even sees your source, the preprocessor scans for <code>#include</code> lines, reads the named file, and pastes its contents verbatim into your source at that point. This is exactly how C/C++ <code>#include</code> works. There is no symbol resolution — the included file's tokens become your tokens.</p>
+
+<p>The delimiter controls where the resolver looks for the file:</p>
+<table>
+  <thead><tr><th>Form</th><th>Search location</th></tr></thead>
+  <tbody>
+    <tr><td><code>#include "path.ume"</code></td><td>Relative to the <em>current file's directory</em> first, then the configured include paths.</td></tr>
+    <tr><td><code>#include &lt;path.ume&gt;</code></td><td>Relative to the Ume standard library directory (<code>stdlib/</code>) and system include paths only.</td></tr>
+  </tbody>
+</table>
+
+<pre><code class="language-ume">// Pull in a shared config file next to this one
+#include &quot;config.ume&quot;
+
+// Pull in something from the stdlib tree
+#include &lt;io.ume&gt;
+
+func void main() {
+    // config.ume&#39;s contents are now part of this file
+    Console.println(GREETING);
+}</code></pre>
+
+<h3 id="include-guards">Include guards</h3>
+<p>The preprocessor tracks every file it has already included by absolute path. If you <code>#include</code> the same file twice (directly or transitively), the second and subsequent includes are silently skipped. This means you don't need manual <code>#pragma once</code>-style guards — Ume handles it for you. It also means <code>#include</code> is idempotent, which is important for cyclic or diamond-shaped include graphs.</p>
+
+<div class="callout callout-info">
+  <div class="callout-title">When to use which</div>
+  <p>Use <code>import</code> for application code and library APIs — it gives you symbol isolation, wildcard convenience, and works regardless of file location. Reserve <code>#include</code> for cases where you genuinely want raw text splicing: shared constant blocks, code-generation templates, or C-style header idioms. For everyday work, <code>import</code> is almost always the right choice.</p>
+</div>
+
+<h2 id="resolution">How the resolver finds a package</h2>
+<p>When the compiler sees <code>import a.b.c</code>, the package resolver tries several strategies in order until one succeeds. Knowing this order helps debug "unresolved import" errors.</p>
+<ol>
+  <li><strong>Exact package map match.</strong> If any scanned file declares <code>package a.b.c;</code>, that file is used.</li>
+  <li><strong>Dotted split.</strong> Split into <code>a.b</code> (package) + <code>c</code> (symbol). If a file declares <code>package a.b;</code>, load it and pull out only <code>c</code>.</li>
+  <li><strong>Filesystem match.</strong> Convert dots to slashes (<code>a/b/c</code>) and look for <code>a/b/c.ume</code> or <code>a/b/c/package.ume</code> in each search path.</li>
+  <li><strong>Symbol split on filesystem.</strong> Same as #2 but applied to the filesystem: look for <code>a/b.ume</code> and treat <code>c</code> as the symbol.</li>
+  <li><strong>Bare filename.</strong> If all else fails, treat the whole thing as a filename and look for it directly (e.g. <code>math.ume</code>).</li>
+</ol>
+<p>The search paths tried are: the current file's directory, then every <code>-I</code> path, then the current working directory. The standard library directory is always searched.</p>
+
+<h2 id="stdlib">Standard library imports</h2>
+<p>The bundled standard library lives in the <code>stdlib/</code> directory and is organized into packages. Each file declares its own package name (for example, <code>collections.ume</code> declares <code>package std.collections;</code>).</p>
+
+<p>Every standard library module can be brought in <strong>two ways</strong>:</p>
+<table>
+  <thead><tr><th>Module</th><th><code>import</code> (AST-level, recommended)</th><th><code>#include</code> (textual, C-style)</th><th>What it provides</th></tr></thead>
+  <tbody>
+    <tr><td>Collections</td><td><code>import std.collections.*;</code></td><td><code>#include &lt;collections.ume&gt;</code></td><td><code>List&lt;T&gt;</code>, <code>Map&lt;K,V&gt;</code>, <code>Set&lt;T&gt;</code>, <code>Stack&lt;T&gt;</code>, <code>Queue&lt;T&gt;</code></td></tr>
+    <tr><td>String</td><td><code>import std.string.*;</code></td><td><code>#include &lt;string.ume&gt;</code></td><td><code>StringUtils</code>, <code>StringBuilder</code></td></tr>
+    <tr><td>Math</td><td><code>import std.math.*;</code></td><td><code>#include &lt;math.ume&gt;</code></td><td>Extended <code>Math</code> (E, TAU, absi, log2…), <code>Random</code></td></tr>
+    <tr><td>Thread</td><td><code>import std.thread.*;</code></td><td><code>#include &lt;thread.ume&gt;</code></td><td><code>Thread</code>, <code>Mutex</code>, <code>ConditionVariable</code>, <code>AtomicInt</code>, <code>Task&lt;T&gt;</code></td></tr>
+    <tr><td>Audio</td><td><code>import std.audio.*;</code></td><td><code>#include &lt;audio.ume&gt;</code></td><td><code>AudioEngine</code>, <code>Sound</code></td></tr>
+    <tr><td>Net</td><td><code>import std.net.*;</code></td><td><code>#include &lt;net.ume&gt;</code></td><td><code>HttpClient</code>, <code>TcpSocket</code>, <code>TcpListener</code>, <code>Url</code></td></tr>
+    <tr><td>System</td><td><code>import std.system.*;</code></td><td><code>#include &lt;system.ume&gt;</code></td><td><code>System</code>, <code>FileSystem</code></td></tr>
+    <tr><td>Graphics</td><td><code>import std.graphics.*;</code></td><td><code>#include &lt;graphics.ume&gt;</code></td><td><code>Window</code>, <code>Color</code>, <code>Shader</code>, <code>Mesh</code>, <code>Key</code>, <code>MouseButton</code></td></tr>
+    <tr><td>Vector</td><td><code>import std.vector.*;</code></td><td><code>#include &lt;vector.ume&gt;</code></td><td><code>Vector2</code>, <code>Vector3</code></td></tr>
+    <tr><td>IO</td><td><code>import std.io.*;</code></td><td><code>#include &lt;io.ume&gt;</code></td><td><code>Console</code>, <code>File</code></td></tr>
+  </tbody>
+</table>
+
+<div class="callout callout-info">
+  <div class="callout-title">Always available (no import needed)</div>
+  <p>The following are natively backed by the interpreter and are always in scope — no <code>import</code> or <code>#include</code> required:</p>
+  <ul>
+    <li><code>Console</code> — <code>println</code>, <code>print</code>, <code>readLine</code>, <code>WriteLine</code>, <code>Write</code>, <code>clear</code></li>
+    <li><code>Math</code> — basic functions (PI, sqrt, pow, abs, floor, ceil, round, sin, cos, tan, log, log10, min, max, clamp)</li>
+    <li><code>range()</code>, <code>rangeTo()</code>, <code>repeat()</code> — prelude helper functions</li>
+    <li><code>Pair</code>, <code>StringBuilder</code> — prelude classes (natively backed)</li>
+    <li><code>Thread.sleep()</code> — static method</li>
+  </ul>
+</div>
+
+<h2 id="auto">What's auto-loaded (the prelude)</h2>
+<p>A few things are always available without any import. The <code>prelude.ume</code> file is automatically loaded by the runtime before your code runs. It provides the base <code>Exception</code> class, a generic-any <code>Stack</code> and <code>Queue</code> (the older pre-generics versions), <code>Pair</code>, the <code>range()</code> and <code>repeat()</code> helper functions, and a pre-generics <code>StringBuilder</code>. The core <code>Console</code> and basic <code>Math</code> (PI, sqrt, sin, cos, …) classes are natively backed by the C++ runtime and are also always available. See <a href="stdlib-core.html">Core (Prelude)</a> for the full list.</p>
+
+<h2 id="example">A complete multi-file example</h2>
+<p>Here's a small project showing both mechanisms in use. The math helpers use the package system (selective import), and a shared constants file uses <code>#include</code>.</p>
+
+<h4>math_tools.ume</h4>
+<pre><code class="language-ume">namespace MyMath;
+
+public func int add(int a, int b) {
+    return a + b;
+}
+
+public func int multiply(int a, int b) {
+    return a * b;
+}</code></pre>
+
+<h4>config.ume (textually included)</h4>
+<pre><code class="language-ume">// These constants get pasted into main.ume verbatim
+const int MAX_RETRIES = 3;
+const string APP_NAME = &quot;demo&quot;;</code></pre>
+
+<h4>main.ume</h4>
+<pre><code class="language-ume">package App;
+
+#include &quot;config.ume&quot;            // textual include — MAX_RETRIES, APP_NAME now in scope
+import MyMath.add;               // selective import — only add(), not multiply()
+
+func void main() {
+    int sum = add(10, 20);       // works — add was imported
+    // int prod = multiply(10, 20);  // ERROR — multiply was not imported
+
+    Console.println($&quot;{APP_NAME}: sum = {sum}, retries = {MAX_RETRIES}&quot;);
+}</code></pre>
+
+<p><a class="next-link" href="types.html">Primitive Types →</a></p>
+</main>
+</div>
+<footer>
+  <div class="container">
+    <p>Ume Language &nbsp;·&nbsp; <a href="../index.html">Home</a> &nbsp;·&nbsp;
+       <a href="index.html">Wiki</a> &nbsp;·&nbsp; MIT License</p>
+  </div>
+</footer>
+<script>
+(function() {
+  // Theme toggle (persisted, respects OS preference on first load)
+  var root = document.documentElement;
+  var stored = localStorage.getItem('ume-theme');
+  if (!stored) {
+    stored = (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches)
+      ? 'dark' : 'light';
+  }
+  root.setAttribute('data-theme', stored);
+  var icon = document.getElementById('theme-icon');
+  if (icon) icon.textContent = stored === 'dark' ? '◑' : '◐';
+
+  document.getElementById('theme-toggle').addEventListener('click', function() {
+    var cur = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    root.setAttribute('data-theme', cur);
+    localStorage.setItem('ume-theme', cur);
+    if (icon) icon.textContent = cur === 'dark' ? '◑' : '◐';
+  });
+
+  // Highlight + copy button
+  function setup() {
+    if (!window.hljs) { setTimeout(setup, 30); return; }
+    try { hljs.registerAliases(['ume','Ume'], { languageName: 'csharp' }); } catch(e) {}
+    document.querySelectorAll('pre code').forEach(function(block) {
+      try { hljs.highlightElement(block); } catch(e) {}
+      if (block.parentElement.querySelector('.copy-btn')) return;
+      var btn = document.createElement('button');
+      btn.className = 'copy-btn';
+      btn.type = 'button';
+      btn.textContent = 'Copy';
+      btn.addEventListener('click', function() {
+        var txt = block.innerText;
+        navigator.clipboard.writeText(txt).then(function() {
+          btn.classList.add('copied');
+          btn.textContent = 'Copied!';
+          setTimeout(function() {
+            btn.classList.remove('copied');
+            btn.textContent = 'Copy';
+          }, 1600);
+        }, function() {
+          var ta = document.createElement('textarea');
+          ta.value = txt; document.body.appendChild(ta); ta.select();
+          try { document.execCommand('copy'); } catch(e) {}
+          document.body.removeChild(ta);
+          btn.textContent = 'Copied!';
+          setTimeout(function() { btn.textContent = 'Copy'; }, 1600);
+        });
+      });
+      block.parentElement.appendChild(btn);
+    });
+  }
+  setup();
+})();
+</script>
+</body>
+</html>
+

@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Primitive Types — Ume Language</title>
+<link rel="stylesheet" href="../style.css"/>
+<link rel="icon" href="../img/logo.png"/>
+<link rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css"
+      referrerpolicy="no-referrer"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/csharp.min.js" defer></script>
+</head>
+<body>
+
+<nav class="topnav">
+  <a class="nav-brand" href="../index.html">
+    <img src="../img/logo.png" alt="Ume"/>
+    <span>Ume</span>
+  </a>
+  <div class="nav-links">
+    <a href="../index.html">Home</a>
+    <a href="index.html">Wiki</a>
+    <a href="https://github.com" target="_blank" rel="noopener">GitHub</a>
+    <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Toggle dark mode">
+      <span id="theme-icon">◐</span>
+    </button>
+  </div>
+</nav>
+
+<div class="wiki">
+<aside class="sidebar">
+
+  <h4>Overview</h4>
+
+  <a href="index.html">Wiki Home</a>
+
+  <a href="getting-started.html">Getting Started</a>
+
+  <a href="project-config.html">Projects &amp; ume.toml</a>
+
+  <a href="modules.html">Modules &amp; Imports</a>
+
+  <h4>Language</h4>
+
+  <a href="types.html" class=&#34;active&#34;>Primitive Types</a>
+
+  <a href="variables.html">Variables &amp; Scope</a>
+
+  <a href="strings.html">Strings &amp; Interpolation</a>
+
+  <a href="expressions.html">Expressions &amp; Operators</a>
+
+  <a href="functions.html">Functions</a>
+
+  <a href="control-flow.html">Control Flow</a>
+
+  <a href="classes.html">Classes</a>
+
+  <a href="interfaces.html">Interfaces &amp; Abstract</a>
+
+  <a href="enums.html">Enums &amp; Structs</a>
+
+  <a href="generics.html">Generics</a>
+
+  <a href="properties.html">Properties &amp; Indexers</a>
+
+  <a href="attributes.html">Attributes</a>
+
+  <a href="exceptions.html">Exceptions</a>
+
+  <a href="lambdas.html">Lambdas &amp; Closures</a>
+
+  <a href="operators.html">Operator Overloading</a>
+
+  <a href="unsafe.html">Unsafe Blocks</a>
+
+  <h4>Standard Library</h4>
+
+  <a href="stdlib-core.html">Core (Prelude)</a>
+
+  <a href="stdlib-io.html">Console &amp; File</a>
+
+  <a href="stdlib-collections.html">Collections</a>
+
+  <a href="stdlib-string.html">String Utilities</a>
+
+  <a href="stdlib-math.html">Math &amp; Random</a>
+
+  <a href="stdlib-json.html">JSON</a>
+
+  <a href="stdlib-thread.html">Concurrency</a>
+
+  <a href="stdlib-audio.html">Audio</a>
+
+  <a href="stdlib-net.html">Networking</a>
+
+  <a href="stdlib-system.html">System &amp; FileSystem</a>
+
+  <a href="stdlib-time.html">Time &amp; Timestep</a>
+
+  <a href="stdlib-graphics.html">Graphics</a>
+
+  <a href="stdlib-vector.html">Vectors</a>
+
+  <a href="stdlib-matrix.html">Matrices</a>
+
+</aside>
+
+<main class="content">
+
+<span class="eyebrow">Language</span>
+<h1>Primitive Types</h1>
+<p class="lead">Ume is statically typed. Every variable, parameter, field, and return value has a type known at compile time. The built-in primitive types cover numeric, textual, and boolean values; user-defined types (classes, structs, enums, interfaces) build on top of these.</p>
+
+<h2 id="numeric">Numeric types</h2>
+<p>Ume provides the standard C-family numeric types. Sizes follow the C++17 <code>&lt;cstdint&gt;</code> conventions on the target platform — on Windows/MSVC, <code>int</code> and <code>long</code> are both 32 bits.</p>
+<table>
+  <thead><tr><th>Type</th><th>Kind</th><th>Typical width</th><th>Example</th></tr></thead>
+  <tbody>
+    <tr><td><code>int</code></td><td>Signed integer</td><td>32 bits</td><td><code>int x = 42;</code></td></tr>
+    <tr><td><code>long</code></td><td>Signed integer</td><td>32 or 64 bits (platform)</td><td><code>long ms = 1700000000L;</code></td></tr>
+    <tr><td><code>short</code></td><td>Signed integer</td><td>16 bits</td><td><code>short s = 1000;</code></td></tr>
+    <tr><td><code>byte</code></td><td>Signed integer</td><td>8 bits</td><td><code>byte b = 255;</code></td></tr>
+    <tr><td><code>float</code></td><td>Floating point</td><td>32 bits (IEEE 754)</td><td><code>float f = 3.14f;</code></td></tr>
+    <tr><td><code>double</code></td><td>Floating point</td><td>64 bits (IEEE 754)</td><td><code>double pi = 3.14159;</code></td></tr>
+  </tbody>
+</table>
+
+<p>Integer literals can be written in decimal or hexadecimal (<code>0x</code> prefix). A trailing <code>f</code> on a numeric literal makes it a <code>float</code>; without it, a literal containing a decimal point or exponent is a <code>double</code>, and one without either is an <code>int</code>.</p>
+<pre><code class="language-ume">int    dec   = 255;
+int    hex   = 0xFF;        // 255
+double pi    = 3.14159;
+double sci   = 1.5e3;       // 1500.0
+float  half  = 0.5f;
+long   big   = 9000000000;</code></pre>
+
+<h2 id="bool"><code>bool</code></h2>
+<p>The boolean type has two values: <code>true</code> and <code>false</code>. It's the type of comparison results, logical operators, and conditions in <code>if</code>/<code>while</code>/<code>for</code>. There's no implicit conversion between <code>bool</code> and integers — you must compare explicitly.</p>
+<pre><code class="language-ume">bool ready  = true;
+bool empty  = (0 == 0);
+bool larger = (10 &gt; 5) &amp;&amp; (3 != 4);
+
+if (ready) {
+    Console.println(&quot;go&quot;);
+}</code></pre>
+
+<h2 id="char"><code>char</code></h2>
+<p>A single character, written with single quotes. Supports the standard escape sequences. <code>char</code> is a value type — assigning one <code>char</code> to another copies the value.</p>
+<pre><code class="language-ume">char letter = &#39;A&#39;;
+char nl     = &#39;\n&#39;;
+char tab    = &#39;\t&#39;;
+char nul    = &#39;\0&#39;;
+char quote  = &#39;\&#39;&#39;;
+
+Console.println(letter);    // A</code></pre>
+
+<h2 id="string"><code>string</code></h2>
+<p>A reference type holding a sequence of characters. String literals use double quotes and support the same escape sequences as <code>char</code>. Strings are immutable in the standard library sense — operations like concatenation produce new strings rather than mutating in place. See <a href="strings.html">Strings &amp; Interpolation</a> for the full story including the <code>$"…{expr}…"</code> interpolation syntax.</p>
+<pre><code class="language-ume">string name  = &quot;Alice&quot;;
+string path  = &quot;C:\\temp\\file.txt&quot;;
+string multi = &quot;line1\nline2&quot;;
+
+// String concatenation with +
+string full = &quot;Hello, &quot; + name + &quot;!&quot;;
+
+// Length is a method
+Console.println(name.length());   // 5</code></pre>
+
+<h2 id="void"><code>void</code></h2>
+<p>Used only as a return type on functions (and as a parameter list indicator). It means "this function does not return a value". You cannot declare a variable of type <code>void</code>.</p>
+<pre><code class="language-ume">func void log(string msg) {
+    Console.println(msg);
+    // no return statement, or just `return;`
+}</code></pre>
+
+<h2 id="any"><code>any</code></h2>
+<p>A type-erased reference that can hold any value. <code>any</code> is Ume's escape hatch when you genuinely don't know (or don't care about) the static type at compile time — for example, a heterogeneous collection or a parameter that accepts anything. You pay for this with runtime dispatch: method calls on an <code>any</code> are resolved dynamically by the interpreter, and statically-typed code generation may emit runtime type checks.</p>
+<pre><code class="language-ume">any box = 42;            // holds an int
+box   = &quot;now a string&quot;;   // holds a string
+box   = new List&lt;int&gt;();  // holds a List&lt;int&gt;
+
+Console.println(box.toString());   // safe — everything has toString</code></pre>
+
+<p>Because <code>any</code> bypasses static checking, prefer generics over <code>any</code> whenever you can express the same idea generically. A <code>List&lt;int&gt;</code> is always preferable to a <code>List&lt;any&gt;</code> — the former is type-safe at compile time, the latter will happily let you put a string in and crash on retrieval.</p>
+
+<h2 id="nullable">Nullable types <code>T?</code></h2>
+<p>Any reference type (and <code>int?</code>, <code>long?</code>, etc.) can be made nullable by appending a <code>?</code> to the type. A nullable variable can hold either a valid value of the base type or <code>null</code>. The compiler treats nullable and non-nullable as distinct types — you cannot assign <code>null</code> to a non-nullable variable without an explicit cast.</p>
+<pre><code class="language-ume">string  name    = &quot;Alice&quot;;     // non-nullable — cannot be null
+string? nickname = null;        // nullable — can be null or a string
+
+// Safe: nullable to nullable
+string? a = nickname;
+
+// Unsafe without a check — would need an explicit cast or null-coalesce
+// string b = nickname;   // ← rejected: nickname might be null
+
+// Null-coalesce: provide a default when null
+string display = nickname ?? &quot;Anonymous&quot;;
+
+// Safe navigation: method call that&#39;s skipped if null
+int? len = nickname?.length();   // null if nickname is null, else its length</code></pre>
+
+<p>For the full set of null-safety operators (<code>??</code>, <code>?.</code>, <code>!</code>), see <a href="/wiki/expressions#null-safety">Expressions &amp; Operators → Null safety</a>.</p>
+
+<h2 id="array">Array types <code>T[]</code></h2>
+<p>Append <code>[]</code> to a type to get a dynamic array of that type. You can also give a fixed size with <code>T[N]</code>. Arrays support indexing with <code>[]</code> and have a <code>.length()</code> method. Array literals are written with square brackets: <code>[1, 2, 3]</code>.</p>
+<pre><code class="language-ume">int[]  nums   = [10, 20, 30];
+string[] names = [&quot;Alice&quot;, &quot;Bob&quot;];
+
+Console.println(nums[0]);       // 10
+nums[1] = 99;
+Console.println(nums.length()); // 3
+
+// Fixed-size array type
+double[5] samples;</code></pre>
+
+<h2 id="pointer">Pointer types <code>T*</code> (unsafe)</h2>
+<p>Raw pointers exist but are only usable inside <code>unsafe</code> blocks. They're intended for C++ interop and manual memory management. The pointer level can be stacked (<code>int**</code>). See <a href="unsafe.html">Unsafe Blocks</a> for the full story.</p>
+<pre><code class="language-ume">unsafe {
+    int* p = alloc&lt;int&gt;(4);
+    *p = 42;
+    Console.println(*p);
+    free(p);
+}</code></pre>
+
+<h2 id="func-type">Function types <code>func&lt;…&gt;</code></h2>
+<p>You can declare variables and parameters that hold function values. There are two equivalent syntaxes — the angle-bracket form and the inline form. The angle-bracket form lists the return type first, then the parameter types; the inline form writes the return type, then the parameter types in parentheses.</p>
+<pre><code class="language-ume">// Both declare: a function that takes two ints and returns an int
+func&lt;int, int, int&gt; op1;
+func int (int, int) op2;
+
+// Assigning a lambda
+op1 = (int a, int b) -&gt; { return a + b; };
+Console.println(op1(3, 4));   // 7</code></pre>
+<p>See <a href="lambdas.html">Lambdas &amp; Closures</a> for the full treatment.</p>
+
+<h2 id="literal-table">Literal quick reference</h2>
+<table>
+  <thead><tr><th>Literal</th><th>Type</th><th>Notes</th></tr></thead>
+  <tbody>
+    <tr><td><code>42</code></td><td><code>int</code></td><td>Decimal.</td></tr>
+    <tr><td><code>0xFF</code></td><td><code>int</code></td><td>Hexadecimal, <code>0x</code> prefix.</td></tr>
+    <tr><td><code>3.14</code></td><td><code>double</code></td><td>Has a decimal point.</td></tr>
+    <tr><td><code>1.5e3</code></td><td><code>double</code></td><td>Scientific notation.</td></tr>
+    <tr><td><code>0.5f</code></td><td><code>float</code></td><td>Trailing <code>f</code> forces float.</td></tr>
+    <tr><td><code>true</code> / <code>false</code></td><td><code>bool</code></td><td>Keyword literals.</td></tr>
+    <tr><td><code>'A'</code></td><td><code>char</code></td><td>Single quotes; supports escapes.</td></tr>
+    <tr><td><code>"hi"</code></td><td><code>string</code></td><td>Double quotes; supports escapes.</td></tr>
+    <tr><td><code>$"x={x}"</code></td><td><code>string</code></td><td>Interpolated; <code>{ }</code> evaluated as expressions.</td></tr>
+    <tr><td><code>null</code></td><td>any nullable</td><td>The null reference.</td></tr>
+    <tr><td><code>[1, 2, 3]</code></td><td><code>T[]</code></td><td>Array literal; type inferred from elements.</td></tr>
+  </tbody>
+</table>
+
+<p><a class="next-link" href="variables.html">Variables &amp; Scope →</a></p>
+</main>
+</div>
+<footer>
+  <div class="container">
+    <p>Ume Language &nbsp;·&nbsp; <a href="../index.html">Home</a> &nbsp;·&nbsp;
+       <a href="index.html">Wiki</a> &nbsp;·&nbsp; MIT License</p>
+  </div>
+</footer>
+<script>
+(function() {
+  // Theme toggle (persisted, respects OS preference on first load)
+  var root = document.documentElement;
+  var stored = localStorage.getItem('ume-theme');
+  if (!stored) {
+    stored = (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches)
+      ? 'dark' : 'light';
+  }
+  root.setAttribute('data-theme', stored);
+  var icon = document.getElementById('theme-icon');
+  if (icon) icon.textContent = stored === 'dark' ? '◑' : '◐';
+
+  document.getElementById('theme-toggle').addEventListener('click', function() {
+    var cur = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    root.setAttribute('data-theme', cur);
+    localStorage.setItem('ume-theme', cur);
+    if (icon) icon.textContent = cur === 'dark' ? '◑' : '◐';
+  });
+
+  // Highlight + copy button
+  function setup() {
+    if (!window.hljs) { setTimeout(setup, 30); return; }
+    try { hljs.registerAliases(['ume','Ume'], { languageName: 'csharp' }); } catch(e) {}
+    document.querySelectorAll('pre code').forEach(function(block) {
+      try { hljs.highlightElement(block); } catch(e) {}
+      if (block.parentElement.querySelector('.copy-btn')) return;
+      var btn = document.createElement('button');
+      btn.className = 'copy-btn';
+      btn.type = 'button';
+      btn.textContent = 'Copy';
+      btn.addEventListener('click', function() {
+        var txt = block.innerText;
+        navigator.clipboard.writeText(txt).then(function() {
+          btn.classList.add('copied');
+          btn.textContent = 'Copied!';
+          setTimeout(function() {
+            btn.classList.remove('copied');
+            btn.textContent = 'Copy';
+          }, 1600);
+        }, function() {
+          var ta = document.createElement('textarea');
+          ta.value = txt; document.body.appendChild(ta); ta.select();
+          try { document.execCommand('copy'); } catch(e) {}
+          document.body.removeChild(ta);
+          btn.textContent = 'Copied!';
+          setTimeout(function() { btn.textContent = 'Copy'; }, 1600);
+        });
+      });
+      block.parentElement.appendChild(btn);
+    });
+  }
+  setup();
+})();
+</script>
+</body>
+</html>
+

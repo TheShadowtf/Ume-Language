@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Strings &amp; Interpolation — Ume Language</title>
+<link rel="stylesheet" href="../style.css"/>
+<link rel="icon" href="../img/logo.png"/>
+<link rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css"
+      referrerpolicy="no-referrer"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/csharp.min.js" defer></script>
+</head>
+<body>
+
+<nav class="topnav">
+  <a class="nav-brand" href="../index.html">
+    <img src="../img/logo.png" alt="Ume"/>
+    <span>Ume</span>
+  </a>
+  <div class="nav-links">
+    <a href="../index.html">Home</a>
+    <a href="index.html">Wiki</a>
+    <a href="https://github.com" target="_blank" rel="noopener">GitHub</a>
+    <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Toggle dark mode">
+      <span id="theme-icon">◐</span>
+    </button>
+  </div>
+</nav>
+
+<div class="wiki">
+<aside class="sidebar">
+
+  <h4>Overview</h4>
+
+  <a href="index.html">Wiki Home</a>
+
+  <a href="getting-started.html">Getting Started</a>
+
+  <a href="project-config.html">Projects &amp; ume.toml</a>
+
+  <a href="modules.html">Modules &amp; Imports</a>
+
+  <h4>Language</h4>
+
+  <a href="types.html">Primitive Types</a>
+
+  <a href="variables.html">Variables &amp; Scope</a>
+
+  <a href="strings.html" class=&#34;active&#34;>Strings &amp; Interpolation</a>
+
+  <a href="expressions.html">Expressions &amp; Operators</a>
+
+  <a href="functions.html">Functions</a>
+
+  <a href="control-flow.html">Control Flow</a>
+
+  <a href="classes.html">Classes</a>
+
+  <a href="interfaces.html">Interfaces &amp; Abstract</a>
+
+  <a href="enums.html">Enums &amp; Structs</a>
+
+  <a href="generics.html">Generics</a>
+
+  <a href="properties.html">Properties &amp; Indexers</a>
+
+  <a href="attributes.html">Attributes</a>
+
+  <a href="exceptions.html">Exceptions</a>
+
+  <a href="lambdas.html">Lambdas &amp; Closures</a>
+
+  <a href="operators.html">Operator Overloading</a>
+
+  <a href="unsafe.html">Unsafe Blocks</a>
+
+  <h4>Standard Library</h4>
+
+  <a href="stdlib-core.html">Core (Prelude)</a>
+
+  <a href="stdlib-io.html">Console &amp; File</a>
+
+  <a href="stdlib-collections.html">Collections</a>
+
+  <a href="stdlib-string.html">String Utilities</a>
+
+  <a href="stdlib-math.html">Math &amp; Random</a>
+
+  <a href="stdlib-json.html">JSON</a>
+
+  <a href="stdlib-thread.html">Concurrency</a>
+
+  <a href="stdlib-audio.html">Audio</a>
+
+  <a href="stdlib-net.html">Networking</a>
+
+  <a href="stdlib-system.html">System &amp; FileSystem</a>
+
+  <a href="stdlib-time.html">Time &amp; Timestep</a>
+
+  <a href="stdlib-graphics.html">Graphics</a>
+
+  <a href="stdlib-vector.html">Vectors</a>
+
+  <a href="stdlib-matrix.html">Matrices</a>
+
+</aside>
+
+<main class="content">
+
+<span class="eyebrow">Language</span>
+<h1>Strings &amp; Interpolation</h1>
+<p class="lead">Strings in Ume are double-quoted, reference-typed, and support both escape sequences and C#-style <code>$"…{expr}…"</code> interpolation. This page covers literal syntax, escapes, concatenation, and the interpolation grammar.</p>
+
+<h2 id="literals">String literals</h2>
+<p>A string literal is a sequence of characters between double quotes. The lexer treats everything between the opening and closing <code>"</code> as the string's value, with one exception: a backslash <code>\</code> starts an escape sequence.</p>
+<pre><code class="language-ume">string simple   = &quot;Hello&quot;;
+string withSpaces = &quot;  leading and trailing  &quot;;
+string empty      = &quot;&quot;;</code></pre>
+
+<h2 id="escapes">Escape sequences</h2>
+<p>Inside a regular string literal, these escape sequences are recognized. Any other character after a backslash is included literally.</p>
+<table>
+  <thead><tr><th>Escape</th><th>Meaning</th></tr></thead>
+  <tbody>
+    <tr><td><code>\n</code></td><td>Newline (LF, U+000A)</td></tr>
+    <tr><td><code>\t</code></td><td>Horizontal tab (U+0009)</td></tr>
+    <tr><td><code>\r</code></td><td>Carriage return (U+000D)</td></tr>
+    <tr><td><code>\"</code></td><td>Double quote (so you can include <code>"</code> in a string)</td></tr>
+    <tr><td><code>\\</code></td><td>Backslash (so you can include <code>\</code>)</td></tr>
+    <tr><td><code>\0</code></td><td>Null character (U+0000)</td></tr>
+  </tbody>
+</table>
+<pre><code class="language-ume">string nl      = &quot;first\nsecond&quot;;       // first on one line, second on the next
+string quote    = &quot;She said \&quot;hi\&quot;.&quot;;         // She said &quot;hi&quot;.
+string winpath  = &quot;C:\\temp\\file.txt&quot;;      // C:\temp\file.txt
+string tabbed   = &quot;col1\tcol2&quot;;                // col1&lt;tab&gt;col2</code></pre>
+
+<h2 id="concat">Concatenation</h2>
+<p>The <code>+</code> operator concatenates strings. When one operand is a string and the other is a non-string, the non-string is converted to its string representation via <code>toString()</code> automatically. This makes it easy to build messages inline:</p>
+<pre><code class="language-ume">string name = &quot;Alice&quot;;
+int    age  = 30;
+double pi   = 3.14;
+
+string msg = &quot;Name: &quot; + name + &quot;, age: &quot; + age + &quot;, pi: &quot; + pi;
+Console.println(msg);
+// Name: Alice, age: 30, pi: 3.14</code></pre>
+
+<p>For repeated concatenation in a loop, prefer <a href="stdlib-string.html">StringBuilder</a> — it's dramatically more efficient than <code>+</code> because <code>+</code> allocates a fresh string each time.</p>
+
+<h2 id="interpolation">Interpolated strings <code>$"…"</code></h2>
+<p>Prefix a string literal with <code>$</code> to enable interpolation. Inside an interpolated string, text between <code>{</code> and <code>}</code> is parsed as a Ume expression, evaluated, and its result is converted to a string and spliced in. The expression can be any valid expression: a variable reference, an arithmetic expression, a method call, even another string.</p>
+<pre><code class="language-ume">string name = &quot;Alice&quot;;
+int    age  = 30;
+
+string msg = $&quot;Hello, {name}! You are {age} years old.&quot;;
+Console.println(msg);
+// Hello, Alice! You are 30 years old.</code></pre>
+
+<p>Interpolated strings are far more readable than chained <code>+</code> concatenation, especially when mixing types:</p>
+<pre><code class="language-ume">double price = 19.99;
+int    qty   = 3;
+double total = price * qty;
+
+Console.println($&quot;{qty} × ${price} = ${total}&quot;);
+// 3 × $19.99 = $59.97</code></pre>
+
+<h3 id="interp-expressions">Expressions inside <code>{ }</code></h3>
+<p>The expression inside <code>{ }</code> is a full Ume expression — it can include method calls, property accesses, arithmetic, and even nested interpolation. Braces can be nested to any depth: <code>${$"x={x}"}</code> is legal (though usually a sign you should restructure).</p>
+<pre><code class="language-ume">class Point {
+    public double x, y;
+}
+
+Point p = new Point();
+p.x = 3.0;
+p.y = 4.0;
+double dist = Math.sqrt(p.x*p.x + p.y*p.y);
+
+Console.println($&quot;Point ({p.x}, {p.y}) has distance {dist} from origin&quot;);
+// Point (3.0, 4.0) has distance 5.0 from origin
+
+// Method calls inside { }
+List&lt;int&gt; nums = new List&lt;int&gt;();
+nums.add(1); nums.add(2); nums.add(3);
+Console.println($&quot;List has {nums.size()} items, sum = {nums.reduce(0, (a, n) -&gt; a + n)}&quot;);</code></pre>
+
+<h3 id="interp-braces">Literal braces in interpolated strings</h3>
+<p>If you need a literal <code>{</code> or <code>}</code> in an interpolated string (not as an expression delimiter), write it doubled: <code>{{</code> produces a single <code>{</code>, <code>}}</code> produces a single <code>}</code>. This mirrors C# interpolated strings.</p>
+<pre><code class="language-ume">string json = $&quot;{{\&quot;id\&quot;: {42}, \&quot;name\&quot;: \&quot;Alice\&quot;}}&quot;;
+Console.println(json);
+// {&quot;id&quot;: 42, &quot;name&quot;: &quot;Alice&quot;}</code></pre>
+
+<h3 id="interp-escapes">Escapes still work</h3>
+<p>Inside an interpolated string, the standard escape sequences (<code>\n</code>, <code>\t</code>, <code>\"</code>, <code>\\</code>, etc.) work exactly as in a regular string. The backslash is processed before the <code>{ }</code> scanner runs, so <code>{</code> inside an expression is unaffected by escaping.</p>
+
+<h2 id="char-vs-string"><code>char</code> vs <code>string</code></h2>
+<p>A single character in single quotes is a <code>char</code> (a value type). A single character in double quotes is a <code>string</code> of length 1. The two are not interchangeable — a <code>char</code> is not a one-character <code>string</code>, and concatenating a <code>char</code> to a <code>string</code> works because <code>+</code> auto-converts via <code>toString()</code>.</p>
+<pre><code class="language-ume">char   ch = &#39;A&#39;;     // type: char
+string s  = &quot;A&quot;;     // type: string, length 1
+
+// ch and s are different types but both convert to strings:
+string msg = ch + &quot; - &quot; + s;     // &quot;A - A&quot;</code></pre>
+
+<h2 id="common-methods">Common operations</h2>
+<p>Strings have a small set of built-in methods. For richer operations (splitting, padding, formatting, parsing), use <a href="stdlib-string.html"><code>StringUtils</code></a>.</p>
+<table>
+  <thead><tr><th>Method</th><th>Returns</th><th>Example</th></tr></thead>
+  <tbody>
+    <tr><td><code>s.length()</code></td><td>number of characters</td><td><code>"hi".length()</code> → <code>2</code></td></tr>
+    <tr><td><code>s.toString()</code></td><td>itself</td><td>identity</td></tr>
+    <tr><td><code>s + other</code></td><td>concatenated string</td><td><code>"a" + "b"</code> → <code>"ab"</code></td></tr>
+  </tbody>
+</table>
+
+<p><a class="next-link" href="expressions.html">Expressions &amp; Operators →</a></p>
+</main>
+</div>
+<footer>
+  <div class="container">
+    <p>Ume Language &nbsp;·&nbsp; <a href="../index.html">Home</a> &nbsp;·&nbsp;
+       <a href="index.html">Wiki</a> &nbsp;·&nbsp; MIT License</p>
+  </div>
+</footer>
+<script>
+(function() {
+  // Theme toggle (persisted, respects OS preference on first load)
+  var root = document.documentElement;
+  var stored = localStorage.getItem('ume-theme');
+  if (!stored) {
+    stored = (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches)
+      ? 'dark' : 'light';
+  }
+  root.setAttribute('data-theme', stored);
+  var icon = document.getElementById('theme-icon');
+  if (icon) icon.textContent = stored === 'dark' ? '◑' : '◐';
+
+  document.getElementById('theme-toggle').addEventListener('click', function() {
+    var cur = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    root.setAttribute('data-theme', cur);
+    localStorage.setItem('ume-theme', cur);
+    if (icon) icon.textContent = cur === 'dark' ? '◑' : '◐';
+  });
+
+  // Highlight + copy button
+  function setup() {
+    if (!window.hljs) { setTimeout(setup, 30); return; }
+    try { hljs.registerAliases(['ume','Ume'], { languageName: 'csharp' }); } catch(e) {}
+    document.querySelectorAll('pre code').forEach(function(block) {
+      try { hljs.highlightElement(block); } catch(e) {}
+      if (block.parentElement.querySelector('.copy-btn')) return;
+      var btn = document.createElement('button');
+      btn.className = 'copy-btn';
+      btn.type = 'button';
+      btn.textContent = 'Copy';
+      btn.addEventListener('click', function() {
+        var txt = block.innerText;
+        navigator.clipboard.writeText(txt).then(function() {
+          btn.classList.add('copied');
+          btn.textContent = 'Copied!';
+          setTimeout(function() {
+            btn.classList.remove('copied');
+            btn.textContent = 'Copy';
+          }, 1600);
+        }, function() {
+          var ta = document.createElement('textarea');
+          ta.value = txt; document.body.appendChild(ta); ta.select();
+          try { document.execCommand('copy'); } catch(e) {}
+          document.body.removeChild(ta);
+          btn.textContent = 'Copied!';
+          setTimeout(function() { btn.textContent = 'Copy'; }, 1600);
+        });
+      });
+      block.parentElement.appendChild(btn);
+    });
+  }
+  setup();
+})();
+</script>
+</body>
+</html>
+

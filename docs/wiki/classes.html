@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Classes — Ume Language</title>
+<link rel="stylesheet" href="../style.css"/>
+<link rel="icon" href="../img/logo.png"/>
+<link rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css"
+      referrerpolicy="no-referrer"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/csharp.min.js" defer></script>
+</head>
+<body>
+
+<nav class="topnav">
+  <a class="nav-brand" href="../index.html">
+    <img src="../img/logo.png" alt="Ume"/>
+    <span>Ume</span>
+  </a>
+  <div class="nav-links">
+    <a href="../index.html">Home</a>
+    <a href="index.html">Wiki</a>
+    <a href="https://github.com" target="_blank" rel="noopener">GitHub</a>
+    <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Toggle dark mode">
+      <span id="theme-icon">◐</span>
+    </button>
+  </div>
+</nav>
+
+<div class="wiki">
+<aside class="sidebar">
+
+  <h4>Overview</h4>
+
+  <a href="index.html">Wiki Home</a>
+
+  <a href="getting-started.html">Getting Started</a>
+
+  <a href="project-config.html">Projects &amp; ume.toml</a>
+
+  <a href="modules.html">Modules &amp; Imports</a>
+
+  <h4>Language</h4>
+
+  <a href="types.html">Primitive Types</a>
+
+  <a href="variables.html">Variables &amp; Scope</a>
+
+  <a href="strings.html">Strings &amp; Interpolation</a>
+
+  <a href="expressions.html">Expressions &amp; Operators</a>
+
+  <a href="functions.html">Functions</a>
+
+  <a href="control-flow.html">Control Flow</a>
+
+  <a href="classes.html" class=&#34;active&#34;>Classes</a>
+
+  <a href="interfaces.html">Interfaces &amp; Abstract</a>
+
+  <a href="enums.html">Enums &amp; Structs</a>
+
+  <a href="generics.html">Generics</a>
+
+  <a href="properties.html">Properties &amp; Indexers</a>
+
+  <a href="attributes.html">Attributes</a>
+
+  <a href="exceptions.html">Exceptions</a>
+
+  <a href="lambdas.html">Lambdas &amp; Closures</a>
+
+  <a href="operators.html">Operator Overloading</a>
+
+  <a href="unsafe.html">Unsafe Blocks</a>
+
+  <h4>Standard Library</h4>
+
+  <a href="stdlib-core.html">Core (Prelude)</a>
+
+  <a href="stdlib-io.html">Console &amp; File</a>
+
+  <a href="stdlib-collections.html">Collections</a>
+
+  <a href="stdlib-string.html">String Utilities</a>
+
+  <a href="stdlib-math.html">Math &amp; Random</a>
+
+  <a href="stdlib-json.html">JSON</a>
+
+  <a href="stdlib-thread.html">Concurrency</a>
+
+  <a href="stdlib-audio.html">Audio</a>
+
+  <a href="stdlib-net.html">Networking</a>
+
+  <a href="stdlib-system.html">System &amp; FileSystem</a>
+
+  <a href="stdlib-time.html">Time &amp; Timestep</a>
+
+  <a href="stdlib-graphics.html">Graphics</a>
+
+  <a href="stdlib-vector.html">Vectors</a>
+
+  <a href="stdlib-matrix.html">Matrices</a>
+
+</aside>
+
+<main class="content">
+
+<span class="eyebrow">Language</span>
+<h1>Classes</h1>
+<p class="lead">Classes are the primary user-defined type in Ume. They support the full OOP feature set: fields, methods, constructors, destructors, inheritance, abstract/final modifiers, static members, and access control. This page covers the complete class system.</p>
+
+<h2 id="basic">Declaring a class</h2>
+<p>A class is declared with the <code>class</code> keyword, a name, and a body in braces. Inside the body you put fields, constructors, methods, properties, operators, and indexers. Each member can have an access modifier (<code>public</code>, <code>private</code>, <code>protected</code>, <code>internal</code>) and optional modifiers (<code>static</code>, <code>final</code>, <code>override</code>, <code>abstract</code>).</p>
+<pre><code class="language-ume">public class Animal {
+    public string name;
+    private int age;
+
+    public Animal(string name, int age) {
+        this.name = name;
+        this.age  = age;
+    }
+
+    public func string describe() {
+        return name + &quot; (age &quot; + age + &quot;)&quot;;
+    }
+}
+
+var a = new Animal(&quot;Rex&quot;, 3);
+Console.println(a.describe());   // Rex (age 3)</code></pre>
+
+<h2 id="access">Access modifiers</h2>
+<p>Access modifiers control who can see a member. The default (when you omit the modifier) is package-private — visible only within the same package.</p>
+<table>
+  <thead><tr><th>Modifier</th><th>Accessible from</th></tr></thead>
+  <tbody>
+    <tr><td><code>public</code></td><td>Anywhere the class is visible.</td></tr>
+    <tr><td><code>private</code></td><td>Only inside the same class.</td></tr>
+    <tr><td><code>protected</code></td><td>The same class and its subclasses.</td></tr>
+    <tr><td><code>internal</code></td><td>The same package / module.</td></tr>
+    <tr><td><em>(none)</em></td><td>Package-private (same as <code>internal</code> in practice).</td></tr>
+  </tbody>
+</table>
+
+<h2 id="ctor">Constructors</h2>
+<p>A constructor is declared as a method whose name matches the class name and has no return type. Constructors run when <code>new</code> creates an instance. A class can have multiple constructors (overloaded by parameter list); one constructor can delegate to another with <code>this(...)</code>.</p>
+<pre><code class="language-ume">public class Point {
+    public double x;
+    public double y;
+
+    // Primary constructor
+    public Point(double x, double y) {
+        this.x = x;
+        this.y = y;
+    }
+
+    // Overloaded: zero-argument, delegates to the primary
+    public Point() {
+        this(0.0, 0.0);
+    }
+}
+
+var p1 = new Point(3.0, 4.0);
+var p2 = new Point();        // (0.0, 0.0)</code></pre>
+
+<h2 id="this"><code>this</code></h2>
+<p>Inside an instance method or constructor, <code>this</code> refers to the current object. You use it to disambiguate when a parameter shadows a field name, or to pass the current object to another function. In a static method there is no <code>this</code>.</p>
+<pre><code class="language-ume">public class User {
+    public string name;
+
+    public User(string name) {
+        this.name = name;     // &#39;this.name&#39; is the field, &#39;name&#39; is the param
+    }
+
+    public func User rename(string newName) {
+        this.name = newName;
+        return this;          // return the current object for chaining
+    }
+}</code></pre>
+
+<h2 id="inheritance">Inheritance</h2>
+<p>A class can extend exactly one parent class with <code>extends</code>. The subclass inherits all of the parent's non-private members. To call the parent's constructor, use <code>super(args)</code> as the first statement in the subclass's constructor. To call a parent method that you've overridden, use <code>super.methodName(args)</code>.</p>
+<pre><code class="language-ume">public class Dog extends Animal {
+    public string breed;
+
+    public Dog(string name, int age, string breed) {
+        super(name, age);      // call Animal&#39;s constructor
+        this.breed = breed;
+    }
+
+    public override func string describe() {
+        return super.describe() + &quot; [&quot; + breed + &quot;]&quot;;
+    }
+}
+
+var d = new Dog(&quot;Buddy&quot;, 4, &quot;Labrador&quot;);
+Console.println(d.describe());
+// Buddy (age 4) [Labrador]</code></pre>
+
+<h2 id="super"><code>super</code></h2>
+<p>Two uses of <code>super</code>: (1) <code>super(args)</code> calls the parent constructor — this must be the first statement in the subclass constructor. (2) <code>super.methodName(args)</code> calls an inherited method that the current class has overridden, bypassing the override. You cannot use <code>super</code> in a static context.</p>
+
+<h2 id="override"><code>override</code></h2>
+<p>When a subclass provides a new implementation of a method inherited from its parent, mark the new method with <code>override</code>. This is a safety check — if you misspell the method name or get the signature wrong, the compiler will reject the <code>override</code> because there's nothing to override. Without <code>override</code>, you'd silently be adding a new method instead of replacing the inherited one.</p>
+<pre><code class="language-ume">public class Rectangle extends Shape {
+    public override func double area() {
+        return width * height;
+    }
+}</code></pre>
+
+<h2 id="abstract"><code>abstract</code> classes and methods</h2>
+<p>An <code>abstract</code> class cannot be instantiated directly — it can only be subclassed. An <code>abstract</code> method declares a signature but no body; subclasses must provide the implementation. This is how Ume does polymorphism: you program against the abstract parent's interface, and the actual behavior comes from whichever concrete subclass is present at runtime.</p>
+<pre><code class="language-ume">public abstract class Shape {
+    public abstract func double area();    // no body — subclass must implement
+
+    public func void printArea() {
+        Console.println(&quot;Area: &quot; + area());   // calls the subclass&#39;s area()
+    }
+}
+
+public class Rectangle extends Shape {
+    private double w, h;
+    public Rectangle(double w, double h) { this.w = w; this.h = h; }
+    public override func double area() { return w * h; }
+}
+
+public class Circle extends Shape {
+    public double radius;
+    public override func double area() { return Math.PI * radius * radius; }
+}
+
+Shape s = new Rectangle(4.0, 5.0);
+s.printArea();   // Area: 20
+
+s = new Circle();
+s.radius = 3.0;
+s.printArea();   // Area: 28.27...</code></pre>
+
+<h2 id="final"><code>final</code></h2>
+<p>A <code>final</code> class cannot be subclassed. A <code>final</code> method cannot be overridden by subclasses. Use <code>final</code> when you want to prevent further extension — typically for security-sensitive classes or to enable compiler optimizations.</p>
+<pre><code class="language-ume">public final class SecretKey {
+    // cannot be subclassed
+}
+
+public class Base {
+    public final func void critical() {
+        // subclasses cannot override this
+    }
+}</code></pre>
+
+<h2 id="static">Static members</h2>
+<p>A <code>static</code> field or method belongs to the class itself, not to any particular instance. There's exactly one copy of a static field, shared by all instances. Static methods are called on the class name (<code>ClassName.method()</code>) and don't have access to <code>this</code>.</p>
+<pre><code class="language-ume">public class Counter {
+    public static int total = 0;     // shared across all instances
+
+    public int id;
+
+    public Counter() {
+        total++;                     // increment the shared counter
+        this.id = total;
+    }
+
+    public static func int nextId() {
+        return total + 1;            // can read static fields
+        // cannot read instance fields like &#39;id&#39; here
+    }
+}
+
+var c1 = new Counter();
+var c2 = new Counter();
+Console.println(Counter.total);    // 2
+Console.println(c2.id);            // 2
+Console.println(Counter.nextId()); // 3</code></pre>
+
+<h2 id="destructor">Destructors</h2>
+<p>A destructor is a method named <code>~ClassName()</code> that runs when an object is garbage-collected. In Ume, since the transpilation target is C++17 with deterministic destruction (RAII), destructors run at well-defined points — when a local goes out of scope, when a container is cleared, etc. Use destructors to release non-memory resources (file handles, sockets, GL objects). They take no parameters and have no return type.</p>
+<pre><code class="language-ume">public class FileHandle {
+    private any handle;
+
+    public FileHandle(string path) {
+        this.handle = openFile(path);
+    }
+
+    ~FileHandle() {
+        closeFile(this.handle);
+    }
+}</code></pre>
+
+<h2 id="nested">Nested types</h2>
+<p>You can declare classes, structs, and enums inside a class body. They become members of the enclosing class and are accessed as <code>Outer.Inner</code>. Nested types can be <code>static</code> (the common case — they don't need an enclosing instance) or non-static (rare).</p>
+<pre><code class="language-ume">public class LinkedList&lt;T&gt; {
+    public class Node {
+        public T value;
+        public Node next;
+    }
+
+    private Node head;
+}</code></pre>
+
+<h2 id="fields-multi">Multiple fields in one declaration</h2>
+<p>You can declare several fields of the same type in a single statement, separated by commas. This is purely syntactic convenience — it's equivalent to separate declarations.</p>
+<pre><code class="language-ume">public class Vec3 {
+    public double x, y, z;   // three fields, all double
+}</code></pre>
+
+<p><a class="next-link" href="interfaces.html">Interfaces &amp; Abstract →</a></p>
+</main>
+</div>
+<footer>
+  <div class="container">
+    <p>Ume Language &nbsp;·&nbsp; <a href="../index.html">Home</a> &nbsp;·&nbsp;
+       <a href="index.html">Wiki</a> &nbsp;·&nbsp; MIT License</p>
+  </div>
+</footer>
+<script>
+(function() {
+  // Theme toggle (persisted, respects OS preference on first load)
+  var root = document.documentElement;
+  var stored = localStorage.getItem('ume-theme');
+  if (!stored) {
+    stored = (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches)
+      ? 'dark' : 'light';
+  }
+  root.setAttribute('data-theme', stored);
+  var icon = document.getElementById('theme-icon');
+  if (icon) icon.textContent = stored === 'dark' ? '◑' : '◐';
+
+  document.getElementById('theme-toggle').addEventListener('click', function() {
+    var cur = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    root.setAttribute('data-theme', cur);
+    localStorage.setItem('ume-theme', cur);
+    if (icon) icon.textContent = cur === 'dark' ? '◑' : '◐';
+  });
+
+  // Highlight + copy button
+  function setup() {
+    if (!window.hljs) { setTimeout(setup, 30); return; }
+    try { hljs.registerAliases(['ume','Ume'], { languageName: 'csharp' }); } catch(e) {}
+    document.querySelectorAll('pre code').forEach(function(block) {
+      try { hljs.highlightElement(block); } catch(e) {}
+      if (block.parentElement.querySelector('.copy-btn')) return;
+      var btn = document.createElement('button');
+      btn.className = 'copy-btn';
+      btn.type = 'button';
+      btn.textContent = 'Copy';
+      btn.addEventListener('click', function() {
+        var txt = block.innerText;
+        navigator.clipboard.writeText(txt).then(function() {
+          btn.classList.add('copied');
+          btn.textContent = 'Copied!';
+          setTimeout(function() {
+            btn.classList.remove('copied');
+            btn.textContent = 'Copy';
+          }, 1600);
+        }, function() {
+          var ta = document.createElement('textarea');
+          ta.value = txt; document.body.appendChild(ta); ta.select();
+          try { document.execCommand('copy'); } catch(e) {}
+          document.body.removeChild(ta);
+          btn.textContent = 'Copied!';
+          setTimeout(function() { btn.textContent = 'Copy'; }, 1600);
+        });
+      });
+      block.parentElement.appendChild(btn);
+    });
+  }
+  setup();
+})();
+</script>
+</body>
+</html>
+

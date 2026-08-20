@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Ume Language — Ume Language</title>
+<link rel="stylesheet" href="style.css"/>
+<link rel="icon" href="img/logo.png"/>
+<link rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css"
+      referrerpolicy="no-referrer"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/csharp.min.js" defer></script>
+</head>
+<body>
+
+<nav class="topnav">
+  <a class="nav-brand" href="index.html">
+    <img src="img/logo.png" alt="Ume"/>
+    <span>Ume</span>
+  </a>
+  <div class="nav-links">
+    <a href="index.html">Home</a>
+    <a href="wiki/index.html">Wiki</a>
+    <a href="https://github.com" target="_blank" rel="noopener">GitHub</a>
+    <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Toggle dark mode">
+      <span id="theme-icon">◐</span>
+    </button>
+  </div>
+</nav>
+
+
+<section class="hero">
+  <div class="container">
+    <span class="eyebrow">Ume Language</span>
+    <h1>Fast. Expressive. Native.</h1>
+    <p>A statically-typed, C#-inspired language that transpiles to optimized C++17.
+       Write modern, expressive code without sacrificing raw performance.</p>
+    <div class="hero-cta">
+      <a href="wiki/getting-started.html" class="btn btn-primary">Read the docs</a>
+      <a href="wiki/index.html" class="btn btn-outline">Browse the wiki</a>
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container">
+    <h2>Documentation</h2>
+    <div class="cards">
+      <a class="card" href="wiki/getting-started.html">
+        <h4>Getting Started</h4>
+        <p>Install the compiler, write your first program, learn the CLI and project layout.</p>
+      </a>
+      <a class="card" href="wiki/modules.html">
+        <h4>Modules &amp; Imports</h4>
+        <p>The two ways to bring code in: <code>import</code> (AST-level) and <code>#include</code> (textual).</p>
+      </a>
+      <a class="card" href="wiki/classes.html">
+        <h4>Language Reference</h4>
+        <p>Types, functions, classes, generics, properties, exceptions, lambdas, operator overloading, unsafe blocks.</p>
+      </a>
+      <a class="card" href="wiki/stdlib-collections.html">
+        <h4>Standard Library</h4>
+        <p>Collections, I/O, JSON, concurrency, audio, networking, graphics, math, and more.</p>
+      </a>
+      <a class="card" href="wiki/stdlib-json.html">
+        <h4>JSON Serialization</h4>
+        <p>Compile-time generated <code>toJsonString()</code> / <code>fromJsonString()</code> via <code>[Serializable]</code>.</p>
+      </a>
+      <a class="card" href="wiki/expressions.html">
+        <h4>Expressions &amp; Operators</h4>
+        <p>Every operator with semantics, precedence, and the null-safety trio <code>??</code> <code>?.</code> <code>!</code>.</p>
+      </a>
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container">
+    <h2>A taste of Ume</h2>
+    <pre><code class="language-ume">[Serializable]
+public class Player {
+    [JsonProperty(&quot;user_id&quot;)]
+    public int id;
+    public string name;
+
+    // Expression-bodied property
+    public bool isMaxLevel =&gt; this.level &gt;= 100;
+}
+
+public class Main {
+    public static func void main() {
+        var p = new Player();
+        p.id   = 1;
+        p.name = &quot;Alice&quot;;
+
+        // Serialize to JSON
+        string json = p.toJsonString();
+        Console.println(json);
+        // {&quot;user_id&quot;:1,&quot;name&quot;:&quot;Alice&quot;}
+    }
+}</code></pre>
+  </div>
+</section>
+
+<footer>
+  <div class="container">
+    <p>Ume Language &nbsp;·&nbsp; <a href="wiki/index.html">Wiki</a> &nbsp;·&nbsp; MIT License</p>
+  </div>
+</footer>
+
+<script>
+(function() {
+  var root = document.documentElement;
+  var stored = localStorage.getItem('ume-theme');
+  if (!stored) {
+    stored = (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
+  }
+  root.setAttribute('data-theme', stored);
+  var icon = document.getElementById('theme-icon');
+  if (icon) icon.textContent = stored === 'dark' ? '◑' : '◐';
+  document.getElementById('theme-toggle').addEventListener('click', function() {
+    var cur = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    root.setAttribute('data-theme', cur);
+    localStorage.setItem('ume-theme', cur);
+    if (icon) icon.textContent = cur === 'dark' ? '◑' : '◐';
+  });
+  if (window.hljs) {
+    try { hljs.registerAliases(['ume','Ume'], { languageName: 'csharp' }); } catch(e) {}
+    document.querySelectorAll('pre code').forEach(function(b) {
+      try { hljs.highlightElement(b); } catch(e) {}
+      var btn = document.createElement('button');
+      btn.className = 'copy-btn'; btn.type = 'button'; btn.textContent = 'Copy';
+      btn.addEventListener('click', function() {
+        navigator.clipboard.writeText(b.innerText).then(function() {
+          btn.classList.add('copied'); btn.textContent = 'Copied!';
+          setTimeout(function(){ btn.classList.remove('copied'); btn.textContent = 'Copy'; }, 1600);
+        });
+      });
+      b.parentElement.appendChild(btn);
+    });
+  } else {
+    var iv = setInterval(function() {
+      if (window.hljs) { clearInterval(iv); setup(); }
+    }, 30);
+    function setup() {
+      try { hljs.registerAliases(['ume','Ume'], { languageName: 'csharp' }); } catch(e) {}
+      document.querySelectorAll('pre code').forEach(function(b) {
+        try { hljs.highlightElement(b); } catch(e) {}
+      });
+    }
+  }
+})();
+</script>
+</body>
+</html>

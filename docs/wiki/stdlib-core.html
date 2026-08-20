@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Core (Prelude) — Ume Language</title>
+<link rel="stylesheet" href="../style.css"/>
+<link rel="icon" href="../img/logo.png"/>
+<link rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css"
+      referrerpolicy="no-referrer"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/csharp.min.js" defer></script>
+</head>
+<body>
+
+<nav class="topnav">
+  <a class="nav-brand" href="../index.html">
+    <img src="../img/logo.png" alt="Ume"/>
+    <span>Ume</span>
+  </a>
+  <div class="nav-links">
+    <a href="../index.html">Home</a>
+    <a href="index.html">Wiki</a>
+    <a href="https://github.com" target="_blank" rel="noopener">GitHub</a>
+    <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Toggle dark mode">
+      <span id="theme-icon">◐</span>
+    </button>
+  </div>
+</nav>
+
+<div class="wiki">
+<aside class="sidebar">
+
+  <h4>Overview</h4>
+
+  <a href="index.html">Wiki Home</a>
+
+  <a href="getting-started.html">Getting Started</a>
+
+  <a href="project-config.html">Projects &amp; ume.toml</a>
+
+  <a href="modules.html">Modules &amp; Imports</a>
+
+  <h4>Language</h4>
+
+  <a href="types.html">Primitive Types</a>
+
+  <a href="variables.html">Variables &amp; Scope</a>
+
+  <a href="strings.html">Strings &amp; Interpolation</a>
+
+  <a href="expressions.html">Expressions &amp; Operators</a>
+
+  <a href="functions.html">Functions</a>
+
+  <a href="control-flow.html">Control Flow</a>
+
+  <a href="classes.html">Classes</a>
+
+  <a href="interfaces.html">Interfaces &amp; Abstract</a>
+
+  <a href="enums.html">Enums &amp; Structs</a>
+
+  <a href="generics.html">Generics</a>
+
+  <a href="properties.html">Properties &amp; Indexers</a>
+
+  <a href="attributes.html">Attributes</a>
+
+  <a href="exceptions.html">Exceptions</a>
+
+  <a href="lambdas.html">Lambdas &amp; Closures</a>
+
+  <a href="operators.html">Operator Overloading</a>
+
+  <a href="unsafe.html">Unsafe Blocks</a>
+
+  <h4>Standard Library</h4>
+
+  <a href="stdlib-core.html" class=&#34;active&#34;>Core (Prelude)</a>
+
+  <a href="stdlib-io.html">Console &amp; File</a>
+
+  <a href="stdlib-collections.html">Collections</a>
+
+  <a href="stdlib-string.html">String Utilities</a>
+
+  <a href="stdlib-math.html">Math &amp; Random</a>
+
+  <a href="stdlib-json.html">JSON</a>
+
+  <a href="stdlib-thread.html">Concurrency</a>
+
+  <a href="stdlib-audio.html">Audio</a>
+
+  <a href="stdlib-net.html">Networking</a>
+
+  <a href="stdlib-system.html">System &amp; FileSystem</a>
+
+  <a href="stdlib-time.html">Time &amp; Timestep</a>
+
+  <a href="stdlib-graphics.html">Graphics</a>
+
+  <a href="stdlib-vector.html">Vectors</a>
+
+  <a href="stdlib-matrix.html">Matrices</a>
+
+</aside>
+
+<main class="content">
+
+<span class="eyebrow">Standard Library</span>
+<h1>Core (Prelude)</h1>
+<p class="lead">A small set of types and functions that are always available — you don't need to import them. The prelude is loaded automatically before your code runs. It provides the base <code>Exception</code> class, the <code>Pair</code> tuple, the <code>range()</code> and <code>repeat()</code> helpers, and the pre-generics versions of <code>Stack</code>, <code>Queue</code>, and <code>StringBuilder</code>.</p>
+
+<div class="callout callout-info">
+  <div class="callout-title">Always available</div>
+  <p>The prelude functions (<code>range</code>, <code>rangeTo</code>, <code>repeat</code>) and classes (<code>Pair</code>, <code>StringBuilder</code>) are natively backed by the interpreter runtime. You do not need any <code>import</code> statement to use them — they are always in scope.</p>
+</div>
+
+<h2 id="whats-here">What's in the prelude</h2>
+<p>The prelude file (<code>stdlib/prelude.ume</code>) declares <code>package std;</code> and contains these declarations. The runtime loads it before your entry point, so all of these are in scope everywhere. Note that <code>Console</code> and basic <code>Math</code> are <em>not</em> in the prelude file — they're natively backed by the C++ runtime and are also always available. See <a href="stdlib-io.html">Console &amp; File</a> and <a href="stdlib-math.html">Math &amp; Random</a>.</p>
+
+<h2 id="exception"><code>Exception</code></h2>
+<p>The base exception type. Custom exceptions extend this. See <a href="exceptions.html">Exceptions</a> for the full story.</p>
+<table>
+  <thead><tr><th>Member</th><th>Signature</th><th>Description</th></tr></thead>
+  <tbody>
+    <tr><td><code>message</code></td><td><code>public string message</code></td><td>Field holding the error description.</td></tr>
+    <tr><td>constructor</td><td><code>public func void constructor(string message)</code></td><td>Stores the message in the field.</td></tr>
+    <tr><td><code>getMessage()</code></td><td><code>public func string getMessage()</code></td><td>Returns the message.</td></tr>
+    <tr><td><code>toString()</code></td><td><code>public func string toString()</code></td><td>Returns the message (alias for <code>getMessage</code>).</td></tr>
+  </tbody>
+</table>
+<pre><code class="language-ume">try {
+    throw new Exception(&quot;something went wrong&quot;);
+} catch (Exception e) {
+    Console.println(e.getMessage());   // something went wrong
+}</code></pre>
+
+<h2 id="pair"><code>Pair</code></h2>
+<p>A simple two-element tuple. Both fields are typed <code>any</code>, so a single <code>Pair</code> can hold any two values. For type-safe pairs, write your own generic class (see <a href="generics.html">Generics</a>).</p>
+<table>
+  <thead><tr><th>Member</th><th>Signature</th></tr></thead>
+  <tbody>
+    <tr><td><code>first</code></td><td><code>public any first</code></td></tr>
+    <tr><td><code>second</code></td><td><code>public any second</code></td></tr>
+    <tr><td>constructor</td><td><code>public func void constructor(any a, any b)</code></td></tr>
+    <tr><td><code>toString()</code></td><td><code>public func string toString()</code> — <code>"(a, b)"</code></td></tr>
+  </tbody>
+</table>
+<pre><code class="language-ume">var p = new Pair(&quot;Alice&quot;, 30);
+Console.println(p.first);    // Alice
+Console.println(p.second);   // 30</code></pre>
+
+<h2 id="range"><code>range()</code> and <code>rangeTo()</code></h2>
+<p>Two helper functions that produce a <code>List&lt;int&gt;</code> of consecutive integers. <code>range(start, end)</code> is half-open — <code>start</code> is included, <code>end</code> is excluded. <code>rangeTo(end)</code> is shorthand for <code>range(0, end)</code>.</p>
+<table>
+  <thead><tr><th>Function</th><th>Signature</th><th>Returns</th></tr></thead>
+  <tbody>
+    <tr><td><code>range</code></td><td><code>public func List&lt;int&gt; range(int start, int end)</code></td><td><code>[start, start+1, …, end-1]</code></td></tr>
+    <tr><td><code>rangeTo</code></td><td><code>public func List&lt;int&gt; rangeTo(int end)</code></td><td><code>[0, 1, …, end-1]</code></td></tr>
+  </tbody>
+</table>
+<pre><code class="language-ume">var r = range(1, 5);     // [1, 2, 3, 4]
+Console.println(&quot;range size = &quot; + r.size());  // 4
+foreach (int i in range(0, 3)) {
+    Console.println(i);      // 0, 1, 2
+}
+
+var zeros = rangeTo(3);       // [0, 1, 2]</code></pre>
+
+<h2 id="repeat"><code>repeat()</code></h2>
+<p>Returns a string consisting of <code>s</code> repeated <code>n</code> times. Useful for simple formatting (indentation, separators).</p>
+<table>
+  <thead><tr><th>Function</th><th>Signature</th></tr></thead>
+  <tbody>
+    <tr><td><code>repeat</code></td><td><code>public func string repeat(string s, int n)</code></td></tr>
+  </tbody>
+</table>
+<pre><code class="language-ume">string bar = repeat(&quot;-&quot;, 20);
+Console.println(bar);    // --------------------
+
+string indent = repeat(&quot;  &quot;, 3);
+Console.println(indent + &quot;indented text&quot;);   //       indented text</code></pre>
+
+<h2 id="legacy-collections">Pre-generics Stack and Queue</h2>
+<p>The prelude includes <code>Stack</code> and <code>Queue</code> classes that store <code>any</code> values. These predate the generic versions in <code>std.collections</code> and are kept for backward compatibility. For new code, prefer <code>import std.collections.*;</code> and use <code>Stack&lt;T&gt;</code> / <code>Queue&lt;T&gt;</code> — they're type-safe at compile time.</p>
+
+<h3 id="prelude-stack"><code>Stack</code> (any-typed, LIFO)</h3>
+<table>
+  <thead><tr><th>Method</th><th>Signature</th></tr></thead>
+  <tbody>
+    <tr><td><code>push</code></td><td><code>public func void push(any item)</code></td></tr>
+    <tr><td><code>pop</code></td><td><code>public func any pop()</code> — throws if empty</td></tr>
+    <tr><td><code>peek</code></td><td><code>public func any peek()</code> — throws if empty</td></tr>
+    <tr><td><code>isEmpty</code></td><td><code>public func bool isEmpty()</code></td></tr>
+    <tr><td><code>size</code></td><td><code>public func int size()</code></td></tr>
+    <tr><td><code>clear</code></td><td><code>public func void clear()</code></td></tr>
+    <tr><td><code>toString</code></td><td><code>public func string toString()</code></td></tr>
+  </tbody>
+</table>
+<pre><code class="language-ume">Stack&lt;int&gt; s = new Stack&lt;int&gt;();
+s.push(10);
+s.push(20);
+Console.println(s.pop());    // 20
+Console.println(s.peek());   // 10
+
+// Note: The prelude also provides an untyped Stack (stores any).
+// For type safety, use Stack&lt;T&gt; from std.collections instead.</code></pre>
+
+<h3 id="prelude-queue"><code>Queue</code> (any-typed, FIFO)</h3>
+<table>
+  <thead><tr><th>Method</th><th>Signature</th></tr></thead>
+  <tbody>
+    <tr><td><code>enqueue</code></td><td><code>public func void enqueue(any item)</code></td></tr>
+    <tr><td><code>dequeue</code></td><td><code>public func any dequeue()</code> — throws if empty</td></tr>
+    <tr><td><code>front</code></td><td><code>public func any front()</code> — throws if empty</td></tr>
+    <tr><td><code>isEmpty</code></td><td><code>public func bool isEmpty()</code></td></tr>
+    <tr><td><code>size</code></td><td><code>public func int size()</code></td></tr>
+    <tr><td><code>clear</code></td><td><code>public func void clear()</code></td></tr>
+  </tbody>
+</table>
+<pre><code class="language-ume">Queue&lt;string&gt; q = new Queue&lt;string&gt;();
+q.enqueue(&quot;first&quot;);
+q.enqueue(&quot;second&quot;);
+Console.println(q.dequeue());   // first
+
+// Note: The prelude also provides an untyped Queue (stores any).
+// For type safety, use Queue&lt;T&gt; from std.collections instead.</code></pre>
+
+<h2 id="prelude-stringbuilder"><code>StringBuilder</code> (prelude version)</h2>
+<p>The prelude also ships a <code>StringBuilder</code> that uses a <code>List&lt;string&gt;</code> internally. The <code>std.string</code> package provides an equivalent <code>StringBuilder</code> — both have the same API. Use whichever is in scope; if you <code>import std.string.*</code>, that version takes precedence.</p>
+<table>
+  <thead><tr><th>Method</th><th>Signature</th></tr></thead>
+  <tbody>
+    <tr><td>constructor</td><td><code>public func void constructor()</code></td></tr>
+    <tr><td><code>append</code></td><td><code>public func StringBuilder append(any value)</code> — returns <code>this</code> for chaining</td></tr>
+    <tr><td><code>appendLine</code></td><td><code>public func StringBuilder appendLine(any value)</code> — appends value + newline</td></tr>
+    <tr><td><code>clear</code></td><td><code>public func void clear()</code></td></tr>
+    <tr><td><code>length</code></td><td><code>public func int length()</code></td></tr>
+    <tr><td><code>toString</code></td><td><code>public func string toString()</code></td></tr>
+  </tbody>
+</table>
+<pre><code class="language-ume">var sb = new StringBuilder();
+sb.append(&quot;name=&quot;);
+sb.append(&quot;Alice&quot;);
+sb.append(&quot;
+&quot;);
+sb.append(&quot;age=&quot;);
+sb.append(30);
+Console.println(sb.toString());
+// name=Alice
+// age=30
+
+// Note: Method chaining (sb.append().append()) may not work reliably
+// with the native StringBuilder. Use separate statements instead.</code></pre>
+
+<p><a class="next-link" href="stdlib-io.html">Console &amp; File →</a></p>
+</main>
+</div>
+<footer>
+  <div class="container">
+    <p>Ume Language &nbsp;·&nbsp; <a href="../index.html">Home</a> &nbsp;·&nbsp;
+       <a href="index.html">Wiki</a> &nbsp;·&nbsp; MIT License</p>
+  </div>
+</footer>
+<script>
+(function() {
+  // Theme toggle (persisted, respects OS preference on first load)
+  var root = document.documentElement;
+  var stored = localStorage.getItem('ume-theme');
+  if (!stored) {
+    stored = (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches)
+      ? 'dark' : 'light';
+  }
+  root.setAttribute('data-theme', stored);
+  var icon = document.getElementById('theme-icon');
+  if (icon) icon.textContent = stored === 'dark' ? '◑' : '◐';
+
+  document.getElementById('theme-toggle').addEventListener('click', function() {
+    var cur = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    root.setAttribute('data-theme', cur);
+    localStorage.setItem('ume-theme', cur);
+    if (icon) icon.textContent = cur === 'dark' ? '◑' : '◐';
+  });
+
+  // Highlight + copy button
+  function setup() {
+    if (!window.hljs) { setTimeout(setup, 30); return; }
+    try { hljs.registerAliases(['ume','Ume'], { languageName: 'csharp' }); } catch(e) {}
+    document.querySelectorAll('pre code').forEach(function(block) {
+      try { hljs.highlightElement(block); } catch(e) {}
+      if (block.parentElement.querySelector('.copy-btn')) return;
+      var btn = document.createElement('button');
+      btn.className = 'copy-btn';
+      btn.type = 'button';
+      btn.textContent = 'Copy';
+      btn.addEventListener('click', function() {
+        var txt = block.innerText;
+        navigator.clipboard.writeText(txt).then(function() {
+          btn.classList.add('copied');
+          btn.textContent = 'Copied!';
+          setTimeout(function() {
+            btn.classList.remove('copied');
+            btn.textContent = 'Copy';
+          }, 1600);
+        }, function() {
+          var ta = document.createElement('textarea');
+          ta.value = txt; document.body.appendChild(ta); ta.select();
+          try { document.execCommand('copy'); } catch(e) {}
+          document.body.removeChild(ta);
+          btn.textContent = 'Copied!';
+          setTimeout(function() { btn.textContent = 'Copy'; }, 1600);
+        });
+      });
+      block.parentElement.appendChild(btn);
+    });
+  }
+  setup();
+})();
+</script>
+</body>
+</html>
+

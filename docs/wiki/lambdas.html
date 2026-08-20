@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Lambdas &amp; Closures — Ume Language</title>
+<link rel="stylesheet" href="../style.css"/>
+<link rel="icon" href="../img/logo.png"/>
+<link rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css"
+      referrerpolicy="no-referrer"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/csharp.min.js" defer></script>
+</head>
+<body>
+
+<nav class="topnav">
+  <a class="nav-brand" href="../index.html">
+    <img src="../img/logo.png" alt="Ume"/>
+    <span>Ume</span>
+  </a>
+  <div class="nav-links">
+    <a href="../index.html">Home</a>
+    <a href="index.html">Wiki</a>
+    <a href="https://github.com" target="_blank" rel="noopener">GitHub</a>
+    <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Toggle dark mode">
+      <span id="theme-icon">◐</span>
+    </button>
+  </div>
+</nav>
+
+<div class="wiki">
+<aside class="sidebar">
+
+  <h4>Overview</h4>
+
+  <a href="index.html">Wiki Home</a>
+
+  <a href="getting-started.html">Getting Started</a>
+
+  <a href="project-config.html">Projects &amp; ume.toml</a>
+
+  <a href="modules.html">Modules &amp; Imports</a>
+
+  <h4>Language</h4>
+
+  <a href="types.html">Primitive Types</a>
+
+  <a href="variables.html">Variables &amp; Scope</a>
+
+  <a href="strings.html">Strings &amp; Interpolation</a>
+
+  <a href="expressions.html">Expressions &amp; Operators</a>
+
+  <a href="functions.html">Functions</a>
+
+  <a href="control-flow.html">Control Flow</a>
+
+  <a href="classes.html">Classes</a>
+
+  <a href="interfaces.html">Interfaces &amp; Abstract</a>
+
+  <a href="enums.html">Enums &amp; Structs</a>
+
+  <a href="generics.html">Generics</a>
+
+  <a href="properties.html">Properties &amp; Indexers</a>
+
+  <a href="attributes.html">Attributes</a>
+
+  <a href="exceptions.html">Exceptions</a>
+
+  <a href="lambdas.html" class=&#34;active&#34;>Lambdas &amp; Closures</a>
+
+  <a href="operators.html">Operator Overloading</a>
+
+  <a href="unsafe.html">Unsafe Blocks</a>
+
+  <h4>Standard Library</h4>
+
+  <a href="stdlib-core.html">Core (Prelude)</a>
+
+  <a href="stdlib-io.html">Console &amp; File</a>
+
+  <a href="stdlib-collections.html">Collections</a>
+
+  <a href="stdlib-string.html">String Utilities</a>
+
+  <a href="stdlib-math.html">Math &amp; Random</a>
+
+  <a href="stdlib-json.html">JSON</a>
+
+  <a href="stdlib-thread.html">Concurrency</a>
+
+  <a href="stdlib-audio.html">Audio</a>
+
+  <a href="stdlib-net.html">Networking</a>
+
+  <a href="stdlib-system.html">System &amp; FileSystem</a>
+
+  <a href="stdlib-time.html">Time &amp; Timestep</a>
+
+  <a href="stdlib-graphics.html">Graphics</a>
+
+  <a href="stdlib-vector.html">Vectors</a>
+
+  <a href="stdlib-matrix.html">Matrices</a>
+
+</aside>
+
+<main class="content">
+
+<span class="eyebrow">Language</span>
+<h1>Lambdas &amp; Closures</h1>
+<p class="lead">A lambda is an anonymous function you write inline. Lambdas are first-class values — you can store them in variables, pass them as arguments, return them from functions, and capture variables from their enclosing scope. They're the foundation of Ume's functional-style collection operations (<code>filter</code>, <code>map</code>, <code>reduce</code>, <code>forEach</code>, <code>sort</code>).</p>
+
+<h2 id="syntax">Lambda syntax</h2>
+<p>A lambda consists of a parameter list, an arrow (<code>-></code> or <code>=></code>), and a body. The body can be a block in braces (for multiple statements) or a single expression (for one-liners). When the body is a single expression, the <code>return</code> is implicit.</p>
+<pre><code class="language-ume">// Block body
+var add = (int a, int b) -&gt; {
+    return a + b;
+};
+
+// Expression body — implicit return
+var sq = (int n) -&gt; n * n;
+
+// Both arrow forms accepted: -&gt; and =&gt;
+var greet = (string name) =&gt; &quot;Hello, &quot; + name;</code></pre>
+
+<h2 id="single-param">Single-parameter shorthand</h2>
+<p>When a lambda takes exactly one parameter, you can omit the parentheses and the parameter's type — the type is inferred from context. This is the form you'll see most often in collection pipelines:</p>
+<pre><code class="language-ume">// n&#39;s type is inferred from the surrounding context
+var doubled = nums.map(n -&gt; n * 2);
+var evens   = nums.filter(n -&gt; n % 2 == 0);
+nums.forEach(n -&gt; Console.println(n));</code></pre>
+
+<h2 id="no-params">Zero-parameter lambdas</h2>
+<p>A lambda with no parameters needs empty parentheses:</p>
+<pre><code class="language-ume">var sayHi = () -&gt; { Console.println(&quot;hi&quot;); };
+sayHi();   // hi
+
+// Or with expression body:
+var getPi = () -&gt; Math.PI;</code></pre>
+
+<h2 id="func-type">The <code>func&lt;…&gt;</code> type</h2>
+<p>The type of a function value is written with <code>func</code>. There are two equivalent syntaxes:</p>
+<table>
+  <thead><tr><th>Form</th><th>Example</th><th>Meaning</th></tr></thead>
+  <tbody>
+    <tr><td>Angle-bracket</td><td><code>func&lt;int, int, int&gt;</code></td><td>First type is the return type; rest are parameter types. So this is a function taking two <code>int</code>s and returning an <code>int</code>.</td></tr>
+    <tr><td>Inline</td><td><code>func int (int, int)</code></td><td>Return type, then parameter types in parentheses. Same meaning.</td></tr>
+  </tbody>
+</table>
+<pre><code class="language-ume">// Both declare a function: (int, int) → int
+func&lt;int, int, int&gt; op1;
+func int (int, int) op2;
+
+op1 = (int a, int b) -&gt; { return a + b; };
+op2 = (int a, int b) -&gt; a * b;
+
+Console.println(op1(3, 4));   // 7
+Console.println(op2(3, 4));   // 12</code></pre>
+
+<p>The inline form is more common in parameter lists because it reads naturally:</p>
+<pre><code class="language-ume">// A function that takes another function as a parameter
+public func int apply(func int (int, int) f, int x, int y) {
+    return f(x, y);
+}
+
+var result = apply((a, b) -&gt; a + b, 10, 20);
+Console.println(result);   // 30</code></pre>
+
+<h2 id="func-type-single">Single-parameter function types</h2>
+<p>The standard library uses the inline form heavily. For example, <code>List&lt;T&gt;.forEach</code> takes a <code>func void (T)</code> — a function taking a <code>T</code> and returning <code>void</code>:</p>
+<pre><code class="language-ume">List&lt;string&gt; names = [&quot;Alice&quot;, &quot;Bob&quot;, &quot;Charlie&quot;];
+
+// forEach takes a func void (string)
+names.forEach((string n) -&gt; Console.println(&quot;Hi &quot; + n));
+names.forEach(n -&gt; Console.println(&quot;Hi &quot; + n));   // shorthand</code></pre>
+
+<h2 id="closures">Closures</h2>
+<p>A closure is a lambda that captures variables from its enclosing scope. The captured variables are not copied at the moment the lambda is created — they're referenced, so changes to them after the lambda is created are visible when the lambda runs. This is what makes closures powerful for callbacks and event handlers.</p>
+<pre><code class="language-ume">int multiplier = 10;
+
+// This lambda captures &#39;multiplier&#39; from the enclosing scope
+func int (int) scale = n -&gt; n * multiplier;
+
+Console.println(scale(5));    // 50
+
+// Changing the captured variable affects the lambda
+multiplier = 100;
+Console.println(scale(5));    // 500</code></pre>
+
+<h2 id="closures-capture">Capturing local state</h2>
+<p>Closures are the standard way to carry local state into a callback. For example, a counter that increments each time it's called:</p>
+<pre><code class="language-ume">public func func int () makeCounter() {
+    int count = 0;
+    return () -&gt; {
+        count = count + 1;
+        return count;
+    };
+}
+
+var c = makeCounter();
+Console.println(c());   // 1
+Console.println(c());   // 2
+Console.println(c());   // 3
+
+// Each closure has its own captured state
+var d = makeCounter();
+Console.println(d());   // 1
+Console.println(c());   // 4</code></pre>
+
+<h2 id="collections">Lambdas with collections</h2>
+<p>This is where lambdas shine. The collection types all take lambdas for transformation, filtering, and aggregation:</p>
+<pre><code class="language-ume">List&lt;int&gt; nums = [1, 2, 3, 4, 5];
+
+// filter: keep elements matching a predicate
+List&lt;int&gt; evens = nums.filter(n -&gt; n % 2 == 0);    // [2, 4]
+
+// map: transform each element
+List&lt;int&gt;  doubled  = nums.map(n -&gt; n * 2);   // [2, 4, 6, 8, 10]
+List&lt;string&gt; words  = nums.map(n -&gt; $&quot;n{n}&quot;);    // [&quot;n1&quot;, &quot;n2&quot;, ...]
+
+// reduce: combine all elements into one value
+int sum = nums.reduce(0, (acc, n) -&gt; acc + n);     // 15
+
+// sort with a comparator lambda
+nums.sort((a, b) -&gt; a - b);   // ascending
+
+// forEach: side-effect per element
+nums.forEach(n -&gt; Console.println(n));</code></pre>
+
+<h2 id="immediately-invoked">Immediately-invoked lambdas</h2>
+<p>You can define and call a lambda in one expression by wrapping it in parentheses and adding the call parentheses:</p>
+<pre><code class="language-ume">int result = ((int a, int b) -&gt; a + b)(3, 4);
+Console.println(result);   // 7</code></pre>
+
+<p>This is occasionally useful for one-off computations where you want a local scope, or for initializing a <code>const</code> from a non-trivial expression.</p>
+
+<h2 id="lambdas-vs-methods">Lambdas vs methods</h2>
+<p>Lambdas and methods both represent reusable behavior, but they serve different purposes. Methods are named members of a class, accessible wherever the class is visible. Lambdas are anonymous values, scoped to wherever the variable holding them is visible. Use methods when the behavior is part of a type's API and will be called from many places; use lambdas when the behavior is local to one piece of code (like a one-off transformation passed to <code>map</code>).</p>
+
+<p><a class="next-link" href="operators.html">Operator Overloading →</a></p>
+</main>
+</div>
+<footer>
+  <div class="container">
+    <p>Ume Language &nbsp;·&nbsp; <a href="../index.html">Home</a> &nbsp;·&nbsp;
+       <a href="index.html">Wiki</a> &nbsp;·&nbsp; MIT License</p>
+  </div>
+</footer>
+<script>
+(function() {
+  // Theme toggle (persisted, respects OS preference on first load)
+  var root = document.documentElement;
+  var stored = localStorage.getItem('ume-theme');
+  if (!stored) {
+    stored = (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches)
+      ? 'dark' : 'light';
+  }
+  root.setAttribute('data-theme', stored);
+  var icon = document.getElementById('theme-icon');
+  if (icon) icon.textContent = stored === 'dark' ? '◑' : '◐';
+
+  document.getElementById('theme-toggle').addEventListener('click', function() {
+    var cur = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    root.setAttribute('data-theme', cur);
+    localStorage.setItem('ume-theme', cur);
+    if (icon) icon.textContent = cur === 'dark' ? '◑' : '◐';
+  });
+
+  // Highlight + copy button
+  function setup() {
+    if (!window.hljs) { setTimeout(setup, 30); return; }
+    try { hljs.registerAliases(['ume','Ume'], { languageName: 'csharp' }); } catch(e) {}
+    document.querySelectorAll('pre code').forEach(function(block) {
+      try { hljs.highlightElement(block); } catch(e) {}
+      if (block.parentElement.querySelector('.copy-btn')) return;
+      var btn = document.createElement('button');
+      btn.className = 'copy-btn';
+      btn.type = 'button';
+      btn.textContent = 'Copy';
+      btn.addEventListener('click', function() {
+        var txt = block.innerText;
+        navigator.clipboard.writeText(txt).then(function() {
+          btn.classList.add('copied');
+          btn.textContent = 'Copied!';
+          setTimeout(function() {
+            btn.classList.remove('copied');
+            btn.textContent = 'Copy';
+          }, 1600);
+        }, function() {
+          var ta = document.createElement('textarea');
+          ta.value = txt; document.body.appendChild(ta); ta.select();
+          try { document.execCommand('copy'); } catch(e) {}
+          document.body.removeChild(ta);
+          btn.textContent = 'Copied!';
+          setTimeout(function() { btn.textContent = 'Copy'; }, 1600);
+        });
+      });
+      block.parentElement.appendChild(btn);
+    });
+  }
+  setup();
+})();
+</script>
+</body>
+</html>
+

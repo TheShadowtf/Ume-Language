@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Operator Overloading — Ume Language</title>
+<link rel="stylesheet" href="../style.css"/>
+<link rel="icon" href="../img/logo.png"/>
+<link rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css"
+      referrerpolicy="no-referrer"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/csharp.min.js" defer></script>
+</head>
+<body>
+
+<nav class="topnav">
+  <a class="nav-brand" href="../index.html">
+    <img src="../img/logo.png" alt="Ume"/>
+    <span>Ume</span>
+  </a>
+  <div class="nav-links">
+    <a href="../index.html">Home</a>
+    <a href="index.html">Wiki</a>
+    <a href="https://github.com" target="_blank" rel="noopener">GitHub</a>
+    <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Toggle dark mode">
+      <span id="theme-icon">◐</span>
+    </button>
+  </div>
+</nav>
+
+<div class="wiki">
+<aside class="sidebar">
+
+  <h4>Overview</h4>
+
+  <a href="index.html">Wiki Home</a>
+
+  <a href="getting-started.html">Getting Started</a>
+
+  <a href="project-config.html">Projects &amp; ume.toml</a>
+
+  <a href="modules.html">Modules &amp; Imports</a>
+
+  <h4>Language</h4>
+
+  <a href="types.html">Primitive Types</a>
+
+  <a href="variables.html">Variables &amp; Scope</a>
+
+  <a href="strings.html">Strings &amp; Interpolation</a>
+
+  <a href="expressions.html">Expressions &amp; Operators</a>
+
+  <a href="functions.html">Functions</a>
+
+  <a href="control-flow.html">Control Flow</a>
+
+  <a href="classes.html">Classes</a>
+
+  <a href="interfaces.html">Interfaces &amp; Abstract</a>
+
+  <a href="enums.html">Enums &amp; Structs</a>
+
+  <a href="generics.html">Generics</a>
+
+  <a href="properties.html">Properties &amp; Indexers</a>
+
+  <a href="attributes.html">Attributes</a>
+
+  <a href="exceptions.html">Exceptions</a>
+
+  <a href="lambdas.html">Lambdas &amp; Closures</a>
+
+  <a href="operators.html" class=&#34;active&#34;>Operator Overloading</a>
+
+  <a href="unsafe.html">Unsafe Blocks</a>
+
+  <h4>Standard Library</h4>
+
+  <a href="stdlib-core.html">Core (Prelude)</a>
+
+  <a href="stdlib-io.html">Console &amp; File</a>
+
+  <a href="stdlib-collections.html">Collections</a>
+
+  <a href="stdlib-string.html">String Utilities</a>
+
+  <a href="stdlib-math.html">Math &amp; Random</a>
+
+  <a href="stdlib-json.html">JSON</a>
+
+  <a href="stdlib-thread.html">Concurrency</a>
+
+  <a href="stdlib-audio.html">Audio</a>
+
+  <a href="stdlib-net.html">Networking</a>
+
+  <a href="stdlib-system.html">System &amp; FileSystem</a>
+
+  <a href="stdlib-time.html">Time &amp; Timestep</a>
+
+  <a href="stdlib-graphics.html">Graphics</a>
+
+  <a href="stdlib-vector.html">Vectors</a>
+
+  <a href="stdlib-matrix.html">Matrices</a>
+
+</aside>
+
+<main class="content">
+
+<span class="eyebrow">Language</span>
+<h1>Operator Overloading</h1>
+<p class="lead">You can teach your own types to respond to <code>+</code>, <code>-</code>, <code>*</code>, comparison, and other operators by declaring <code>operator</code> methods inside the class. This is the standard way to make numeric-like types (vectors, matrices, complex numbers, money) read naturally in expressions.</p>
+
+<h2 id="syntax">Declaring an operator</h2>
+<p>An operator method is declared with the <code>operator</code> keyword, followed by the operator symbol, a parameter list, an optional return type after <code>-></code>, and a body. The left operand is <code>this</code>; the right operand is the parameter. Operators are always public instance methods.</p>
+<pre><code class="language-ume">public class Vec2 {
+    public double x, y;
+
+    public Vec2(double x, double y) { this.x = x; this.y = y; }
+
+    // Binary +
+    public operator + (Vec2 other) -&gt; Vec2 {
+        return new Vec2(x + other.x, y + other.y);
+    }
+
+    // Binary -
+    public operator - (Vec2 other) -&gt; Vec2 {
+        return new Vec2(x - other.x, y - other.y);
+    }
+
+    // Comparison
+    public operator == (Vec2 other) -&gt; bool {
+        return x == other.x &amp;&amp; y == other.y;
+    }
+
+    public func string toString() {
+        return &quot;(&quot; + x + &quot;, &quot; + y + &quot;)&quot;;
+    }
+}
+
+var a = new Vec2(1.0, 2.0);
+var b = new Vec2(3.0, 4.0);
+
+var c = a + b;             // calls a.operator+(b)
+Console.println(c.toString());   // (4.0, 6.0)
+
+Console.println(a == b);   // false
+Console.println(a == a);   // true</code></pre>
+
+<h2 id="overloadable">Overloadable operators</h2>
+<p>The following operators can be overloaded on user-defined types:</p>
+<table>
+  <thead><tr><th>Category</th><th>Operators</th></tr></thead>
+  <tbody>
+    <tr><td>Arithmetic</td><td><code>+</code> <code>-</code> <code>*</code> <code>/</code> <code>%</code></td></tr>
+    <tr><td>Comparison</td><td><code>==</code> <code>!=</code> <code>&lt;</code> <code>&gt;</code> <code>&lt;=</code> <code>&gt;=</code></td></tr>
+    <tr><td>Bitwise</td><td><code>&</code> <code>|</code> <code>^</code> <code>&lt;&lt;</code> <code>&gt;&gt;</code></td></tr>
+  </tbody>
+</table>
+
+<h2 id="scalar">Operators with scalar operands</h2>
+<p>The right-hand operand doesn't have to be the same type as the left. This is how you'd let <code>Vec2 * double</code> scale a vector by a number:</p>
+<pre><code class="language-ume">public class Vec2 {
+    public double x, y;
+
+    public Vec2(double x, double y) { this.x = x; this.y = y; }
+
+    // Vec2 * double → Vec2
+    public operator * (double scalar) -&gt; Vec2 {
+        return new Vec2(x * scalar, y * scalar);
+    }
+}
+
+var v = new Vec2(1.0, 2.0);
+var doubled = v * 3.0;
+Console.println(doubled.toString());   // (3.0, 6.0)</code></pre>
+
+<h2 id="example-complex">A more complete example: complex numbers</h2>
+<pre><code class="language-ume">public class Complex {
+    public double real;
+    public double imag;
+
+    public Complex(double r, double i) { real = r; imag = i; }
+
+    public operator + (Complex o) -&gt; Complex {
+        return new Complex(real + o.real, imag + o.imag);
+    }
+
+    public operator * (Complex o) -&gt; Complex {
+        return new Complex(
+            real * o.real - imag * o.imag,
+            real * o.imag + imag * o.real
+        );
+    }
+
+    public operator == (Complex o) -&gt; bool {
+        return real == o.real &amp;&amp; imag == o.imag;
+    }
+
+    public func string toString() {
+        return real + &quot; + &quot; + imag + &quot;i&quot;;
+    }
+}
+
+var z1 = new Complex(1, 2);   // 1 + 2i
+var z2 = new Complex(3, 4);   // 3 + 4i
+
+var sum = z1 + z2;            // 4 + 6i
+var prod = z1 * z2;           // (1*3 - 2*4) + (1*4 + 2*3)i = -5 + 10i
+
+Console.println(sum.toString());    // 4 + 6i
+Console.println(prod.toString());   // -5 + 10i</code></pre>
+
+<h2 id="guidelines">Design guidelines</h2>
+<ul>
+  <li><strong>Only overload operators when the meaning is obvious.</strong> <code>Vec2 + Vec2</code> clearly means vector addition. <code>Account + Account</code> does not clearly mean anything — use a named method instead.</li>
+  <li><strong>Keep operator behavior consistent with the built-in types.</strong> <code>+</code> should add and return a new value, not mutate <code>this</code>. <code>==</code> should be symmetric (<code>a == b</code> implies <code>b == a</code>) and should agree with <code>!=</code>.</li>
+  <li><strong>Implement <code>==</code> and <code>!=</code> together</strong> — it's confusing if only one is defined.</li>
+  <li><strong>Don't overload comparison operators to mean something other than ordering.</strong> <code>&lt;</code> should be a total order; if you can't provide one, use a named <code>compareTo</code> method instead.</li>
+</ul>
+
+<div class="callout callout-info">
+  <div class="callout-title">Operator overloading is not for everything</div>
+  <p>Resist the temptation to overload operators just because you can. For most types, named methods are clearer. Save operator overloading for types that are mathematically numeric (vectors, matrices, complex numbers, fractions, money) — there, the infix notation genuinely improves readability.</p>
+</div>
+
+<p><a class="next-link" href="unsafe.html">Unsafe Blocks →</a></p>
+</main>
+</div>
+<footer>
+  <div class="container">
+    <p>Ume Language &nbsp;·&nbsp; <a href="../index.html">Home</a> &nbsp;·&nbsp;
+       <a href="index.html">Wiki</a> &nbsp;·&nbsp; MIT License</p>
+  </div>
+</footer>
+<script>
+(function() {
+  // Theme toggle (persisted, respects OS preference on first load)
+  var root = document.documentElement;
+  var stored = localStorage.getItem('ume-theme');
+  if (!stored) {
+    stored = (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches)
+      ? 'dark' : 'light';
+  }
+  root.setAttribute('data-theme', stored);
+  var icon = document.getElementById('theme-icon');
+  if (icon) icon.textContent = stored === 'dark' ? '◑' : '◐';
+
+  document.getElementById('theme-toggle').addEventListener('click', function() {
+    var cur = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    root.setAttribute('data-theme', cur);
+    localStorage.setItem('ume-theme', cur);
+    if (icon) icon.textContent = cur === 'dark' ? '◑' : '◐';
+  });
+
+  // Highlight + copy button
+  function setup() {
+    if (!window.hljs) { setTimeout(setup, 30); return; }
+    try { hljs.registerAliases(['ume','Ume'], { languageName: 'csharp' }); } catch(e) {}
+    document.querySelectorAll('pre code').forEach(function(block) {
+      try { hljs.highlightElement(block); } catch(e) {}
+      if (block.parentElement.querySelector('.copy-btn')) return;
+      var btn = document.createElement('button');
+      btn.className = 'copy-btn';
+      btn.type = 'button';
+      btn.textContent = 'Copy';
+      btn.addEventListener('click', function() {
+        var txt = block.innerText;
+        navigator.clipboard.writeText(txt).then(function() {
+          btn.classList.add('copied');
+          btn.textContent = 'Copied!';
+          setTimeout(function() {
+            btn.classList.remove('copied');
+            btn.textContent = 'Copy';
+          }, 1600);
+        }, function() {
+          var ta = document.createElement('textarea');
+          ta.value = txt; document.body.appendChild(ta); ta.select();
+          try { document.execCommand('copy'); } catch(e) {}
+          document.body.removeChild(ta);
+          btn.textContent = 'Copied!';
+          setTimeout(function() { btn.textContent = 'Copy'; }, 1600);
+        });
+      });
+      block.parentElement.appendChild(btn);
+    });
+  }
+  setup();
+})();
+</script>
+</body>
+</html>
+

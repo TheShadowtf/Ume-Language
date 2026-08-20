@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Functions — Ume Language</title>
+<link rel="stylesheet" href="../style.css"/>
+<link rel="icon" href="../img/logo.png"/>
+<link rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css"
+      referrerpolicy="no-referrer"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/csharp.min.js" defer></script>
+</head>
+<body>
+
+<nav class="topnav">
+  <a class="nav-brand" href="../index.html">
+    <img src="../img/logo.png" alt="Ume"/>
+    <span>Ume</span>
+  </a>
+  <div class="nav-links">
+    <a href="../index.html">Home</a>
+    <a href="index.html">Wiki</a>
+    <a href="https://github.com" target="_blank" rel="noopener">GitHub</a>
+    <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Toggle dark mode">
+      <span id="theme-icon">◐</span>
+    </button>
+  </div>
+</nav>
+
+<div class="wiki">
+<aside class="sidebar">
+
+  <h4>Overview</h4>
+
+  <a href="index.html">Wiki Home</a>
+
+  <a href="getting-started.html">Getting Started</a>
+
+  <a href="project-config.html">Projects &amp; ume.toml</a>
+
+  <a href="modules.html">Modules &amp; Imports</a>
+
+  <h4>Language</h4>
+
+  <a href="types.html">Primitive Types</a>
+
+  <a href="variables.html">Variables &amp; Scope</a>
+
+  <a href="strings.html">Strings &amp; Interpolation</a>
+
+  <a href="expressions.html">Expressions &amp; Operators</a>
+
+  <a href="functions.html" class=&#34;active&#34;>Functions</a>
+
+  <a href="control-flow.html">Control Flow</a>
+
+  <a href="classes.html">Classes</a>
+
+  <a href="interfaces.html">Interfaces &amp; Abstract</a>
+
+  <a href="enums.html">Enums &amp; Structs</a>
+
+  <a href="generics.html">Generics</a>
+
+  <a href="properties.html">Properties &amp; Indexers</a>
+
+  <a href="attributes.html">Attributes</a>
+
+  <a href="exceptions.html">Exceptions</a>
+
+  <a href="lambdas.html">Lambdas &amp; Closures</a>
+
+  <a href="operators.html">Operator Overloading</a>
+
+  <a href="unsafe.html">Unsafe Blocks</a>
+
+  <h4>Standard Library</h4>
+
+  <a href="stdlib-core.html">Core (Prelude)</a>
+
+  <a href="stdlib-io.html">Console &amp; File</a>
+
+  <a href="stdlib-collections.html">Collections</a>
+
+  <a href="stdlib-string.html">String Utilities</a>
+
+  <a href="stdlib-math.html">Math &amp; Random</a>
+
+  <a href="stdlib-json.html">JSON</a>
+
+  <a href="stdlib-thread.html">Concurrency</a>
+
+  <a href="stdlib-audio.html">Audio</a>
+
+  <a href="stdlib-net.html">Networking</a>
+
+  <a href="stdlib-system.html">System &amp; FileSystem</a>
+
+  <a href="stdlib-time.html">Time &amp; Timestep</a>
+
+  <a href="stdlib-graphics.html">Graphics</a>
+
+  <a href="stdlib-vector.html">Vectors</a>
+
+  <a href="stdlib-matrix.html">Matrices</a>
+
+</aside>
+
+<main class="content">
+
+<span class="eyebrow">Language</span>
+<h1>Functions</h1>
+<p class="lead">Functions are the basic unit of reusable behavior. A function has a name, a list of parameters, a return type, and a body. Ume supports overloading, default parameter values, variadic parameters, and generic functions.</p>
+
+<h2 id="decl">Declaring a function</h2>
+<p>The <code>func</code> keyword introduces a function. The syntax is <code>func ReturnType name(params) { … }</code>. A function that doesn't return a value uses <code>void</code> as the return type and either omits the <code>return</code> statement or uses a bare <code>return;</code>.</p>
+<pre><code class="language-ume">func int add(int a, int b) {
+    return a + b;
+}
+
+func void greet(string name) {
+    Console.println(&quot;Hello, &quot; + name + &quot;!&quot;);
+}
+
+// Bare return inside a void function
+func void maybeLog(string msg, bool verbose) {
+    if (!verbose) return;
+    Console.println(msg);
+}</code></pre>
+
+<p>Functions can be declared at the top level of a file (free functions) or as members of a class (methods). Free functions are visible anywhere in their package; methods are accessed through an instance (or the class name, if <code>static</code>).</p>
+
+<h2 id="params">Parameters</h2>
+<p>Parameters are declared as <code>Type name</code> inside the parentheses. Multiple parameters are comma-separated. Each parameter is a fresh local variable initialized with the corresponding argument value when the function is called.</p>
+<pre><code class="language-ume">func double distance(double x1, double y1, double x2, double y2) {
+    double dx = x2 - x1;
+    double dy = y2 - y1;
+    return Math.sqrt(dx*dx + dy*dy);
+}</code></pre>
+
+<h2 id="defaults">Default parameter values</h2>
+<p>Any parameter can have a default value, specified with <code>= expr</code> after the parameter name. When the caller omits that argument, the default expression is used. Default arguments must come after required arguments in the parameter list.</p>
+<pre><code class="language-ume">func void log(string msg, bool newLine = true) {
+    if (newLine) {
+        Console.println(msg);
+    } else {
+        Console.print(msg);
+    }
+}
+
+log(&quot;with newline&quot;);        // calls with newLine=true (default)
+log(&quot;without newline&quot;, false);  // calls with newLine=false</code></pre>
+
+<h2 id="variadic">Variadic parameters</h2>
+<p>A parameter declared with <code>...</code> after its type accepts any number of arguments of that type, collected into an array. Inside the function, the variadic parameter behaves like a regular array. Only the last parameter can be variadic.</p>
+<pre><code class="language-ume">func int sum(int... nums) {
+    int total = 0;
+    foreach (int n in nums) {
+        total += n;
+    }
+    return total;
+}
+
+Console.println(sum());           // 0
+Console.println(sum(1, 2, 3));    // 6
+Console.println(sum(1, 2, 3, 4, 5)); // 15</code></pre>
+
+<p>The <code>...any</code> form accepts arguments of any type — useful for printf-style functions like <code>StringUtils.format()</code>.</p>
+
+<h2 id="overloading">Function overloading</h2>
+<p>Multiple functions can share the same name as long as their parameter lists differ in number or type. The compiler picks the best match based on the argument types at each call site. Overload resolution prefers exact matches over conversions.</p>
+<pre><code class="language-ume">func int    max(int a, int b)    { return a &gt; b ? a : b; }
+func double max(double a, double b) { return a &gt; b ? a : b; }
+
+Console.println(max(5, 10));        // calls int version → 10
+Console.println(max(2.5, 7.5));     // calls double version → 7.5</code></pre>
+
+<h2 id="generics">Generic functions</h2>
+<p>Functions can be parameterized over types. Type parameters are listed in angle brackets between the return type and the function name (or before the name for class methods). Inside the function, the type parameter can be used like any other type.</p>
+<pre><code class="language-ume">// T is a type parameter — the function works for any type
+func T identity&lt;T&gt;(T value) {
+    return value;
+}
+
+int    n = identity(42);      // T inferred as int
+string s = identity(&quot;hi&quot;);     // T inferred as string
+
+// Type inference: the compiler can often infer T from the argument
+int    m = identity(99);     // T inferred as int
+string t = identity(&quot;yo&quot;);   // T inferred as string</code></pre>
+
+<p>Generic functions are especially useful for collection algorithms. The standard library's <code>List&lt;T&gt;.map&lt;R&gt;()</code> is a generic method that takes a transform from <code>T</code> to <code>R</code> and returns a <code>List&lt;R&gt;</code>:</p>
+<pre><code class="language-ume">List&lt;int&gt; nums = [1, 2, 3, 4, 5];
+
+// map transforms int → int
+List&lt;int&gt;  doubled = nums.map(n -&gt; n * 2);
+
+// map transforms int → string
+List&lt;string&gt; words = nums.map(n -&gt; $&quot;num: {n}&quot;);</code></pre>
+
+<h2 id="return">Return statements</h2>
+<p>A <code>return</code> statement exits the function immediately. If the function has a non-<code>void</code> return type, <code>return</code> must be followed by an expression of the correct type. The expression's type is checked at compile time — you can't return a <code>string</code> from a function declared to return <code>int</code>.</p>
+<pre><code class="language-ume">func int firstPositive(int a, int b) {
+    if (a &gt; 0) return a;
+    if (b &gt; 0) return b;
+    return 0;   // fallback
+}</code></pre>
+
+<h2 id="recursion">Recursion</h2>
+<p>Functions can call themselves. The compiler doesn't apply tail-call optimization, so very deep recursion can overflow the stack — for such cases, prefer an iterative loop.</p>
+<pre><code class="language-ume">func int factorial(int n) {
+    if (n &lt;= 1) return 1;
+    return n * factorial(n - 1);
+}
+
+Console.println(factorial(5));   // 120</code></pre>
+
+<h2 id="closures">Functions as values</h2>
+<p>Functions are first-class values: you can store them in variables, pass them as arguments, and return them from other functions. The type of a function value is written with <code>func&lt;…&gt;</code> or the inline <code>func ReturnType (ParamTypes)</code> form. See <a href="lambdas.html">Lambdas &amp; Closures</a> for the full treatment.</p>
+<pre><code class="language-ume">// Declare a variable that holds a function taking (int, int) → int
+func&lt;int, int, int&gt; op;
+
+// Assign a lambda
+op = (int a, int b) -&gt; { return a + b; };
+Console.println(op(3, 4));   // 7
+
+// Pass a function as an argument
+func int apply(func&lt;int, int, int&gt; f, int x, int y) {
+    return f(x, y);
+}
+Console.println(apply(op, 10, 20));   // 30</code></pre>
+
+<h2 id="method-vs-func">Methods</h2>
+<p>When a function is declared inside a class, it's a method. Methods have access to <code>this</code> (the instance the method was called on) and to other members of the class. <code>static</code> methods don't have a <code>this</code> — they're called on the class itself. See <a href="classes.html">Classes</a> for the full method story.</p>
+<pre><code class="language-ume">class Calculator {
+    public int lastResult;       // instance field
+
+    public func int add(int a, int b) {
+        lastResult = a + b;      // &#39;this&#39; is implicit
+        return lastResult;
+    }
+
+    public static func int multiply(int a, int b) {
+        return a * b;
+        // Cannot access &#39;lastResult&#39; here — no &#39;this&#39;
+    }
+}
+
+var c = new Calculator();
+Console.println(c.add(2, 3));           // 5 — instance method
+Console.println(c.lastResult);          // 5
+Console.println(Calculator.multiply(4, 5));  // 20 — static method</code></pre>
+
+<p><a class="next-link" href="control-flow.html">Control Flow →</a></p>
+</main>
+</div>
+<footer>
+  <div class="container">
+    <p>Ume Language &nbsp;·&nbsp; <a href="../index.html">Home</a> &nbsp;·&nbsp;
+       <a href="index.html">Wiki</a> &nbsp;·&nbsp; MIT License</p>
+  </div>
+</footer>
+<script>
+(function() {
+  // Theme toggle (persisted, respects OS preference on first load)
+  var root = document.documentElement;
+  var stored = localStorage.getItem('ume-theme');
+  if (!stored) {
+    stored = (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches)
+      ? 'dark' : 'light';
+  }
+  root.setAttribute('data-theme', stored);
+  var icon = document.getElementById('theme-icon');
+  if (icon) icon.textContent = stored === 'dark' ? '◑' : '◐';
+
+  document.getElementById('theme-toggle').addEventListener('click', function() {
+    var cur = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    root.setAttribute('data-theme', cur);
+    localStorage.setItem('ume-theme', cur);
+    if (icon) icon.textContent = cur === 'dark' ? '◑' : '◐';
+  });
+
+  // Highlight + copy button
+  function setup() {
+    if (!window.hljs) { setTimeout(setup, 30); return; }
+    try { hljs.registerAliases(['ume','Ume'], { languageName: 'csharp' }); } catch(e) {}
+    document.querySelectorAll('pre code').forEach(function(block) {
+      try { hljs.highlightElement(block); } catch(e) {}
+      if (block.parentElement.querySelector('.copy-btn')) return;
+      var btn = document.createElement('button');
+      btn.className = 'copy-btn';
+      btn.type = 'button';
+      btn.textContent = 'Copy';
+      btn.addEventListener('click', function() {
+        var txt = block.innerText;
+        navigator.clipboard.writeText(txt).then(function() {
+          btn.classList.add('copied');
+          btn.textContent = 'Copied!';
+          setTimeout(function() {
+            btn.classList.remove('copied');
+            btn.textContent = 'Copy';
+          }, 1600);
+        }, function() {
+          var ta = document.createElement('textarea');
+          ta.value = txt; document.body.appendChild(ta); ta.select();
+          try { document.execCommand('copy'); } catch(e) {}
+          document.body.removeChild(ta);
+          btn.textContent = 'Copied!';
+          setTimeout(function() { btn.textContent = 'Copy'; }, 1600);
+        });
+      });
+      block.parentElement.appendChild(btn);
+    });
+  }
+  setup();
+})();
+</script>
+</body>
+</html>
+

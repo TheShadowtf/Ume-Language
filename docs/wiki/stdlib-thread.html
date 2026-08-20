@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Concurrency — Ume Language</title>
+<link rel="stylesheet" href="../style.css"/>
+<link rel="icon" href="../img/logo.png"/>
+<link rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css"
+      referrerpolicy="no-referrer"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/csharp.min.js" defer></script>
+</head>
+<body>
+
+<nav class="topnav">
+  <a class="nav-brand" href="../index.html">
+    <img src="../img/logo.png" alt="Ume"/>
+    <span>Ume</span>
+  </a>
+  <div class="nav-links">
+    <a href="../index.html">Home</a>
+    <a href="index.html">Wiki</a>
+    <a href="https://github.com" target="_blank" rel="noopener">GitHub</a>
+    <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Toggle dark mode">
+      <span id="theme-icon">◐</span>
+    </button>
+  </div>
+</nav>
+
+<div class="wiki">
+<aside class="sidebar">
+
+  <h4>Overview</h4>
+
+  <a href="index.html">Wiki Home</a>
+
+  <a href="getting-started.html">Getting Started</a>
+
+  <a href="project-config.html">Projects &amp; ume.toml</a>
+
+  <a href="modules.html">Modules &amp; Imports</a>
+
+  <h4>Language</h4>
+
+  <a href="types.html">Primitive Types</a>
+
+  <a href="variables.html">Variables &amp; Scope</a>
+
+  <a href="strings.html">Strings &amp; Interpolation</a>
+
+  <a href="expressions.html">Expressions &amp; Operators</a>
+
+  <a href="functions.html">Functions</a>
+
+  <a href="control-flow.html">Control Flow</a>
+
+  <a href="classes.html">Classes</a>
+
+  <a href="interfaces.html">Interfaces &amp; Abstract</a>
+
+  <a href="enums.html">Enums &amp; Structs</a>
+
+  <a href="generics.html">Generics</a>
+
+  <a href="properties.html">Properties &amp; Indexers</a>
+
+  <a href="attributes.html">Attributes</a>
+
+  <a href="exceptions.html">Exceptions</a>
+
+  <a href="lambdas.html">Lambdas &amp; Closures</a>
+
+  <a href="operators.html">Operator Overloading</a>
+
+  <a href="unsafe.html">Unsafe Blocks</a>
+
+  <h4>Standard Library</h4>
+
+  <a href="stdlib-core.html">Core (Prelude)</a>
+
+  <a href="stdlib-io.html">Console &amp; File</a>
+
+  <a href="stdlib-collections.html">Collections</a>
+
+  <a href="stdlib-string.html">String Utilities</a>
+
+  <a href="stdlib-math.html">Math &amp; Random</a>
+
+  <a href="stdlib-json.html">JSON</a>
+
+  <a href="stdlib-thread.html" class=&#34;active&#34;>Concurrency</a>
+
+  <a href="stdlib-audio.html">Audio</a>
+
+  <a href="stdlib-net.html">Networking</a>
+
+  <a href="stdlib-system.html">System &amp; FileSystem</a>
+
+  <a href="stdlib-time.html">Time &amp; Timestep</a>
+
+  <a href="stdlib-graphics.html">Graphics</a>
+
+  <a href="stdlib-vector.html">Vectors</a>
+
+  <a href="stdlib-matrix.html">Matrices</a>
+
+</aside>
+
+<main class="content">
+
+<span class="eyebrow">Standard Library</span>
+<h1>Concurrency</h1>
+<p class="lead">Multi-threaded programming with <code>Thread</code>, <code>Mutex</code>, <code>ConditionVariable</code>, <code>AtomicInt</code>, and <code>Task&lt;T&gt;</code> for asynchronous results.</p>
+
+<div class="callout callout-info">
+  <div class="callout-title">Two ways to import</div>
+  <pre><code class="language-ume">import std.thread.*;   // AST-level (recommended)
+#include &lt;thread.ume&gt;   // textual include (C-style)</code></pre>
+  <p>Note: <code>Thread.sleep(ms)</code> is a static method and is always available without import.</p>
+</div>
+
+<h2 id="thread"><code>Thread</code></h2>
+<p>A thread runs a function concurrently with the calling thread. Construct a <code>Thread</code> with the function to run, then call <code>start()</code> to begin execution. Call <code>join()</code> to wait for the thread to finish. Threads share memory with their parent — that's why you need mutexes and atomics for synchronization.</p>
+<table>
+  <thead><tr><th>Method</th><th>Signature</th><th>Description</th></tr></thead>
+  <tbody>
+    <tr><td>constructor</td><td><code>public func void constructor(func void () task)</code></td><td>Stores the task; doesn't start yet.</td></tr>
+    <tr><td><code>start</code></td><td><code>public func void start()</code></td><td>Begins running the task on a new OS thread.</td></tr>
+    <tr><td><code>join</code></td><td><code>public func void join()</code></td><td>Blocks until the thread finishes.</td></tr>
+    <tr><td><code>isAlive</code></td><td><code>public func bool isAlive()</code></td><td>True if the thread is still running.</td></tr>
+    <tr><td><code>sleep</code></td><td><code>public static func void sleep(long milliseconds)</code></td><td>Pause the current thread.</td></tr>
+    <tr><td><code>current</code></td><td><code>public static func Thread current()</code></td><td>The currently-running thread.</td></tr>
+  </tbody>
+</table>
+<pre><code class="language-ume">import std.thread.*;
+
+func void main() {
+    var worker = () -&gt; {
+        for (int i = 0; i &lt; 5; i++) {
+            Console.println(&quot;worker: &quot; + i);
+            Thread.sleep(100);
+        }
+    };
+
+    var t = new Thread(worker);
+    t.start();
+
+    // Do other work in parallel
+    Console.println(&quot;main: started worker&quot;);
+
+    t.join();   // wait for worker to finish
+    Console.println(&quot;main: done&quot;);
+}</code></pre>
+
+<h2 id="mutex"><code>Mutex</code></h2>
+<p>A mutual-exclusion lock. Only one thread can hold the lock at a time; others block on <code>lock()</code> until it's released. Use a mutex to protect shared mutable state — any code that reads or writes shared data should acquire the lock first.</p>
+<table>
+  <thead><tr><th>Method</th><th>Signature</th></tr></thead>
+  <tbody>
+    <tr><td>constructor</td><td><code>public func void constructor()</code></td></tr>
+    <tr><td><code>lock</code></td><td><code>public func void lock()</code> — blocks until acquired</td></tr>
+    <tr><td><code>unlock</code></td><td><code>public func void unlock()</code></td></tr>
+    <tr><td><code>tryLock</code></td><td><code>public func bool tryLock()</code> — non-blocking; returns false if not acquired</td></tr>
+  </tbody>
+</table>
+<pre><code class="language-ume">import std.thread.*;
+
+Mutex mtx = new Mutex();
+int sharedCounter = 0;
+
+var worker = () -&gt; {
+    for (int i = 0; i &lt; 1000; i++) {
+        mtx.lock();
+        sharedCounter++;
+        mtx.unlock();
+    }
+};
+
+var t1 = new Thread(worker);
+var t2 = new Thread(worker);
+t1.start(); t2.start();
+t1.join();  t2.join();
+
+Console.println(sharedCounter);   // 2000 — no lost updates</code></pre>
+
+<h2 id="atomic"><code>AtomicInt</code></h2>
+<p>An integer whose reads and writes are atomic — safe to use from multiple threads without a mutex. Operations like <code>getAndIncrement</code> and <code>compareAndSet</code> are lock-free and use CPU atomic instructions. Prefer <code>AtomicInt</code> over a mutex-protected <code>int</code> when you only need atomic counter semantics.</p>
+<table>
+  <thead><tr><th>Method</th><th>Signature</th><th>Description</th></tr></thead>
+  <tbody>
+    <tr><td>constructor</td><td><code>public func void constructor(int initialValue)</code></td><td>Initial value.</td></tr>
+    <tr><td><code>get</code></td><td><code>public func int get()</code></td><td>Read the current value.</td></tr>
+    <tr><td><code>set</code></td><td><code>public func void set(int value)</code></td><td>Write the value.</td></tr>
+    <tr><td><code>addAndGet</code></td><td><code>public func int addAndGet(int delta)</code></td><td>Add delta, return new value.</td></tr>
+    <tr><td><code>getAndIncrement</code></td><td><code>public func int getAndIncrement()</code></td><td>Return old value, then increment.</td></tr>
+    <tr><td><code>getAndDecrement</code></td><td><code>public func int getAndDecrement()</code></td><td>Return old value, then decrement.</td></tr>
+    <tr><td><code>compareAndSet</code></td><td><code>public func bool compareAndSet(int expected, int update)</code></td><td>If value == expected, set to update and return true; else return false.</td></tr>
+  </tbody>
+</table>
+<pre><code class="language-ume">import std.thread.*;
+
+AtomicInt counter = new AtomicInt(0);
+
+var worker = () -&gt; {
+    for (int i = 0; i &lt; 1000; i++) {
+        counter.getAndIncrement();
+    }
+};
+
+var t1 = new Thread(worker);
+var t2 = new Thread(worker);
+t1.start(); t2.start();
+t1.join();  t2.join();
+
+Console.println(counter.get());   // 2000 — no data race</code></pre>
+
+<h2 id="condvar"><code>ConditionVariable</code></h2>
+<p>For more complex synchronization than a simple mutex allows — wait/notify patterns where one thread waits for a condition and another signals when the condition might be true. A thread calling <code>wait(m)</code> atomically releases the mutex <code>m</code> and blocks; <code>signal()</code> wakes one waiting thread; <code>broadcast()</code> wakes all of them.</p>
+<table>
+  <thead><tr><th>Method</th><th>Signature</th></tr></thead>
+  <tbody>
+    <tr><td>constructor</td><td><code>public func void constructor()</code></td></tr>
+    <tr><td><code>wait</code></td><td><code>public func void wait(Mutex m)</code></td></tr>
+    <tr><td><code>signal</code></td><td><code>public func void signal()</code></td></tr>
+    <tr><td><code>broadcast</code></td><td><code>public func void broadcast()</code></td></tr>
+  </tbody>
+</table>
+
+<h2 id="task"><code>Task&lt;T&gt;</code></h2>
+<p>A future-like wrapper for asynchronous computation. Construct a <code>Task&lt;T&gt;</code> with a function returning <code>T</code>; the function runs (potentially on another thread) and <code>get()</code> blocks until the result is ready. Use <code>isDone()</code> to check without blocking.</p>
+<table>
+  <thead><tr><th>Method</th><th>Signature</th><th>Description</th></tr></thead>
+  <tbody>
+    <tr><td>constructor</td><td><code>public func void constructor()</code></td><td>Empty task.</td></tr>
+    <tr><td><code>get</code></td><td><code>public func T get()</code></td><td>Block until done, return the result.</td></tr>
+    <tr><td><code>wait</code></td><td><code>public func void wait()</code></td><td>Block until done (no return value).</td></tr>
+    <tr><td><code>isDone</code></td><td><code>public func bool isDone()</code></td><td>True if the task has completed.</td></tr>
+  </tbody>
+</table>
+<pre><code class="language-ume">import std.thread.*;
+
+var task = new Task&lt;int&gt;(() -&gt; {
+    // expensive computation
+    int result = 0;
+    for (int i = 0; i &lt; 1000000; i++) {
+        result += i;
+    }
+    return result;
+});
+
+// Do other work while the task runs...
+Console.println(&quot;computing in background...&quot;);
+
+// Block for the result
+int sum = task.get();
+Console.println($&quot;sum = {sum}&quot;);   // sum = 1783293664</code></pre>
+
+<div class="callout callout-warn">
+  <div class="callout-title">Concurrent code is hard</div>
+  <p>Multi-threaded bugs — data races, deadlocks, livelocks — are among the hardest to diagnose because they're often non-deterministic. Reach for <code>AtomicInt</code> first (it's the simplest correct option for counters). Use <code>Mutex</code> when you need to protect a multi-step operation. Keep critical sections short, and never hold a lock while doing I/O.</p>
+</div>
+
+<p><a class="next-link" href="stdlib-audio.html">Audio →</a></p>
+</main>
+</div>
+<footer>
+  <div class="container">
+    <p>Ume Language &nbsp;·&nbsp; <a href="../index.html">Home</a> &nbsp;·&nbsp;
+       <a href="index.html">Wiki</a> &nbsp;·&nbsp; MIT License</p>
+  </div>
+</footer>
+<script>
+(function() {
+  // Theme toggle (persisted, respects OS preference on first load)
+  var root = document.documentElement;
+  var stored = localStorage.getItem('ume-theme');
+  if (!stored) {
+    stored = (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches)
+      ? 'dark' : 'light';
+  }
+  root.setAttribute('data-theme', stored);
+  var icon = document.getElementById('theme-icon');
+  if (icon) icon.textContent = stored === 'dark' ? '◑' : '◐';
+
+  document.getElementById('theme-toggle').addEventListener('click', function() {
+    var cur = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    root.setAttribute('data-theme', cur);
+    localStorage.setItem('ume-theme', cur);
+    if (icon) icon.textContent = cur === 'dark' ? '◑' : '◐';
+  });
+
+  // Highlight + copy button
+  function setup() {
+    if (!window.hljs) { setTimeout(setup, 30); return; }
+    try { hljs.registerAliases(['ume','Ume'], { languageName: 'csharp' }); } catch(e) {}
+    document.querySelectorAll('pre code').forEach(function(block) {
+      try { hljs.highlightElement(block); } catch(e) {}
+      if (block.parentElement.querySelector('.copy-btn')) return;
+      var btn = document.createElement('button');
+      btn.className = 'copy-btn';
+      btn.type = 'button';
+      btn.textContent = 'Copy';
+      btn.addEventListener('click', function() {
+        var txt = block.innerText;
+        navigator.clipboard.writeText(txt).then(function() {
+          btn.classList.add('copied');
+          btn.textContent = 'Copied!';
+          setTimeout(function() {
+            btn.classList.remove('copied');
+            btn.textContent = 'Copy';
+          }, 1600);
+        }, function() {
+          var ta = document.createElement('textarea');
+          ta.value = txt; document.body.appendChild(ta); ta.select();
+          try { document.execCommand('copy'); } catch(e) {}
+          document.body.removeChild(ta);
+          btn.textContent = 'Copied!';
+          setTimeout(function() { btn.textContent = 'Copy'; }, 1600);
+        });
+      });
+      block.parentElement.appendChild(btn);
+    });
+  }
+  setup();
+})();
+</script>
+</body>
+</html>
+

@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>JSON — Ume Language</title>
+<link rel="stylesheet" href="../style.css"/>
+<link rel="icon" href="../img/logo.png"/>
+<link rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css"
+      referrerpolicy="no-referrer"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/csharp.min.js" defer></script>
+</head>
+<body>
+
+<nav class="topnav">
+  <a class="nav-brand" href="../index.html">
+    <img src="../img/logo.png" alt="Ume"/>
+    <span>Ume</span>
+  </a>
+  <div class="nav-links">
+    <a href="../index.html">Home</a>
+    <a href="index.html">Wiki</a>
+    <a href="https://github.com" target="_blank" rel="noopener">GitHub</a>
+    <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Toggle dark mode">
+      <span id="theme-icon">◐</span>
+    </button>
+  </div>
+</nav>
+
+<div class="wiki">
+<aside class="sidebar">
+
+  <h4>Overview</h4>
+
+  <a href="index.html">Wiki Home</a>
+
+  <a href="getting-started.html">Getting Started</a>
+
+  <a href="project-config.html">Projects &amp; ume.toml</a>
+
+  <a href="modules.html">Modules &amp; Imports</a>
+
+  <h4>Language</h4>
+
+  <a href="types.html">Primitive Types</a>
+
+  <a href="variables.html">Variables &amp; Scope</a>
+
+  <a href="strings.html">Strings &amp; Interpolation</a>
+
+  <a href="expressions.html">Expressions &amp; Operators</a>
+
+  <a href="functions.html">Functions</a>
+
+  <a href="control-flow.html">Control Flow</a>
+
+  <a href="classes.html">Classes</a>
+
+  <a href="interfaces.html">Interfaces &amp; Abstract</a>
+
+  <a href="enums.html">Enums &amp; Structs</a>
+
+  <a href="generics.html">Generics</a>
+
+  <a href="properties.html">Properties &amp; Indexers</a>
+
+  <a href="attributes.html">Attributes</a>
+
+  <a href="exceptions.html">Exceptions</a>
+
+  <a href="lambdas.html">Lambdas &amp; Closures</a>
+
+  <a href="operators.html">Operator Overloading</a>
+
+  <a href="unsafe.html">Unsafe Blocks</a>
+
+  <h4>Standard Library</h4>
+
+  <a href="stdlib-core.html">Core (Prelude)</a>
+
+  <a href="stdlib-io.html">Console &amp; File</a>
+
+  <a href="stdlib-collections.html">Collections</a>
+
+  <a href="stdlib-string.html">String Utilities</a>
+
+  <a href="stdlib-math.html">Math &amp; Random</a>
+
+  <a href="stdlib-json.html" class=&#34;active&#34;>JSON</a>
+
+  <a href="stdlib-thread.html">Concurrency</a>
+
+  <a href="stdlib-audio.html">Audio</a>
+
+  <a href="stdlib-net.html">Networking</a>
+
+  <a href="stdlib-system.html">System &amp; FileSystem</a>
+
+  <a href="stdlib-time.html">Time &amp; Timestep</a>
+
+  <a href="stdlib-graphics.html">Graphics</a>
+
+  <a href="stdlib-vector.html">Vectors</a>
+
+  <a href="stdlib-matrix.html">Matrices</a>
+
+</aside>
+
+<main class="content">
+
+<span class="eyebrow">Standard Library</span>
+<h1>JSON</h1>
+<p class="lead">JSON serialization in Ume is compile-time generated. Apply <code>[Serializable]</code> to a class and the compiler writes <code>toJsonString()</code> and <code>fromJsonString()</code> methods for you — no runtime reflection, no manual parsing. Use <code>[JsonProperty("key")]</code> on fields to override the JSON key name.</p>
+
+<h2 id="quickstart">Quick start</h2>
+<pre><code class="language-ume">// No import needed — attributes are built-in keywords
+
+[Serializable]
+public class User {
+    [JsonProperty(&quot;user_id&quot;)]
+    public int id;
+
+    [JsonProperty(&quot;username&quot;)]
+    public string name;
+
+    public double score;   // uses field name &quot;score&quot; as JSON key
+}
+
+func void main() {
+    var u = new User();
+    u.id    = 1;
+    u.name  = &quot;Alice&quot;;
+    u.score = 98.5;
+
+    // Serialize → JSON string
+    string json = u.toJsonString();
+    Console.println(json);
+    // {&quot;user_id&quot;:1,&quot;username&quot;:&quot;Alice&quot;,&quot;score&quot;:98.5}
+
+    // Deserialize ← JSON string
+    var u2 = User.fromJsonString(json);
+    Console.println(u2.name);    // Alice
+    Console.println(u2.score);   // 98.5
+}</code></pre>
+
+<h2 id="attributes">The two attributes</h2>
+<table>
+  <thead><tr><th>Attribute</th><th>Applies to</th><th>Effect</th></tr></thead>
+  <tbody>
+    <tr><td><code>[Serializable]</code></td><td>Class</td><td>Generates <code>toJsonString()</code> and <code>fromJsonString(string)</code> methods.</td></tr>
+    <tr><td><code>[JsonProperty("key")]</code></td><td>Field</td><td>Overrides the JSON key for that field. Without it, the field's name is used.</td></tr>
+  </tbody>
+</table>
+
+<h2 id="how-it-works">How it works</h2>
+<p>When the compiler sees <code>[Serializable]</code> on a class, it scans the class's public fields and generates serialization code at compile time. Each field becomes a key-value pair in the output JSON. The generated <code>toJsonString()</code> walks the fields in declaration order and builds the JSON string; <code>fromJsonString()</code> parses the JSON and assigns each parsed value back to the corresponding field. The implementation lives in the compiler's code-generation pass, so the runtime cost is just the serialization itself — no reflection overhead.</p>
+
+<h2 id="renaming">Renaming keys</h2>
+<p>The most common use of <code>[JsonProperty]</code> is mapping between Ume's preferred naming (often camelCase or descriptive) and a JSON schema you must conform to (often snake_case or abbreviated):</p>
+<pre><code class="language-ume">[Serializable]
+public class Product {
+    [JsonProperty(&quot;product_id&quot;)]    public int id;
+    [JsonProperty(&quot;display_name&quot;)]  public string name;
+    [JsonProperty(&quot;price_usd&quot;)]     public double price;
+    [JsonProperty(&quot;in_stock&quot;)]      public bool inStock;
+}
+
+var p = new Product();
+p.id = 101;
+p.name = &quot;Widget&quot;;
+p.price = 19.99;
+p.inStock = true;
+
+Console.println(p.toJsonString());
+// {&quot;product_id&quot;:101,&quot;display_name&quot;:&quot;Widget&quot;,&quot;price_usd&quot;:19.99,&quot;in_stock&quot;:true}</code></pre>
+
+<h2 id="roundtrip">Round-tripping</h2>
+<p>Serialization is symmetric: <code>fromJsonString(toJsonString(obj))</code> produces an object equal to <code>obj</code> in all the serialized fields. This makes JSON a convenient format for persisting objects to disk or sending them over a network:</p>
+<pre><code class="language-ume">// Save
+[Serializable]
+public class GameSave {
+    public string playerName;
+    public int level;
+    public double score;
+    public List&lt;int&gt; inventory;
+}
+
+var save = new GameSave();
+save.playerName = &quot;Alice&quot;;
+save.level = 7;
+save.score = 12500.0;
+save.inventory = new List&lt;int&gt;();
+save.inventory.add(1); save.inventory.add(5); save.inventory.add(12);
+
+File f = new File(&quot;save.json&quot;);
+f.write(save.toJsonString());
+
+// Load
+var loaded = GameSave.fromJsonString(f.readAll());
+Console.println($&quot;Welcome back, {loaded.playerName} (level {loaded.level})&quot;);</code></pre>
+
+<h2 id="nested">Nested objects</h2>
+<p>If a <code>[Serializable]</code> class has a field whose type is another <code>[Serializable]</code> class, the nested object is serialized recursively — the inner object's <code>toJsonString()</code> is embedded in the outer object's JSON. This lets you build up complex object graphs and serialize them in one call.</p>
+<pre><code class="language-ume">[Serializable]
+public class Address {
+    public string street;
+    public string city;
+}
+
+[Serializable]
+public class Person {
+    public string name;
+    public Address address;   // nested serializable
+}
+
+var p = new Person();
+p.name = &quot;Alice&quot;;
+p.address = new Address();
+p.address.street = &quot;123 Main St&quot;;
+p.address.city = &quot;Springfield&quot;;
+
+Console.println(p.toJsonString());
+// Note: Nested serializable objects may show as [Address instance] in the
+// current interpreter version. The top-level fields serialize correctly.
+// For full nested serialization, flatten the object or serialize manually.</code></pre>
+
+<div class="callout callout-info">
+  <div class="callout-title">No runtime reflection</div>
+  <p>Because the serialization code is generated at compile time, there's no runtime cost for inspecting the class layout. The generated code is just direct field reads and writes — as fast as hand-written serialization.</p>
+</div>
+
+<p><a class="next-link" href="stdlib-thread.html">Concurrency →</a></p>
+</main>
+</div>
+<footer>
+  <div class="container">
+    <p>Ume Language &nbsp;·&nbsp; <a href="../index.html">Home</a> &nbsp;·&nbsp;
+       <a href="index.html">Wiki</a> &nbsp;·&nbsp; MIT License</p>
+  </div>
+</footer>
+<script>
+(function() {
+  // Theme toggle (persisted, respects OS preference on first load)
+  var root = document.documentElement;
+  var stored = localStorage.getItem('ume-theme');
+  if (!stored) {
+    stored = (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches)
+      ? 'dark' : 'light';
+  }
+  root.setAttribute('data-theme', stored);
+  var icon = document.getElementById('theme-icon');
+  if (icon) icon.textContent = stored === 'dark' ? '◑' : '◐';
+
+  document.getElementById('theme-toggle').addEventListener('click', function() {
+    var cur = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    root.setAttribute('data-theme', cur);
+    localStorage.setItem('ume-theme', cur);
+    if (icon) icon.textContent = cur === 'dark' ? '◑' : '◐';
+  });
+
+  // Highlight + copy button
+  function setup() {
+    if (!window.hljs) { setTimeout(setup, 30); return; }
+    try { hljs.registerAliases(['ume','Ume'], { languageName: 'csharp' }); } catch(e) {}
+    document.querySelectorAll('pre code').forEach(function(block) {
+      try { hljs.highlightElement(block); } catch(e) {}
+      if (block.parentElement.querySelector('.copy-btn')) return;
+      var btn = document.createElement('button');
+      btn.className = 'copy-btn';
+      btn.type = 'button';
+      btn.textContent = 'Copy';
+      btn.addEventListener('click', function() {
+        var txt = block.innerText;
+        navigator.clipboard.writeText(txt).then(function() {
+          btn.classList.add('copied');
+          btn.textContent = 'Copied!';
+          setTimeout(function() {
+            btn.classList.remove('copied');
+            btn.textContent = 'Copy';
+          }, 1600);
+        }, function() {
+          var ta = document.createElement('textarea');
+          ta.value = txt; document.body.appendChild(ta); ta.select();
+          try { document.execCommand('copy'); } catch(e) {}
+          document.body.removeChild(ta);
+          btn.textContent = 'Copied!';
+          setTimeout(function() { btn.textContent = 'Copy'; }, 1600);
+        });
+      });
+      block.parentElement.appendChild(btn);
+    });
+  }
+  setup();
+})();
+</script>
+</body>
+</html>
+

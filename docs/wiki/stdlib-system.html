@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>System &amp; FileSystem — Ume Language</title>
+<link rel="stylesheet" href="../style.css"/>
+<link rel="icon" href="../img/logo.png"/>
+<link rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css"
+      referrerpolicy="no-referrer"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/csharp.min.js" defer></script>
+</head>
+<body>
+
+<nav class="topnav">
+  <a class="nav-brand" href="../index.html">
+    <img src="../img/logo.png" alt="Ume"/>
+    <span>Ume</span>
+  </a>
+  <div class="nav-links">
+    <a href="../index.html">Home</a>
+    <a href="index.html">Wiki</a>
+    <a href="https://github.com" target="_blank" rel="noopener">GitHub</a>
+    <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Toggle dark mode">
+      <span id="theme-icon">◐</span>
+    </button>
+  </div>
+</nav>
+
+<div class="wiki">
+<aside class="sidebar">
+
+  <h4>Overview</h4>
+
+  <a href="index.html">Wiki Home</a>
+
+  <a href="getting-started.html">Getting Started</a>
+
+  <a href="project-config.html">Projects &amp; ume.toml</a>
+
+  <a href="modules.html">Modules &amp; Imports</a>
+
+  <h4>Language</h4>
+
+  <a href="types.html">Primitive Types</a>
+
+  <a href="variables.html">Variables &amp; Scope</a>
+
+  <a href="strings.html">Strings &amp; Interpolation</a>
+
+  <a href="expressions.html">Expressions &amp; Operators</a>
+
+  <a href="functions.html">Functions</a>
+
+  <a href="control-flow.html">Control Flow</a>
+
+  <a href="classes.html">Classes</a>
+
+  <a href="interfaces.html">Interfaces &amp; Abstract</a>
+
+  <a href="enums.html">Enums &amp; Structs</a>
+
+  <a href="generics.html">Generics</a>
+
+  <a href="properties.html">Properties &amp; Indexers</a>
+
+  <a href="attributes.html">Attributes</a>
+
+  <a href="exceptions.html">Exceptions</a>
+
+  <a href="lambdas.html">Lambdas &amp; Closures</a>
+
+  <a href="operators.html">Operator Overloading</a>
+
+  <a href="unsafe.html">Unsafe Blocks</a>
+
+  <h4>Standard Library</h4>
+
+  <a href="stdlib-core.html">Core (Prelude)</a>
+
+  <a href="stdlib-io.html">Console &amp; File</a>
+
+  <a href="stdlib-collections.html">Collections</a>
+
+  <a href="stdlib-string.html">String Utilities</a>
+
+  <a href="stdlib-math.html">Math &amp; Random</a>
+
+  <a href="stdlib-json.html">JSON</a>
+
+  <a href="stdlib-thread.html">Concurrency</a>
+
+  <a href="stdlib-audio.html">Audio</a>
+
+  <a href="stdlib-net.html">Networking</a>
+
+  <a href="stdlib-system.html" class=&#34;active&#34;>System &amp; FileSystem</a>
+
+  <a href="stdlib-time.html">Time &amp; Timestep</a>
+
+  <a href="stdlib-graphics.html">Graphics</a>
+
+  <a href="stdlib-vector.html">Vectors</a>
+
+  <a href="stdlib-matrix.html">Matrices</a>
+
+</aside>
+
+<main class="content">
+
+<span class="eyebrow">Standard Library</span>
+<h1>System &amp; FileSystem</h1>
+<p class="lead">Process and environment utilities via <code>System</code>, and filesystem operations via <code>FileSystem</code>.</p>
+
+<div class="callout callout-info">
+  <div class="callout-title">Two ways to import</div>
+  <pre><code class="language-ume">import std.system.*;   // AST-level (recommended)
+#include &lt;system.ume&gt;   // textual include (C-style)</code></pre>
+  <p>Note: <code>System</code> is also always available natively without any import.</p>
+</div>
+
+<h2 id="system"><code>System</code></h2>
+<p>A static class for interacting with the host process and operating system: environment variables, exit codes, command-line arguments, current time, shell execution, and platform detection.</p>
+<table>
+  <thead><tr><th>Method</th><th>Signature</th><th>Description</th></tr></thead>
+  <tbody>
+    <tr><td><code>getEnv</code></td><td><code>public static func string? getEnv(string name)</code></td><td>Environment variable value, or null if unset.</td></tr>
+    <tr><td><code>exit</code></td><td><code>public static func void exit(int code)</code></td><td>Terminate the process with an exit code.</td></tr>
+    <tr><td><code>currentTimeMillis</code></td><td><code>public static func long currentTimeMillis()</code></td><td>Epoch milliseconds — useful for timing and seeding RNGs.</td></tr>
+    <tr><td><code>args</code></td><td><code>public static func List&lt;string&gt; args()</code></td><td>Command-line arguments (excluding the program name).</td></tr>
+    <tr><td><code>exec</code></td><td><code>public static func int exec(string command)</code></td><td>Run a shell command; return its exit code.</td></tr>
+    <tr><td><code>cwd</code></td><td><code>public static func string cwd()</code></td><td>Current working directory.</td></tr>
+    <tr><td><code>platform</code></td><td><code>public static func string platform()</code></td><td>"windows", "linux", or "macos".</td></tr>
+  </tbody>
+</table>
+<pre><code class="language-ume">import std.system.*;
+
+func void main() {
+    // Environment
+    string? home = System.getEnv(&quot;HOME&quot;);
+    if (home != null) {
+        Console.println(&quot;HOME = &quot; + home);
+    }
+
+    // Platform
+    Console.println(&quot;Running on &quot; + System.platform());
+
+    // Current working directory
+    Console.println(&quot;CWD: &quot; + System.cwd());
+
+    // Command-line arguments
+    List&lt;string&gt; args = System.args();
+    foreach (string a in args) {
+        Console.println(&quot;arg: &quot; + a);
+    }
+
+    // Timing
+    long start = System.currentTimeMillis();
+    doExpensiveWork();
+    long elapsed = System.currentTimeMillis() - start;
+    Console.println($&quot;took {elapsed} ms&quot;);
+
+    // Shell execution (returns exit code)
+    int rc = System.exec(&quot;echo hello&quot;);
+    Console.println(&quot;exit code: &quot; + rc);
+}</code></pre>
+
+<h2 id="filesystem"><code>FileSystem</code></h2>
+<p>A static class for filesystem operations: existence checks, directory creation, file/directory listing, copying, moving, and path manipulation. These are all static methods — call them on the class name.</p>
+<table>
+  <thead><tr><th>Method</th><th>Signature</th><th>Description</th></tr></thead>
+  <tbody>
+    <tr><td><code>exists</code></td><td><code>public static func bool exists(string path)</code></td><td>True if file or directory exists.</td></tr>
+    <tr><td><code>isFile</code></td><td><code>public static func bool isFile(string path)</code></td><td>True if path is a regular file.</td></tr>
+    <tr><td><code>isDirectory</code></td><td><code>public static func bool isDirectory(string path)</code></td><td>True if path is a directory.</td></tr>
+    <tr><td><code>createDir</code></td><td><code>public static func void createDir(string path)</code></td><td>Create one directory.</td></tr>
+    <tr><td><code>createDirs</code></td><td><code>public static func void createDirs(string path)</code></td><td>Create all missing directories in a path.</td></tr>
+    <tr><td><code>deleteFile</code></td><td><code>public static func void deleteFile(string path)</code></td><td>Delete a file.</td></tr>
+    <tr><td><code>deleteDir</code></td><td><code>public static func void deleteDir(string path)</code></td><td>Delete a directory.</td></tr>
+    <tr><td><code>copy</code></td><td><code>public static func void copy(string from, string to)</code></td><td>Copy a file.</td></tr>
+    <tr><td><code>move</code></td><td><code>public static func void move(string from, string to)</code></td><td>Move/rename a file.</td></tr>
+    <tr><td><code>readText</code></td><td><code>public static func string readText(string path)</code></td><td>Read entire file as a string.</td></tr>
+    <tr><td><code>listDir</code></td><td><code>public static func List&lt;string&gt; listDir(string path)</code></td><td>Names of entries in a directory.</td></tr>
+    <tr><td><code>fileSize</code></td><td><code>public static func long fileSize(string path)</code></td><td>Size in bytes.</td></tr>
+    <tr><td><code>extension</code></td><td><code>public static func string extension(string path)</code></td><td>File extension (e.g. ".txt").</td></tr>
+    <tr><td><code>filename</code></td><td><code>public static func string filename(string path)</code></td><td>Just the filename portion.</td></tr>
+    <tr><td><code>parentDir</code></td><td><code>public static func string parentDir(string path)</code></td><td>The directory containing the path.</td></tr>
+    <tr><td><code>join</code></td><td><code>public static func string join(string base, string part)</code></td><td>Join two path components with the OS separator.</td></tr>
+  </tbody>
+</table>
+<pre><code class="language-ume">import std.system.*;
+import std.collections.*;
+
+func void main() {
+    // Create a directory tree
+    string dir = &quot;output/data&quot;;
+    if (!FileSystem.exists(dir)) {
+        FileSystem.createDirs(dir);
+    }
+
+    // Write a file
+    FileSystem.copy(&quot;source.txt&quot;, FileSystem.join(dir, &quot;copy.txt&quot;));
+
+    // List directory contents
+    List&lt;string&gt; entries = FileSystem.listDir(dir);
+    foreach (string entry in entries) {
+        string full = FileSystem.join(dir, entry);
+        if (FileSystem.isFile(full)) {
+            long size = FileSystem.fileSize(full);
+            Console.println($&quot;{entry} ({size} bytes)&quot;);
+        } else {
+            Console.println(entry + &quot;/&quot;);
+        }
+    }
+
+    // Path manipulation
+    string path = &quot;src/main.ume&quot;;
+    Console.println(FileSystem.filename(path));    // main.ume
+    Console.println(FileSystem.extension(path));   // .ume
+    Console.println(FileSystem.parentDir(path));   // src</code></pre>
+
+<p><a class="next-link" href="stdlib-graphics.html">Graphics →</a></p>
+</main>
+</div>
+<footer>
+  <div class="container">
+    <p>Ume Language &nbsp;·&nbsp; <a href="../index.html">Home</a> &nbsp;·&nbsp;
+       <a href="index.html">Wiki</a> &nbsp;·&nbsp; MIT License</p>
+  </div>
+</footer>
+<script>
+(function() {
+  // Theme toggle (persisted, respects OS preference on first load)
+  var root = document.documentElement;
+  var stored = localStorage.getItem('ume-theme');
+  if (!stored) {
+    stored = (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches)
+      ? 'dark' : 'light';
+  }
+  root.setAttribute('data-theme', stored);
+  var icon = document.getElementById('theme-icon');
+  if (icon) icon.textContent = stored === 'dark' ? '◑' : '◐';
+
+  document.getElementById('theme-toggle').addEventListener('click', function() {
+    var cur = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    root.setAttribute('data-theme', cur);
+    localStorage.setItem('ume-theme', cur);
+    if (icon) icon.textContent = cur === 'dark' ? '◑' : '◐';
+  });
+
+  // Highlight + copy button
+  function setup() {
+    if (!window.hljs) { setTimeout(setup, 30); return; }
+    try { hljs.registerAliases(['ume','Ume'], { languageName: 'csharp' }); } catch(e) {}
+    document.querySelectorAll('pre code').forEach(function(block) {
+      try { hljs.highlightElement(block); } catch(e) {}
+      if (block.parentElement.querySelector('.copy-btn')) return;
+      var btn = document.createElement('button');
+      btn.className = 'copy-btn';
+      btn.type = 'button';
+      btn.textContent = 'Copy';
+      btn.addEventListener('click', function() {
+        var txt = block.innerText;
+        navigator.clipboard.writeText(txt).then(function() {
+          btn.classList.add('copied');
+          btn.textContent = 'Copied!';
+          setTimeout(function() {
+            btn.classList.remove('copied');
+            btn.textContent = 'Copy';
+          }, 1600);
+        }, function() {
+          var ta = document.createElement('textarea');
+          ta.value = txt; document.body.appendChild(ta); ta.select();
+          try { document.execCommand('copy'); } catch(e) {}
+          document.body.removeChild(ta);
+          btn.textContent = 'Copied!';
+          setTimeout(function() { btn.textContent = 'Copy'; }, 1600);
+        });
+      });
+      block.parentElement.appendChild(btn);
+    });
+  }
+  setup();
+})();
+</script>
+</body>
+</html>
+
