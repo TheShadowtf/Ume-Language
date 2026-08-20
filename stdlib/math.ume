@@ -1,0 +1,42 @@
+// math.ume — Ume Standard Library (Math)
+package std.math;
+
+/// Extended Math utilities
+public static class Math {
+    public static double PI  = 3.14159265358979323846;
+    public static double E   = 2.71828182845904523536;
+    public static double TAU = 6.28318530717958647692;
+
+    public static func double sqrt(double x);
+    public static func double cbrt(double x);
+    public static func double pow(double base, double exp);
+    public static func double exp(double x);
+    public static func double log(double x);
+    public static func double log2(double x);
+    public static func double log10(double x);
+
+    public static func double abs(double x);
+    public static func int    absi(int x);
+    public static func double floor(double x);
+    public static func double ceil(double x);
+    public static func double round(double x);
+    public static func double trunc(double x);
+
+    public static func double sin(double x);
+    public static func double cos(double x);
+    public static func double tan(double x);
+    public static func double asin(double x);
+    public static func double acos(double x);
+    public static func double atan(double x);
+    public static func double atan2(double y, double x);
+
+    public static func double min(double a, double b);
+    public static func double max(double a, double b);
+    public static func double clamp(double v, double lo, double hi);
+    public static func double lerp(double a, double b, double t);
+
+    public static func double toRadians(double degrees);
+    public static func double toDegrees(double radians);
+    public static func bool   isNaN(double x);
+    public static func bool   isInfinite(double x);
+}

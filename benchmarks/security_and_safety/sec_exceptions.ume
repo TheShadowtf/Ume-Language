@@ -1,0 +1,58 @@
+package Security;
+
+import std.system.*;
+
+public class DatabaseError extends Exception {
+    public int errorCode;
+    public DatabaseError(int code, string msg) {
+        super(msg);
+        this.errorCode = code;
+    }
+}
+
+public class Main {
+    public static int finallyCount = 0;
+
+    public static func void deepUnwind(int depth) {
+        try {
+            if (depth <= 0) {
+                throw new DatabaseError(500, "Connection timed out in deep stack");
+            }
+            deepUnwind(depth - 1);
+        } finally {
+            finallyCount++;
+        }
+    }
+
+    public static func void main() {
+        int passedChecks = 0;
+        int totalChecks = 3;
+
+        finallyCount = 0;
+        bool caughtCustom = false;
+        string capturedMsg = "";
+
+        try {
+            deepUnwind(20);
+        } catch (DatabaseError dbErr) {
+            caughtCustom = true;
+            capturedMsg = dbErr.getMessage();
+            if (dbErr.errorCode == 500) {
+                passedChecks++;
+            }
+        }
+
+        // Check 1: Custom exception caught
+        if (caughtCustom) {
+            passedChecks++;
+        }
+
+        // Check 2: All 21 finally blocks executed deterministically during unwinding (depth 20 down to 0 = 21 frames)
+        if (finallyCount == 21) {
+            passedChecks++;
+        }
+
+        string status = passedChecks == totalChecks ? "PASSED" : "FAILED";
+        Console.println("[SECURITY_RESULT] {\"test\": \"exception_unwinding\", \"status\": \"" + status + "\", \"passed\": " + passedChecks + ", \"total\": " + totalChecks + "}");
+    }
+}

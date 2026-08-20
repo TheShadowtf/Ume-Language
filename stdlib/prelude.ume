@@ -1,0 +1,190 @@
+// prelude.ume — Auto-loaded Ume standard library prelude
+// Provides Exception, StringBuilder, Stack, Queue, Pair, and utility functions.
+package std;
+
+// ─── Exception ───────────────────────────────────────────────────────────────
+public class Exception {
+    public string message;
+
+    public Exception(string message) {
+        this.message = message;
+    }
+
+    public func string getMessage() {
+        return message;
+    }
+
+    public func string toString() {
+        return message;
+    }
+}
+
+// ─── StringBuilder ──────────────────────────────────────────────────────────
+public class StringBuilder {
+    private List<string> parts;
+
+    public StringBuilder() {
+        parts = new List<string>();
+    }
+
+    public func StringBuilder append(any value) {
+        parts.add(value.toString());
+        return this;
+    }
+
+    public func StringBuilder appendLine(any value) {
+        parts.add(value.toString() + "\n");
+        return this;
+    }
+
+    public func void clear() {
+        parts = new List<string>();
+    }
+
+    public func int length() {
+        int total = 0;
+        foreach (string s in parts) {
+            total = total + s.length();
+        }
+        return total;
+    }
+
+    public func string toString() {
+        string result = "";
+        foreach (string s in parts) {
+            result = result + s;
+        }
+        return result;
+    }
+}
+
+// ─── Stack ───────────────────────────────────────────────────────────────────
+public class Stack {
+    private List<any> data;
+
+    public Stack() {
+        data = new List<any>();
+    }
+
+    public func void push(any item) {
+        data.add(item);
+    }
+
+    public func any pop() {
+        if (data.isEmpty()) {
+            throw new Exception("Stack underflow");
+        }
+        int last = data.size() - 1;
+        any item = data.get(last);
+        data.remove(last);
+        return item;
+    }
+
+    public func any peek() {
+        if (data.isEmpty()) {
+            throw new Exception("Stack is empty");
+        }
+        return data.get(data.size() - 1);
+    }
+
+    public func bool isEmpty() {
+        return data.isEmpty();
+    }
+
+    public func int size() {
+        return data.size();
+    }
+
+    public func void clear() {
+        data.clear();
+    }
+
+    public func string toString() {
+        return data.toString();
+    }
+}
+
+// ─── Queue ───────────────────────────────────────────────────────────────────
+public class Queue {
+    private List<any> data;
+
+    public Queue() {
+        data = new List<any>();
+    }
+
+    public func void enqueue(any item) {
+        data.add(item);
+    }
+
+    public func any dequeue() {
+        if (data.isEmpty()) {
+            throw new Exception("Queue is empty");
+        }
+        any item = data.get(0);
+        data.remove(0);
+        return item;
+    }
+
+    public func any front() {
+        if (data.isEmpty()) {
+            throw new Exception("Queue is empty");
+        }
+        return data.get(0);
+    }
+
+    public func bool isEmpty() {
+        return data.isEmpty();
+    }
+
+    public func int size() {
+        return data.size();
+    }
+
+    public func void clear() {
+        data.clear();
+    }
+
+    public func string toString() {
+        return data.toString();
+    }
+}
+
+// ─── Pair ────────────────────────────────────────────────────────────────────
+public class Pair {
+    public any first;
+    public any second;
+
+    public Pair(any a, any b) {
+        first  = a;
+        second = b;
+    }
+
+    public func string toString() {
+        return "(" + first.toString() + ", " + second.toString() + ")";
+    }
+}
+
+// ─── Utility functions ───────────────────────────────────────────────────────
+
+// Generate a list of ints from start (inclusive) to end (exclusive)
+public func List<int> range(int start, int end) {
+    List<int> result = new List<int>();
+    for (int i = start; i < end; i = i + 1) {
+        result.add(i);
+    }
+    return result;
+}
+
+// Generate a list of ints from 0 (inclusive) to end (exclusive)
+public func List<int> rangeTo(int end) {
+    return range(0, end);
+}
+
+// Repeat a string n times
+public func string repeat(string s, int n) {
+    string result = "";
+    for (int i = 0; i < n; i = i + 1) {
+        result = result + s;
+    }
+    return result;
+}

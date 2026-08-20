@@ -1,0 +1,57 @@
+// net.ume — Ume Standard Library (Networking)
+package std.net;
+
+/// HTTP response
+public class HttpResponse {
+    public int    statusCode;
+    public string body;
+    public Map<string, string> headers;
+}
+
+/// Simple HTTP client
+public class HttpClient {
+    public func void constructor();
+
+    /// HTTP GET request
+    public func HttpResponse get(string url);
+
+    /// HTTP GET with headers
+    public func HttpResponse get(string url, Map<string, string> headers);
+
+    /// HTTP POST with body
+    public func HttpResponse post(string url, string body);
+
+    /// HTTP POST with JSON body
+    public func HttpResponse postJson(string url, string jsonBody);
+
+    /// Set a default header for all requests
+    public func void setHeader(string name, string value);
+
+    /// Set request timeout in milliseconds
+    public func void setTimeout(int milliseconds);
+}
+
+/// TCP socket
+public class TcpSocket {
+    public func void constructor();
+    public func void   connect(string host, int port);
+    public func void   close();
+    public func void   send(string data);
+    public func string receive(int maxBytes);
+    public func bool   isConnected();
+}
+
+/// TCP server / listener
+public class TcpListener {
+    public func void      constructor(int port);
+    public func void      start();
+    public func TcpSocket accept();
+    public func void      close();
+}
+
+/// URL parsing utilities
+public static class Url {
+    public static func string encode(string raw);
+    public static func string decode(string encoded);
+    public static func Map<string, string> parseQuery(string queryString);
+}

@@ -1,0 +1,201 @@
+{
+  "timestamp": "2026-08-20 19:16:44",
+  "compiler": "MSVC C++20 /O2",
+  "ume_version": "1.0.0 (Interpreter Mode)",
+  "performance_benchmarks": [
+    {
+      "benchmark_id": "fib",
+      "benchmark_name": "Fibonacci (Recursive & Iterative)",
+      "sub_test": "fib_recursive",
+      "category": "Call Stack & Arithmetic",
+      "ume_time_ms": 10204,
+      "cpp_time_ms": 1.007,
+      "speedup_ratio": 10133.0685203575,
+      "ume_result": "317811",
+      "cpp_result": "317811",
+      "correctness": "PASS",
+      "cpp_peak_mem_mb": 3.89
+    },
+    {
+      "benchmark_id": "fib",
+      "benchmark_name": "Fibonacci (Recursive & Iterative)",
+      "sub_test": "fib_iterative",
+      "category": "Call Stack & Arithmetic",
+      "ume_time_ms": 3781,
+      "cpp_time_ms": 2.667,
+      "speedup_ratio": 1417.697787776528,
+      "ume_result": "918091266",
+      "cpp_result": "918091266",
+      "correctness": "PASS",
+      "cpp_peak_mem_mb": 3.94
+    },
+    {
+      "benchmark_id": "primes",
+      "benchmark_name": "Prime Numbers (Trial & Sieve)",
+      "sub_test": "primes_trial_division",
+      "category": "Loops & Branching",
+      "ume_time_ms": 816,
+      "cpp_time_ms": 0.442,
+      "speedup_ratio": 1846.1538461538462,
+      "ume_result": "2262",
+      "cpp_result": "2262",
+      "correctness": "PASS",
+      "cpp_peak_mem_mb": 3.9
+    },
+    {
+      "benchmark_id": "primes",
+      "benchmark_name": "Prime Numbers (Trial & Sieve)",
+      "sub_test": "primes_sieve_eratosthenes",
+      "category": "Loops & Branching",
+      "ume_time_ms": 470,
+      "cpp_time_ms": 0.093,
+      "speedup_ratio": 5053.763440860215,
+      "ume_result": "5133",
+      "cpp_result": "5133",
+      "correctness": "PASS",
+      "cpp_peak_mem_mb": 3.95
+    },
+    {
+      "benchmark_id": "mandelbrot",
+      "benchmark_name": "Mandelbrot Computation",
+      "sub_test": "mandelbrot_float_math",
+      "category": "Floating Point Math",
+      "ume_time_ms": 3046,
+      "cpp_time_ms": 1.43,
+      "speedup_ratio": 2130.0699300699303,
+      "ume_result": "473681",
+      "cpp_result": "473681",
+      "correctness": "PASS",
+      "cpp_peak_mem_mb": 3.89
+    },
+    {
+      "benchmark_id": "objects",
+      "benchmark_name": "OOP Instantiation & Dispatch",
+      "sub_test": "oop_instantiation_and_dispatch",
+      "category": "Object Lifetime & Polymorphism",
+      "ume_time_ms": 1369,
+      "cpp_time_ms": 1.872,
+      "speedup_ratio": 731.3034188034187,
+      "ume_result": "328725000",
+      "cpp_result": "328725000",
+      "correctness": "PASS",
+      "cpp_peak_mem_mb": 3.89
+    },
+    {
+      "benchmark_id": "strings",
+      "benchmark_name": "String Concat & Slicing",
+      "sub_test": "string_concat_and_manipulation",
+      "category": "String & Heap Subsystem",
+      "ume_time_ms": 190,
+      "cpp_time_ms": 1.419,
+      "speedup_ratio": 133.89711064129668,
+      "ume_result": "973015",
+      "cpp_result": "973015",
+      "correctness": "PASS",
+      "cpp_peak_mem_mb": 3.9
+    },
+    {
+      "benchmark_id": "collections",
+      "benchmark_name": "Collections (List, Map, Queue)",
+      "sub_test": "collections_list_map_queue",
+      "category": "Data Structures & Lookup",
+      "ume_time_ms": 87,
+      "cpp_time_ms": 0.695,
+      "speedup_ratio": 125.17985611510792,
+      "ume_result": "96818165",
+      "cpp_result": "96818165",
+      "correctness": "PASS",
+      "cpp_peak_mem_mb": 4.46
+    },
+    {
+      "benchmark_id": "concurrency",
+      "benchmark_name": "Concurrency (Atomics & Mutex)",
+      "sub_test": "concurrency_atomics_and_mutex",
+      "category": "Threading & Synchronization",
+      "ume_time_ms": 318,
+      "cpp_time_ms": 0.88,
+      "speedup_ratio": 361.3636363636364,
+      "ume_result": "atomic=50000;mutex=50000;task=42",
+      "cpp_result": "atomic=50000;mutex=50000;task=42",
+      "correctness": "PASS",
+      "cpp_peak_mem_mb": 3.96
+    }
+  ],
+  "security_tests": [
+    {
+      "test_id": "bounds_safety",
+      "test_name": "List & Array Bounds Safety",
+      "dimension": "Memory Safety / Bounds Isolation",
+      "ume_status": "PASSED",
+      "cpp_status": "PASSED",
+      "passed_checks": 4,
+      "total_checks": 4,
+      "details": {
+        "test": "bounds_safety",
+        "status": "PASSED",
+        "passed": 4,
+        "total": 4
+      }
+    },
+    {
+      "test_id": "null_safety",
+      "test_name": "Null Reference Trapping & Coalescing",
+      "dimension": "Null Safety / Crash Prevention",
+      "ume_status": "PASSED",
+      "cpp_status": "PASSED",
+      "passed_checks": 4,
+      "total_checks": 4,
+      "details": {
+        "test": "null_safety",
+        "status": "PASSED",
+        "passed": 4,
+        "total": 4
+      }
+    },
+    {
+      "test_id": "exception_unwinding",
+      "test_name": "Deep Stack Unwinding & Finally Guarantee",
+      "dimension": "Exception Flow Integrity",
+      "ume_status": "PASSED",
+      "cpp_status": "PASSED",
+      "passed_checks": 3,
+      "total_checks": 3,
+      "details": {
+        "test": "exception_unwinding",
+        "status": "PASSED",
+        "passed": 3,
+        "total": 3
+      }
+    },
+    {
+      "test_id": "arithmetic_safety",
+      "test_name": "Division by Zero & Arithmetic Boundaries",
+      "dimension": "Arithmetic / Overflow Safety",
+      "ume_status": "PASSED",
+      "cpp_status": "PASSED",
+      "passed_checks": 3,
+      "total_checks": 3,
+      "details": {
+        "test": "arithmetic_safety",
+        "status": "PASSED",
+        "passed": 3,
+        "total": 3
+      }
+    },
+    {
+      "test_id": "memory_stress",
+      "test_name": "High-Pressure Allocation & Leak Stress",
+      "dimension": "Heap Memory & Resource Reclamation",
+      "ume_status": "PASSED",
+      "cpp_status": "PASSED",
+      "passed_checks": "-",
+      "total_checks": "-",
+      "details": {
+        "test": "memory_leak_stress",
+        "status": "PASSED",
+        "allocations": 50000,
+        "time_ms": 388
+      }
+    }
+  ]
+}

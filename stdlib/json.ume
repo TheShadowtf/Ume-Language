@@ -1,0 +1,38 @@
+package std.json;
+
+// json.ume — JSON Serialization standard library for Ume
+// Provides JSON parsing and pretty-printing utilities.
+// Full serialization requires [Serializable] on your class.
+// The compiler automatically generates toJsonString() and fromJsonString()
+// methods for any class decorated with [Serializable].
+//
+// Usage:
+//
+//   [Serializable]
+//   class User {
+//       [JsonProperty("user_id")]
+//       public int id;
+//
+//       [JsonProperty("username")]
+//       public string name;
+//   }
+//
+//   func void main() {
+//       var u = new User();
+//       u.id = 42;
+//       u.name = "Alice";
+//
+//       // Serialize to JSON string
+//       string json = u.toJsonString();   // {"user_id":42,"username":"Alice"}
+//
+//       // Deserialize from JSON string
+//       var u2 = User.fromJsonString(json);
+//       Console.println(u2.name);         // Alice
+//   }
+//
+// Attributes:
+//   [Serializable]         — Applied to a class. Generates toJsonString() and
+//                            fromJsonString(string) methods at compile time.
+//   [JsonProperty("key")] — Applied to a field. Overrides the JSON key name.
+//                            Without this, the field's own name is used.
+

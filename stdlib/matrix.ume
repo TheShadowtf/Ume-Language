@@ -1,0 +1,398 @@
+// matrix.ume - Ume Standard Library (Matrix Math)
+// Provides Matrix2x2, Matrix3x3, Matrix4x4 with operator overloading and
+// common transforms: identity, translate, scale, rotate, perspective,
+// lookAt, multiply, transpose.
+//
+// Matrices are stored column-major (OpenGL convention).
+// Element access: m[col * rows + row]
+// For Matrix4x4: m[col * 4 + row], 16 elements total.
+package std.matrix;
+
+import std.vector.*;
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Matrix2x2
+// ═══════════════════════════════════════════════════════════════════════════
+public class Matrix2x2 {
+    public float[] m;
+
+    public Matrix2x2() {
+        m = new float[4];
+    }
+
+    public Matrix2x2(float m00, float m01, float m10, float m11) {
+        m = [m00, m01, m10, m11];
+    }
+
+    public func float get(int col, int row) {
+        return m[col * 2 + row];
+    }
+
+    public func void set(int col, int row, float val) {
+        m[col * 2 + row] = val;
+    }
+
+    public operator * (Matrix2x2 other) -> Matrix2x2 {
+        Matrix2x2 r = new Matrix2x2();
+        for (int c = 0; c < 2; c++) {
+            for (int row = 0; row < 2; row++) {
+                float sum = 0.0;
+                for (int k = 0; k < 2; k++) {
+                    sum += m[k * 2 + row] * other.m[c * 2 + k];
+                }
+                r.m[c * 2 + row] = sum;
+            }
+        }
+        return r;
+    }
+
+    public operator == (Matrix2x2 other) -> bool {
+        for (int i = 0; i < 4; i++) {
+            if (m[i] != other.m[i]) return false;
+        }
+        return true;
+    }
+
+    public func float determinant() {
+        return m[0] * m[3] - m[1] * m[2];
+    }
+
+    public func Matrix2x2 transposed() {
+        return new Matrix2x2(m[0], m[2], m[1], m[3]);
+    }
+
+    public static func Matrix2x2 identity() {
+        return new Matrix2x2(1.0, 0.0, 0.0, 1.0);
+    }
+
+    public static func Matrix2x2 rotation(float angle) {
+        float c = Math.cos(angle);
+        float s = Math.sin(angle);
+        return new Matrix2x2(c, -s, s, c);
+    }
+
+    public static func Matrix2x2 scale(float sx, float sy) {
+        return new Matrix2x2(sx, 0.0, 0.0, sy);
+    }
+
+    public func string toString() {
+        return "[" + m[0] + " " + m[2] + "]\n[" + m[1] + " " + m[3] + "]";
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Matrix3x3
+// ═══════════════════════════════════════════════════════════════════════════
+public class Matrix3x3 {
+    public float[] m;
+
+    public Matrix3x3() {
+        m = new float[9];
+    }
+
+    public Matrix3x3(float[] values) {
+        m = values;
+    }
+
+    public func float get(int col, int row) {
+        return m[col * 3 + row];
+    }
+
+    public func void set(int col, int row, float val) {
+        m[col * 3 + row] = val;
+    }
+
+    public operator * (Matrix3x3 other) -> Matrix3x3 {
+        Matrix3x3 r = new Matrix3x3();
+        for (int c = 0; c < 3; c++) {
+            for (int row = 0; row < 3; row++) {
+                float sum = 0.0;
+                for (int k = 0; k < 3; k++) {
+                    sum += m[k * 3 + row] * other.m[c * 3 + k];
+                }
+                r.m[c * 3 + row] = sum;
+            }
+        }
+        return r;
+    }
+
+    public operator == (Matrix3x3 other) -> bool {
+        for (int i = 0; i < 9; i++) {
+            if (m[i] != other.m[i]) return false;
+        }
+        return true;
+    }
+
+    public func Matrix3x3 transposed() {
+        Matrix3x3 r = new Matrix3x3();
+        for (int c = 0; c < 3; c++) {
+            for (int row = 0; row < 3; row++) {
+                r.m[c * 3 + row] = m[row * 3 + c];
+            }
+        }
+        return r;
+    }
+
+    public func float determinant() {
+        return m[0] * (m[4] * m[8] - m[5] * m[7])
+             - m[3] * (m[1] * m[8] - m[2] * m[7])
+             + m[6] * (m[1] * m[5] - m[2] * m[4]);
+    }
+
+    public static func Matrix3x3 identity() {
+        return new Matrix3x3([1.0, 0.0, 0.0,
+                              0.0, 1.0, 0.0,
+                              0.0, 0.0, 1.0]);
+    }
+
+    public static func Matrix3x3 translation(float tx, float ty) {
+        return new Matrix3x3([1.0, 0.0, 0.0,
+                              0.0, 1.0, 0.0,
+                              tx,  ty,  1.0]);
+    }
+
+    public static func Matrix3x3 scale(float sx, float sy) {
+        return new Matrix3x3([sx,  0.0, 0.0,
+                              0.0, sy,  0.0,
+                              0.0, 0.0, 1.0]);
+    }
+
+    public static func Matrix3x3 rotationZ(float angle) {
+        float c = Math.cos(angle);
+        float s = Math.sin(angle);
+        return new Matrix3x3([c, -s, 0.0,
+                              s,  c,  0.0,
+                              0.0, 0.0, 1.0]);
+    }
+
+    public func string toString() {
+        return "[" + m[0] + " " + m[3] + " " + m[6] + "]\n"
+             + "[" + m[1] + " " + m[4] + " " + m[7] + "]\n"
+             + "[" + m[2] + " " + m[5] + " " + m[8] + "]";
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Matrix4x4
+// ═══════════════════════════════════════════════════════════════════════════
+public class Matrix4x4 {
+    public float[] m;
+
+    public Matrix4x4() {
+        m = new float[16];
+    }
+
+    public Matrix4x4(float[] values) {
+        m = values;
+    }
+
+    public func float get(int col, int row) {
+        return m[col * 4 + row];
+    }
+
+    public func void set(int col, int row, float val) {
+        m[col * 4 + row] = val;
+    }
+
+    // ── Operator overloading ──────────────────────────────
+    public operator * (Matrix4x4 other) -> Matrix4x4 {
+        Matrix4x4 r = new Matrix4x4();
+        for (int c = 0; c < 4; c++) {
+            for (int row = 0; row < 4; row++) {
+                float sum = 0.0;
+                for (int k = 0; k < 4; k++) {
+                    sum += m[k * 4 + row] * other.m[c * 4 + k];
+                }
+                r.m[c * 4 + row] = sum;
+            }
+        }
+        return r;
+    }
+
+    public operator + (Matrix4x4 other) -> Matrix4x4 {
+        Matrix4x4 r = new Matrix4x4();
+        for (int i = 0; i < 16; i++) {
+            r.m[i] = m[i] + other.m[i];
+        }
+        return r;
+    }
+
+    public operator == (Matrix4x4 other) -> bool {
+        for (int i = 0; i < 16; i++) {
+            if (m[i] != other.m[i]) return false;
+        }
+        return true;
+    }
+
+    // ── Transforms ────────────────────────────────────────
+    public func Matrix4x4 transposed() {
+        Matrix4x4 r = new Matrix4x4();
+        for (int c = 0; c < 4; c++) {
+            for (int row = 0; row < 4; row++) {
+                r.m[c * 4 + row] = m[row * 4 + c];
+            }
+        }
+        return r;
+    }
+
+    public func float[] toArray() {
+        return m;
+    }
+
+    // ── Static factories ──────────────────────────────────
+    public static func Matrix4x4 identity() {
+        return new Matrix4x4([
+            1.0, 0.0, 0.0, 0.0,
+            0.0, 1.0, 0.0, 0.0,
+            0.0, 0.0, 1.0, 0.0,
+            0.0, 0.0, 0.0, 1.0
+        ]);
+    }
+
+    public static func Matrix4x4 translation(float tx, float ty, float tz) {
+        return new Matrix4x4([
+            1.0, 0.0, 0.0, 0.0,
+            0.0, 1.0, 0.0, 0.0,
+            0.0, 0.0, 1.0, 0.0,
+            tx,  ty,  tz,  1.0
+        ]);
+    }
+
+    public static func Matrix4x4 scale(float sx, float sy, float sz) {
+        return new Matrix4x4([
+            sx,  0.0, 0.0, 0.0,
+            0.0, sy,  0.0, 0.0,
+            0.0, 0.0, sz,  0.0,
+            0.0, 0.0, 0.0, 1.0
+        ]);
+    }
+
+    public static func Matrix4x4 rotationX(float angle) {
+        float c = Math.cos(angle);
+        float s = Math.sin(angle);
+        return new Matrix4x4([
+            1.0, 0.0, 0.0, 0.0,
+            0.0, c,  -s,   0.0,
+            0.0, s,   c,   0.0,
+            0.0, 0.0, 0.0, 1.0
+        ]);
+    }
+
+    public static func Matrix4x4 rotationY(float angle) {
+        float c = Math.cos(angle);
+        float s = Math.sin(angle);
+        return new Matrix4x4([
+            c,   0.0, s,   0.0,
+            0.0, 1.0, 0.0, 0.0,
+            -s,  0.0, c,   0.0,
+            0.0, 0.0, 0.0, 1.0
+        ]);
+    }
+
+    public static func Matrix4x4 rotationZ(float angle) {
+        float c = Math.cos(angle);
+        float s = Math.sin(angle);
+        return new Matrix4x4([
+            c,  -s,   0.0, 0.0,
+            s,   c,   0.0, 0.0,
+            0.0, 0.0, 1.0, 0.0,
+            0.0, 0.0, 0.0, 1.0
+        ]);
+    }
+
+    public static func Matrix4x4 perspective(double fov, double aspect, double nearVal, double farVal) {
+        double f = 1.0 / Math.tan(fov / 2.0);
+        return new Matrix4x4([
+            (float)(f / aspect), 0.0, 0.0, 0.0,
+            0.0, (float)f, 0.0, 0.0,
+            0.0, 0.0, (float)((farVal + nearVal) / (nearVal - farVal)), -1.0,
+            0.0, 0.0, (float)((2.0 * farVal * nearVal) / (nearVal - farVal)), 0.0
+        ]);
+    }
+
+    public static func Matrix4x4 ortho(double left, double right, double bottom, double top, double nearVal, double farVal) {
+        return new Matrix4x4([
+            (float)(2.0 / (right - left)), 0.0, 0.0, 0.0,
+            0.0, (float)(2.0 / (top - bottom)), 0.0, 0.0,
+            0.0, 0.0, (float)(-2.0 / (farVal - nearVal)), 0.0,
+            (float)(-(right + left) / (right - left)),
+            (float)(-(top + bottom) / (top - bottom)),
+            (float)(-(farVal + nearVal) / (farVal - nearVal)),
+            1.0
+        ]);
+    }
+
+    public static func Matrix4x4 lookAt(
+        double ex, double ey, double ez,
+        double cx, double cy, double cz,
+        double ux, double uy, double uz
+    ) {
+        // Forward = eye - center (points away from target)
+        double fx = ex - cx; double fy = ey - cy; double fz = ez - cz;
+        double fl = Math.sqrt(fx*fx + fy*fy + fz*fz);
+        if (fl == 0.0) fl = 1.0;
+        fx /= fl; fy /= fl; fz /= fl;
+        // Right = cross(up, forward)
+        double rx = uy * fz - uz * fy;
+        double ry = uz * fx - ux * fz;
+        double rz = ux * fy - uy * fx;
+        double rl = Math.sqrt(rx*rx + ry*ry + rz*rz);
+        if (rl == 0.0) rl = 1.0;
+        rx /= rl; ry /= rl; rz /= rl;
+        // Recompute up = cross(forward, right)
+        double nux = fy * rz - fz * ry;
+        double nuy = fz * rx - fx * rz;
+        double nuz = fx * ry - fy * rx;
+        return new Matrix4x4([
+            (float)rx,  (float)nux, (float)fx, 0.0,
+            (float)ry,  (float)nuy, (float)fy, 0.0,
+            (float)rz,  (float)nuz, (float)fz, 0.0,
+            (float)(-(rx*ex + ry*ey + rz*ez)),
+            (float)(-(nux*ex + nuy*ey + nuz*ez)),
+            (float)(-(fx*ex + fy*ey + fz*ez)),
+            1.0
+        ]);
+    }
+
+    public func bool isBoxInFrustum(double minX, double minY, double minZ, double maxX, double maxY, double maxZ) {
+        // Test bounding box 8 corners against view-projection matrix clip space
+        double[] cornersX = [minX, maxX, minX, maxX, minX, maxX, minX, maxX];
+        double[] cornersY = [minY, minY, maxY, maxY, minY, minY, maxY, maxY];
+        double[] cornersZ = [minZ, minZ, minZ, minZ, maxZ, maxZ, maxZ, maxZ];
+
+        // Column-major MVP indexing
+        float m0=m[0]; float m1=m[1]; float m2=m[2]; float m3=m[3];
+        float m4=m[4]; float m5=m[5]; float m6=m[6]; float m7=m[7];
+        float m8=m[8]; float m9=m[9]; float m10=m[10]; float m11=m[11];
+        float m12=m[12]; float m13=m[13]; float m14=m[14]; float m15=m[15];
+
+        bool outLeft = true; bool outRight = true;
+        bool outBottom = true; bool outTop = true;
+        bool outNear = true; bool outFar = true;
+
+        for (int i = 0; i < 8; i++) {
+            double cx = cornersX[i]; double cy = cornersY[i]; double cz = cornersZ[i];
+            double clipX = m0*cx + m4*cy + m8*cz + m12;
+            double clipY = m1*cx + m5*cy + m9*cz + m13;
+            double clipZ = m2*cx + m6*cy + m10*cz + m14;
+            double clipW = m3*cx + m7*cy + m11*cz + m15;
+
+            if (clipX >= -clipW) outLeft = false;
+            if (clipX <= clipW)  outRight = false;
+            if (clipY >= -clipW) outBottom = false;
+            if (clipY <= clipW)  outTop = false;
+            if (clipZ >= -clipW) outNear = false;
+            if (clipZ <= clipW)  outFar = false;
+        }
+
+        if (outLeft || outRight || outBottom || outTop || outNear || outFar) return false;
+        return true;
+    }
+
+    public func string toString() {
+        return "[" + m[0] + " " + m[4] + " " + m[8]  + " " + m[12] + "]\n"
+             + "[" + m[1] + " " + m[5] + " " + m[9]  + " " + m[13] + "]\n"
+             + "[" + m[2] + " " + m[6] + " " + m[10] + " " + m[14] + "]\n"
+             + "[" + m[3] + " " + m[7] + " " + m[11] + " " + m[15] + "]";
+    }
+}

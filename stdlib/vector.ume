@@ -1,0 +1,213 @@
+// vector.ume - Ume Standard Library (Vector Math)
+// Provides Vector2, Vector3, Vector4 with operator overloading.
+package std.vector;
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Vector2
+// ═══════════════════════════════════════════════════════════════════════════
+public class Vector2 {
+    public float x;
+    public float y;
+
+    public Vector2(float x, float y) {
+        this.x = x;
+        this.y = y;
+    }
+
+    public Vector2() { this.x = 0.0; this.y = 0.0; }
+
+    // ── Operator overloading ──────────────────────────────
+    public operator + (Vector2 other) -> Vector2 {
+        return new Vector2(x + other.x, y + other.y);
+    }
+    public operator - (Vector2 other) -> Vector2 {
+        return new Vector2(x - other.x, y - other.y);
+    }
+    public operator * (float scalar) -> Vector2 {
+        return new Vector2(x * scalar, y * scalar);
+    }
+    public operator == (Vector2 other) -> bool {
+        return x == other.x && y == other.y;
+    }
+
+    // ── Named methods (for compatibility) ─────────────────
+    public func Vector2 add(Vector2 other) { return new Vector2(x + other.x, y + other.y); }
+    public func Vector2 sub(Vector2 other) { return new Vector2(x - other.x, y - other.y); }
+    public func Vector2 mul(float scalar) { return new Vector2(x * scalar, y * scalar); }
+
+    // ── Math ──────────────────────────────────────────────
+    public func float dot(Vector2 other) {
+        return x * other.x + y * other.y;
+    }
+    public func float length() {
+        return Math.sqrt(x * x + y * y);
+    }
+    public func float lengthSquared() {
+        return x * x + y * y;
+    }
+    public func Vector2 normalized() {
+        float len = length();
+        if (len == 0.0) { return new Vector2(0.0, 0.0); }
+        return new Vector2(x / len, y / len);
+    }
+    public func Vector2 lerp(Vector2 other, float t) {
+        return new Vector2(x + (other.x - x) * t, y + (other.y - y) * t);
+    }
+    public func float angle() {
+        return Math.atan2(y, x);
+    }
+    public func Vector2 rotate(float angle) {
+        float c = Math.cos(angle);
+        float s = Math.sin(angle);
+        return new Vector2(x * c - y * s, x * s + y * c);
+    }
+    public func string toString() {
+        return "(" + x + ", " + y + ")";
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Vector3
+// ═══════════════════════════════════════════════════════════════════════════
+public class Vector3 {
+    public float x;
+    public float y;
+    public float z;
+
+    public Vector3(float x, float y, float z) {
+        this.x = x;
+        this.y = y;
+        this.z = z;
+    }
+
+    public Vector3() { this.x = 0.0; this.y = 0.0; this.z = 0.0; }
+
+    // ── Operator overloading ──────────────────────────────
+    public operator + (Vector3 other) -> Vector3 {
+        return new Vector3(x + other.x, y + other.y, z + other.z);
+    }
+    public operator - (Vector3 other) -> Vector3 {
+        return new Vector3(x - other.x, y - other.y, z - other.z);
+    }
+    public operator * (float scalar) -> Vector3 {
+        return new Vector3(x * scalar, y * scalar, z * scalar);
+    }
+    public operator == (Vector3 other) -> bool {
+        return x == other.x && y == other.y && z == other.z;
+    }
+
+    // ── Named methods (for compatibility) ─────────────────
+    public func Vector3 add(Vector3 other) { return new Vector3(x + other.x, y + other.y, z + other.z); }
+    public func Vector3 sub(Vector3 other) { return new Vector3(x - other.x, y - other.y, z - other.z); }
+    public func Vector3 mul(float scalar) { return new Vector3(x * scalar, y * scalar, z * scalar); }
+
+    // ── Math ──────────────────────────────────────────────
+    public func float dot(Vector3 other) {
+        return x * other.x + y * other.y + z * other.z;
+    }
+    public func Vector3 cross(Vector3 other) {
+        return new Vector3(
+            y * other.z - z * other.y,
+            z * other.x - x * other.z,
+            x * other.y - y * other.x
+        );
+    }
+    public func float length() {
+        return Math.sqrt(x * x + y * y + z * z);
+    }
+    public func float lengthSquared() {
+        return x * x + y * y + z * z;
+    }
+    public func Vector3 normalized() {
+        float len = length();
+        if (len == 0.0) { return new Vector3(0.0, 0.0, 0.0); }
+        return new Vector3(x / len, y / len, z / len);
+    }
+    public func Vector3 lerp(Vector3 other, float t) {
+        return new Vector3(
+            x + (other.x - x) * t,
+            y + (other.y - y) * t,
+            z + (other.z - z) * t
+        );
+    }
+    public func float distance(Vector3 other) {
+        float dx = x - other.x;
+        float dy = y - other.y;
+        float dz = z - other.z;
+        return Math.sqrt(dx * dx + dy * dy + dz * dz);
+    }
+    public func Vector3 negate() {
+        return new Vector3(-x, -y, -z);
+    }
+    public func string toString() {
+        return "(" + x + ", " + y + ", " + z + ")";
+    }
+
+    // ── Static factories ──────────────────────────────────
+    public static func Vector3 zero()    { return new Vector3(0.0, 0.0, 0.0); }
+    public static func Vector3 one()     { return new Vector3(1.0, 1.0, 1.0); }
+    public static func Vector3 up()      { return new Vector3(0.0, 1.0, 0.0); }
+    public static func Vector3 forward() { return new Vector3(0.0, 0.0, -1.0); }
+    public static func Vector3 right()   { return new Vector3(1.0, 0.0, 0.0); }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Vector4
+// ═══════════════════════════════════════════════════════════════════════════
+public class Vector4 {
+    public float x;
+    public float y;
+    public float z;
+    public float w;
+
+    public Vector4(float x, float y, float z, float w) {
+        this.x = x;
+        this.y = y;
+        this.z = z;
+        this.w = w;
+    }
+
+    public Vector4() { this.x = 0.0; this.y = 0.0; this.z = 0.0; this.w = 0.0; }
+
+    // ── Operator overloading ──────────────────────────────
+    public operator + (Vector4 other) -> Vector4 {
+        return new Vector4(x + other.x, y + other.y, z + other.z, w + other.w);
+    }
+    public operator - (Vector4 other) -> Vector4 {
+        return new Vector4(x - other.x, y - other.y, z - other.z, w - other.w);
+    }
+    public operator * (float scalar) -> Vector4 {
+        return new Vector4(x * scalar, y * scalar, z * scalar, w * scalar);
+    }
+    public operator == (Vector4 other) -> bool {
+        return x == other.x && y == other.y && z == other.z && w == other.w;
+    }
+
+    // ── Math ──────────────────────────────────────────────
+    public func float dot(Vector4 other) {
+        return x * other.x + y * other.y + z * other.z + w * other.w;
+    }
+    public func float length() {
+        return Math.sqrt(x * x + y * y + z * z + w * w);
+    }
+    public func Vector4 normalized() {
+        float len = length();
+        if (len == 0.0) { return new Vector4(0.0, 0.0, 0.0, 0.0); }
+        return new Vector4(x / len, y / len, z / len, w / len);
+    }
+    public func Vector3 xyz() {
+        return new Vector3(x, y, z);
+    }
+    public func string toString() {
+        return "(" + x + ", " + y + ", " + z + ", " + w + ")";
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Vector3f Struct (Value-type)
+// ═══════════════════════════════════════════════════════════════════════════
+public struct Vector3f {
+    public float x;
+    public float y;
+    public float z;
+}

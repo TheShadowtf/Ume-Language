@@ -1,0 +1,38 @@
+// io.ume — Ume Standard Library (I/O)
+package std.io;
+
+/// Console I/O (natively backed)
+public static class Console {
+    public static func void println(any msg);
+    public static func void print(any msg);
+    public static func string readLine();
+    public static func string readLine(string prompt);
+    public static func void clear();
+}
+
+/// File I/O
+public class File {
+    private string path;
+
+    public func void constructor(string path) {
+        this.path = path;
+    }
+
+    /// Read entire file contents as a string
+    public func string readAll();
+
+    /// Read all lines as a list
+    public func List<string> readLines();
+
+    /// Write content to file (overwrite)
+    public func void write(string content);
+
+    /// Append content to file
+    public func void append(string content);
+
+    /// Returns true if file exists
+    public func bool exists();
+
+    /// Delete this file
+    public func void delete();
+}

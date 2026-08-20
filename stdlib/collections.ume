@@ -1,0 +1,80 @@
+// collections.ume — Ume Standard Library (Collections)
+package std.collections;
+
+/// Generic dynamic list
+public class List<T> {
+    public func void constructor();
+    public func void     add(T item);
+    public func T        get(int index);
+    public func void     set(int index, T item);
+    public func int      size();
+    public func bool     isEmpty();
+    public func bool     contains(T item);
+    public func void     remove(int index);
+    public func void     removeItem(T item);
+    public func void     clear();
+    public func void     forEach(func void (T) action);
+    public func List<T>  filter(func bool (T) predicate);
+    public func List<R>  map<R>(func R (T) transform);
+    public func R        reduce<R>(R initial, func R (R, T) accumulator);
+    public func void     sort(func int (T, T)? comparator);
+    public func List<T>  slice(int start, int end);
+    public func int      indexOf(T item);
+    public func T[]      toArray();
+    public func void     addAll(any items);
+}
+
+/// Generic key-value map
+public class Map<K, V> {
+    public func void constructor();
+    public func void    put(K key, V value);
+    public func V       get(K key);
+    public func V?      getOrNull(K key);
+    public func bool    containsKey(K key);
+    public func bool    containsValue(V value);
+    public func void    remove(K key);
+    public func int     size();
+    public func bool    isEmpty();
+    public func void    clear();
+    public func List<K> keys();
+    public func List<V> values();
+    public func void    forEach(func void (K, V) action);
+}
+
+/// Generic set (unique values)
+public class Set<T> {
+    public func void constructor();
+    public func void   add(T item);
+    public func bool   contains(T item);
+    public func void   remove(T item);
+    public func int    size();
+    public func bool   isEmpty();
+    public func void   clear();
+    public func List<T> toList();
+    public func void   forEach(func void (T) action);
+    public func Set<T> union(Set<T> other);
+    public func Set<T> intersect(Set<T> other);
+    public func Set<T> difference(Set<T> other);
+}
+
+/// Stack (LIFO)
+public class Stack<T> {
+    public func void constructor();
+    public func void push(T item);
+    public func T    pop();
+    public func T    peek();
+    public func bool isEmpty();
+    public func int  size();
+    public func void clear();
+}
+
+/// Queue (FIFO)
+public class Queue<T> {
+    public func void constructor();
+    public func void enqueue(T item);
+    public func T    dequeue();
+    public func T    front();
+    public func bool isEmpty();
+    public func int  size();
+    public func void clear();
+}

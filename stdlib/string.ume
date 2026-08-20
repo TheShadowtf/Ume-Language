@@ -1,0 +1,36 @@
+// string.ume — Ume Standard Library (String)
+package std.string;
+
+/// String utilities
+public static class StringUtils {
+    /// Parse an integer from a string
+    public static func int    parseInt(string s);
+    /// Parse a double from a string
+    public static func double parseDouble(string s);
+    /// Parse a bool from a string ("true"/"false")
+    public static func bool   parseBool(string s);
+    /// Returns true if the string represents a valid integer
+    public static func bool   isInt(string s);
+    /// Returns true if the string represents a valid number
+    public static func bool   isNumber(string s);
+    /// Repeat a string n times
+    public static func string repeat(string s, int n);
+    /// Pad left to width with given char
+    public static func string padLeft(string s, int width, char pad);
+    /// Pad right to width with given char
+    public static func string padRight(string s, int width, char pad);
+    /// Join a list of strings with a separator
+    public static func string join(List<string> parts, string separator);
+    /// Format a string using {0}, {1}, ... placeholders
+    public static func string format(string template, ...any args);
+}
+
+/// StringBuilder for efficient string assembly
+public class StringBuilder {
+    public func void constructor();
+    public func StringBuilder append(any value);
+    public func StringBuilder appendLine(any value);
+    public func void clear();
+    public func string toString();
+    public func int length();
+}

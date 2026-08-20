@@ -1,0 +1,14 @@
+{
+	"InstallScripts" : 
+	[
+		"D:/Projects/C++/Ume-Language/build/cmake_install.cmake",
+		"D:/Projects/C++/Ume-Language/build/vendor/glfw/cmake_install.cmake",
+		"D:/Projects/C++/Ume-Language/build/vendor/glfw/src/cmake_install.cmake",
+		"D:/Projects/C++/Ume-Language/build/vendor/glad/cmake_install.cmake",
+		"D:/Projects/C++/Ume-Language/build/graphics/cmake_install.cmake",
+		"D:/Projects/C++/Ume-Language/build/compiler/cmake_install.cmake",
+		"D:/Projects/C++/Ume-Language/build/interpreter/cmake_install.cmake",
+		"D:/Projects/C++/Ume-Language/build/cli/cmake_install.cmake"
+	],
+	"Parallel" : false
+}

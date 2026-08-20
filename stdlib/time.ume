@@ -1,0 +1,22 @@
+// time.ume — Ume Standard Library (Time)
+package std.time;
+
+import std.system.*;
+
+/// Time utilities
+public static class Time {
+    /// Get current time in milliseconds
+    public static func long millis() {
+        return System.currentTimeMillis();
+    }
+
+    /// Get high-resolution monotonic time in nanoseconds
+    public static func long nanos() {
+        return System.nanoTime();
+    }
+
+    /// Get current time in seconds (as double)
+    public static func double seconds() {
+        return cast<double>(System.currentTimeMillis()) / 1000.0;
+    }
+}

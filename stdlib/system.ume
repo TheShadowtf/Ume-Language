@@ -1,0 +1,49 @@
+// system.ume — Ume Standard Library (System)
+package std.system;
+
+/// Process and environment utilities
+public static class System {
+    /// Get an environment variable value (null if not set)
+    public static func string? getEnv(string name);
+
+    /// Exit the process with the given exit code
+    public static func void exit(int code);
+
+    /// Get current epoch time in milliseconds
+    public static func long currentTimeMillis();
+
+    /// Get high-resolution monotonic time in nanoseconds
+    public static func long nanoTime();
+
+    /// Get command-line arguments as a list
+    public static func List<string> args();
+
+    /// Execute a shell command, returns exit code
+    public static func int exec(string command);
+
+    /// Get the current working directory
+    public static func string cwd();
+
+    /// Get the OS platform name: "windows", "linux", "macos"
+    public static func string platform();
+}
+
+/// File system utilities
+public static class FileSystem {
+    public static func bool   exists(string path);
+    public static func bool   isFile(string path);
+    public static func bool   isDirectory(string path);
+    public static func void   createDir(string path);
+    public static func void   createDirs(string path);
+    public static func void   deleteFile(string path);
+    public static func void   deleteDir(string path);
+    public static func void   copy(string from, string to);
+    public static func void   move(string from, string to);
+    public static func string readText(string path);
+    public static func List<string> listDir(string path);
+    public static func long   fileSize(string path);
+    public static func string extension(string path);
+    public static func string filename(string path);
+    public static func string parentDir(string path);
+    public static func string join(string base, string part);
+}

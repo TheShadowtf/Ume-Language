@@ -1,0 +1,32 @@
+// std.ume — Ume Standard Library (Core)
+// This file is natively implemented by the C++ runtime.
+package std;
+
+/// Core I/O console interface (natively backed)
+public static class Console {
+    public static func void println(any msg);
+    public static func void print(any msg);
+    public static func string readLine();
+    public static func string readLine(string prompt);
+}
+
+/// Math utilities (natively backed)
+public static class Math {
+    public static double PI = 3.14159265358979323846;
+    public static func double sqrt(double x);
+    public static func double pow(double base, double exp);
+    public static func double abs(double x);
+    public static func double floor(double x);
+    public static func double ceil(double x);
+    public static func double round(double x);
+    public static func double log(double x);
+    public static func double log10(double x);
+    public static func double sin(double x);
+    public static func double cos(double x);
+    public static func double tan(double x);
+    public static func int    min(int a, int b);
+    public static func int    max(int a, int b);
+    public static func double minf(double a, double b);
+    public static func double maxf(double a, double b);
+    public static func double clamp(double v, double lo, double hi);
+}

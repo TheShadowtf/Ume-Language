@@ -1,0 +1,52 @@
+package Security;
+
+import std.collections.*;
+import std.system.*;
+
+public class Main {
+    public static func void main() {
+        int passedChecks = 0;
+        int totalChecks = 4;
+
+        List<int> list = new List<int>();
+        list.add(10);
+        list.add(20);
+        list.add(30);
+
+        // Check 1: Out of bounds positive index
+        bool caughtOOBHigh = false;
+        try {
+            int val = list.get(100);
+        } catch (Exception e) {
+            caughtOOBHigh = true;
+            passedChecks++;
+        }
+
+        // Check 2: Out of bounds negative index
+        bool caughtOOBNeg = false;
+        try {
+            int val = list.get(-1);
+        } catch (Exception e) {
+            caughtOOBNeg = true;
+            passedChecks++;
+        }
+
+        // Check 3: Out of bounds setter
+        bool caughtSetOOB = false;
+        try {
+            list.set(50, 999);
+        } catch (Exception e) {
+            caughtSetOOB = true;
+            passedChecks++;
+        }
+
+        // Check 4: Normal valid access still works correctly
+        int valid = list.get(1);
+        if (valid == 20) {
+            passedChecks++;
+        }
+
+        string status = passedChecks == totalChecks ? "PASSED" : "FAILED";
+        Console.println("[SECURITY_RESULT] {\"test\": \"bounds_safety\", \"status\": \"" + status + "\", \"passed\": " + passedChecks + ", \"total\": " + totalChecks + "}");
+    }
+}

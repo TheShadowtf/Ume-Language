@@ -1,0 +1,42 @@
+package Benchmarks;
+
+import std.system.*;
+
+public class Main {
+    public static func int fibRecursive(int n) {
+        if (n <= 1) return n;
+        return fibRecursive(n - 1) + fibRecursive(n - 2);
+    }
+
+    public static func int fibIterative(int n) {
+        int a = 0;
+        int b = 1;
+        int i = 0;
+        while (i < n) {
+            int temp = (a + b) % 1000000007;
+            a = b;
+            b = temp;
+            i++;
+        }
+        return a;
+    }
+
+    public static func void main() {
+        // Warmup / verification
+        int checkRec = fibRecursive(10);
+        int checkIter = fibIterative(10);
+
+        long t0 = System.currentTimeMillis();
+        int resRec = fibRecursive(28);
+        long t1 = System.currentTimeMillis();
+        double timeRec = cast<double>(t1 - t0);
+
+        long t2 = System.currentTimeMillis();
+        int resIter = fibIterative(1000000);
+        long t3 = System.currentTimeMillis();
+        double timeIter = cast<double>(t3 - t2);
+
+        Console.println("[BENCHMARK_RESULT] {\"name\": \"fib_recursive\", \"time_ms\": " + timeRec + ", \"result\": \"" + resRec + "\"}");
+        Console.println("[BENCHMARK_RESULT] {\"name\": \"fib_iterative\", \"time_ms\": " + timeIter + ", \"result\": \"" + resIter + "\"}");
+    }
+}

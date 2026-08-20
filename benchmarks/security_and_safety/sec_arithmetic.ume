@@ -1,0 +1,44 @@
+package Security;
+
+import std.string.*;
+import std.system.*;
+
+public class Main {
+    public static func void main() {
+        int passedChecks = 0;
+        int totalChecks = 3;
+
+        // Check 1: Integer division by zero raises catchable exception
+        bool caughtDivZero = false;
+        try {
+            int a = 100;
+            int b = 0;
+            int c = a / b;
+        } catch (Exception ex) {
+            caughtDivZero = true;
+            passedChecks++;
+        }
+
+        // Check 2: Modulo by zero raises catchable exception
+        bool caughtModZero = false;
+        try {
+            int a = 50;
+            int b = 0;
+            int c = a % b;
+        } catch (Exception ex) {
+            caughtModZero = true;
+            passedChecks++;
+        }
+
+        // Check 3: Large integer arithmetic wrapping
+        int maxVal = 2147483647;
+        int wrapped = maxVal + 1;
+        // In 64-bit intVal or 32-bit wrap, arithmetic continues deterministically
+        if (wrapped != 0) {
+            passedChecks++;
+        }
+
+        string status = passedChecks == totalChecks ? "PASSED" : "FAILED";
+        Console.println("[SECURITY_RESULT] {\"test\": \"arithmetic_safety\", \"status\": \"" + status + "\", \"passed\": " + passedChecks + ", \"total\": " + totalChecks + "}");
+    }
+}

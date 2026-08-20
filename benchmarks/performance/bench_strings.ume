@@ -1,0 +1,39 @@
+package Benchmarks;
+
+import std.string.*;
+import std.system.*;
+
+public class Main {
+    public static func int runStringBenchmark(int count) {
+        int checksum = 0;
+        int i = 0;
+        while (i < count) {
+            string tag = "ITEM_" + i;
+            string formatted = "ID: [" + tag + "] - Status: OK - Code: " + (i * 7);
+            
+            // Check string length
+            checksum = (checksum + formatted.length()) % 1000000007;
+
+            // Substring if possible
+            if (formatted.length() > 8) {
+                string sub = formatted.substring(4, 10);
+                checksum = (checksum + sub.length()) % 1000000007;
+            }
+
+            i++;
+        }
+        return checksum;
+    }
+
+    public static func void main() {
+        // Warmup
+        runStringBenchmark(100);
+
+        long t0 = System.currentTimeMillis();
+        int res = runStringBenchmark(20000);
+        long t1 = System.currentTimeMillis();
+        double timeMs = cast<double>(t1 - t0);
+
+        Console.println("[BENCHMARK_RESULT] {\"name\": \"string_concat_and_manipulation\", \"time_ms\": " + timeMs + ", \"result\": \"" + res + "\"}");
+    }
+}

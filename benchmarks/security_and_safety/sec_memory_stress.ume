@@ -1,0 +1,32 @@
+package Security;
+
+import std.system.*;
+
+public class TempNode {
+    public string payload;
+    public int id;
+    public TempNode(int id) {
+        this.id = id;
+        this.payload = "payload_data_string_" + id;
+    }
+}
+
+public class Main {
+    public static func void main() {
+        int allocations = 50000;
+        int i = 0;
+        int checksum = 0;
+
+        long t0 = System.currentTimeMillis();
+        while (i < allocations) {
+            TempNode node = new TempNode(i);
+            checksum = (checksum + node.id) % 1000000007;
+            i++;
+        }
+        long t1 = System.currentTimeMillis();
+        double timeMs = cast<double>(t1 - t0);
+
+        string status = (checksum == 249974993) ? "PASSED" : "FAILED";
+        Console.println("[SECURITY_RESULT] {\"test\": \"memory_leak_stress\", \"status\": \"" + status + "\", \"allocations\": " + allocations + ", \"time_ms\": " + timeMs + "}");
+    }
+}

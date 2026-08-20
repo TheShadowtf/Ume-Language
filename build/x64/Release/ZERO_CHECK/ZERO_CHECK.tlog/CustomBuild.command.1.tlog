@@ -1,0 +1,10 @@
+^D:\PROJECTS\C++\UME-LANGUAGE\BUILD\CMAKEFILES\75D9E04B042E4B6661450C2156E0C1FD\GENERATE.STAMP.RULE
+setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -SD:/Projects/C++/Ume-Language -BD:/Projects/C++/Ume-Language/build --check-stamp-list CMakeFiles/generate.stamp.list --vs-solution-file D:/Projects/C++/Ume-Language/build/UmeLang.slnx
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd

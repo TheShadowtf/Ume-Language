@@ -1,0 +1,54 @@
+package Security;
+
+import std.system.*;
+
+public class User {
+    public string name;
+    public User(string name) {
+        this.name = name;
+    }
+    public func string getName() {
+        return name;
+    }
+}
+
+public class Main {
+    public static func void main() {
+        int passedChecks = 0;
+        int totalChecks = 4;
+
+        // Check 1: Null coalescing with null value
+        string? nullStr = null;
+        string fallback = nullStr ?? "FallbackValue";
+        if (fallback == "FallbackValue") {
+            passedChecks++;
+        }
+
+        // Check 2: Null coalescing with non-null value
+        string? activeStr = "ActiveValue";
+        string notFallback = activeStr ?? "FallbackValue";
+        if (notFallback == "ActiveValue") {
+            passedChecks++;
+        }
+
+        // Check 3: Calling method on null reference should be safely trapped
+        User? nullUser = null;
+        bool caughtNullCall = false;
+        try {
+            nullUser.getName();
+        } catch (Exception e) {
+            caughtNullCall = true;
+            passedChecks++;
+        }
+
+        // Check 4: Null comparison equality
+        User? u1 = null;
+        User? u2 = null;
+        if (u1 == u2 && u1 == null) {
+            passedChecks++;
+        }
+
+        string status = passedChecks == totalChecks ? "PASSED" : "FAILED";
+        Console.println("[SECURITY_RESULT] {\"test\": \"null_safety\", \"status\": \"" + status + "\", \"passed\": " + passedChecks + ", \"total\": " + totalChecks + "}");
+    }
+}

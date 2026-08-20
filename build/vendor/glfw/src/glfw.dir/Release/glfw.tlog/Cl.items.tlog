@@ -1,0 +1,15 @@
+D:\Projects\C++\Ume-Language\vendor\glfw\src\context.c;D:\Projects\C++\Ume-Language\build\vendor\glfw\src\glfw.dir\Release\context.obj
+D:\Projects\C++\Ume-Language\vendor\glfw\src\init.c;D:\Projects\C++\Ume-Language\build\vendor\glfw\src\glfw.dir\Release\init.obj
+D:\Projects\C++\Ume-Language\vendor\glfw\src\input.c;D:\Projects\C++\Ume-Language\build\vendor\glfw\src\glfw.dir\Release\input.obj
+D:\Projects\C++\Ume-Language\vendor\glfw\src\monitor.c;D:\Projects\C++\Ume-Language\build\vendor\glfw\src\glfw.dir\Release\monitor.obj
+D:\Projects\C++\Ume-Language\vendor\glfw\src\vulkan.c;D:\Projects\C++\Ume-Language\build\vendor\glfw\src\glfw.dir\Release\vulkan.obj
+D:\Projects\C++\Ume-Language\vendor\glfw\src\window.c;D:\Projects\C++\Ume-Language\build\vendor\glfw\src\glfw.dir\Release\window.obj
+D:\Projects\C++\Ume-Language\vendor\glfw\src\win32_init.c;D:\Projects\C++\Ume-Language\build\vendor\glfw\src\glfw.dir\Release\win32_init.obj
+D:\Projects\C++\Ume-Language\vendor\glfw\src\win32_joystick.c;D:\Projects\C++\Ume-Language\build\vendor\glfw\src\glfw.dir\Release\win32_joystick.obj
+D:\Projects\C++\Ume-Language\vendor\glfw\src\win32_monitor.c;D:\Projects\C++\Ume-Language\build\vendor\glfw\src\glfw.dir\Release\win32_monitor.obj
+D:\Projects\C++\Ume-Language\vendor\glfw\src\win32_time.c;D:\Projects\C++\Ume-Language\build\vendor\glfw\src\glfw.dir\Release\win32_time.obj
+D:\Projects\C++\Ume-Language\vendor\glfw\src\win32_thread.c;D:\Projects\C++\Ume-Language\build\vendor\glfw\src\glfw.dir\Release\win32_thread.obj
+D:\Projects\C++\Ume-Language\vendor\glfw\src\win32_window.c;D:\Projects\C++\Ume-Language\build\vendor\glfw\src\glfw.dir\Release\win32_window.obj
+D:\Projects\C++\Ume-Language\vendor\glfw\src\wgl_context.c;D:\Projects\C++\Ume-Language\build\vendor\glfw\src\glfw.dir\Release\wgl_context.obj
+D:\Projects\C++\Ume-Language\vendor\glfw\src\egl_context.c;D:\Projects\C++\Ume-Language\build\vendor\glfw\src\glfw.dir\Release\egl_context.obj
+D:\Projects\C++\Ume-Language\vendor\glfw\src\osmesa_context.c;D:\Projects\C++\Ume-Language\build\vendor\glfw\src\glfw.dir\Release\osmesa_context.obj

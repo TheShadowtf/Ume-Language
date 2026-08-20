@@ -1,0 +1,82 @@
+package Benchmarks;
+
+import std.collections.*;
+import std.system.*;
+
+public class Main {
+    public static func int runCollectionsBenchmark(int n) {
+        int checksum = 0;
+
+        // 1. List operations
+        List<int> list = new List<int>();
+        int i = 0;
+        while (i < n) {
+            list.add(i * 3 + 1);
+            i++;
+        }
+
+        int j = 0;
+        while (j < n) {
+            int val = list.get(j);
+            checksum = (checksum + val) % 1000000007;
+            j = j + 2; // Every second element
+        }
+
+        // 2. Map operations
+        Map<string, int> map = new Map<string, int>();
+        int k = 0;
+        while (k < n / 2) {
+            string key = "key_" + k;
+            map.put(key, k * 5);
+            k++;
+        }
+
+        int m = 0;
+        while (m < n / 2) {
+            string key = "key_" + m;
+            if (map.containsKey(key)) {
+                int mapVal = map.get(key);
+                checksum = (checksum + mapVal) % 1000000007;
+            }
+            m = m + 3;
+        }
+
+        // 3. Stack operations
+        Stack stack = new Stack();
+        int s = 0;
+        while (s < 1000) {
+            stack.push(s);
+            s++;
+        }
+        while (!stack.isEmpty()) {
+            int popped = cast<int>(stack.pop());
+            checksum = (checksum + popped) % 1000000007;
+        }
+
+        // 4. Queue operations
+        Queue queue = new Queue();
+        int q = 0;
+        while (q < 1000) {
+            queue.enqueue(q);
+            q++;
+        }
+        while (!queue.isEmpty()) {
+            int deq = cast<int>(queue.dequeue());
+            checksum = (checksum + deq) % 1000000007;
+        }
+
+        return checksum;
+    }
+
+    public static func void main() {
+        // Warmup
+        runCollectionsBenchmark(100);
+
+        long t0 = System.currentTimeMillis();
+        int res = runCollectionsBenchmark(10000);
+        long t1 = System.currentTimeMillis();
+        double timeMs = cast<double>(t1 - t0);
+
+        Console.println("[BENCHMARK_RESULT] {\"name\": \"collections_list_map_queue\", \"time_ms\": " + timeMs + ", \"result\": \"" + res + "\"}");
+    }
+}

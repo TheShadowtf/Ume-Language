@@ -1,0 +1,47 @@
+// thread.ume — Ume Standard Library (Threading)
+package std.thread;
+
+/// Simple thread abstraction
+public class Thread {
+    public func void constructor(func void () task);
+    public func void start();
+    public func void join();
+    public func bool isAlive();
+    public static func void sleep(long milliseconds);
+    public static func Thread current();
+}
+
+/// Mutual exclusion lock
+public class Mutex {
+    public func void constructor();
+    public func void lock();
+    public func void unlock();
+    public func bool tryLock();
+}
+
+/// Condition variable for thread synchronisation
+public class ConditionVariable {
+    public func void constructor();
+    public func void wait(Mutex m);
+    public func void signal();
+    public func void broadcast();
+}
+
+/// Atomic integer
+public class AtomicInt {
+    public func void constructor(int initialValue);
+    public func int  get();
+    public func void set(int value);
+    public func int  addAndGet(int delta);
+    public func int  getAndIncrement();
+    public func int  getAndDecrement();
+    public func bool compareAndSet(int expected, int update);
+}
+
+/// Future-based asynchronous task
+public class Task<T> {
+    public func void constructor();
+    public func T get();
+    public func void wait();
+    public func bool isDone();
+}

@@ -1,0 +1,58 @@
+package Benchmarks;
+
+import std.system.*;
+
+public class Point2D {
+    public double x;
+    public double y;
+
+    public Point2D(double x, double y) {
+        this.x = x;
+        this.y = y;
+    }
+
+    public func double magnitude() {
+        return x * x + y * y;
+    }
+}
+
+public class ColoredPoint extends Point2D {
+    public int color;
+
+    public ColoredPoint(double x, double y, int color) {
+        super(x, y);
+        this.color = color;
+    }
+
+    public override func double magnitude() {
+        return super.magnitude() + cast<double>(color);
+    }
+}
+
+public class Main {
+    public static func int runObjectBenchmark(int count) {
+        double totalMag = 0.0;
+        int i = 0;
+        while (i < count) {
+            double fx = cast<double>(i % 100);
+            double fy = cast<double>((i + 1) % 100);
+            int col = i % 16;
+            ColoredPoint pt = new ColoredPoint(fx, fy, col);
+            totalMag = totalMag + pt.magnitude();
+            i++;
+        }
+        return cast<int>(totalMag) % 1000000007;
+    }
+
+    public static func void main() {
+        // Warmup
+        runObjectBenchmark(100);
+
+        long t0 = System.currentTimeMillis();
+        int res = runObjectBenchmark(50000);
+        long t1 = System.currentTimeMillis();
+        double timeMs = cast<double>(t1 - t0);
+
+        Console.println("[BENCHMARK_RESULT] {\"name\": \"oop_instantiation_and_dispatch\", \"time_ms\": " + timeMs + ", \"result\": \"" + res + "\"}");
+    }
+}

@@ -1,0 +1,19 @@
+// audio.ume — Ume Standard Library (Audio)
+package std.audio;
+
+/// Main audio engine context
+public class AudioEngine {
+    public func void constructor();
+    public func void setVolume(float volume);
+}
+
+/// A playable sound
+public class Sound {
+    public func void constructor(AudioEngine engine, string filepath);
+    public func void play();
+    public func void stop();
+    public func bool isPlaying();
+    public func void setVolume(float volume);
+    public func void setPitch(float pitch);
+    public func void setLooping(bool loop);
+}

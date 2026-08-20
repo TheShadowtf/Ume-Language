@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Solution>
+	<Configurations>
+		<BuildType Name="Debug"/>
+		<BuildType Name="Release"/>
+		<BuildType Name="MinSizeRel"/>
+		<BuildType Name="RelWithDebInfo"/>
+		<Platform Name="x64"/>
+	</Configurations>
+	<Project Path="vendor/glad/glad.vcxproj" Type="8bc9ceb8-8b4a-11d0-8d11-00a0c91bc942" Id="60504fc0-e638-3cd5-8da8-8a98d7e8f29b">
+		<BuildDependency Project="ZERO_CHECK.vcxproj"/>
+	</Project>
+	<Project Path="cli/ume.vcxproj" Type="8bc9ceb8-8b4a-11d0-8d11-00a0c91bc942" Id="cf911a8e-07f0-353a-942b-89439ac5f0a5">
+		<BuildDependency Project="ZERO_CHECK.vcxproj"/>
+		<BuildDependency Project="vendor/glad/glad.vcxproj"/>
+		<BuildDependency Project="vendor/glfw/src/glfw.vcxproj"/>
+		<BuildDependency Project="compiler/ume_compiler_lib.vcxproj"/>
+		<BuildDependency Project="graphics/ume_graphics_lib.vcxproj"/>
+		<BuildDependency Project="interpreter/ume_interpreter_lib.vcxproj"/>
+	</Project>
+	<Project Path="compiler/ume_compiler_lib.vcxproj" Type="8bc9ceb8-8b4a-11d0-8d11-00a0c91bc942" Id="d0709327-e988-34e2-ac1c-25c226e46701">
+		<BuildDependency Project="ZERO_CHECK.vcxproj"/>
+	</Project>
+	<Project Path="graphics/ume_graphics_lib.vcxproj" Type="8bc9ceb8-8b4a-11d0-8d11-00a0c91bc942" Id="4eb93bf3-8fb9-3e71-8b5c-4d027ef5f8a6">
+		<BuildDependency Project="ZERO_CHECK.vcxproj"/>
+		<BuildDependency Project="vendor/glad/glad.vcxproj"/>
+		<BuildDependency Project="vendor/glfw/src/glfw.vcxproj"/>
+	</Project>
+	<Project Path="interpreter/ume_interpreter_lib.vcxproj" Type="8bc9ceb8-8b4a-11d0-8d11-00a0c91bc942" Id="7afb055a-d922-37ea-bca2-7618cd19d669">
+		<BuildDependency Project="ZERO_CHECK.vcxproj"/>
+		<BuildDependency Project="vendor/glad/glad.vcxproj"/>
+		<BuildDependency Project="vendor/glfw/src/glfw.vcxproj"/>
+		<BuildDependency Project="compiler/ume_compiler_lib.vcxproj"/>
+		<BuildDependency Project="graphics/ume_graphics_lib.vcxproj"/>
+	</Project>
+	<Folder Name="/CMakePredefinedTargets/">
+		<Project Path="ALL_BUILD.vcxproj" Type="8bc9ceb8-8b4a-11d0-8d11-00a0c91bc942" Id="a8e57805-ee3e-37f6-aaa0-140ca1d16590" DefaultStartup="true">
+			<BuildDependency Project="ZERO_CHECK.vcxproj"/>
+			<BuildDependency Project="vendor/glad/glad.vcxproj"/>
+			<BuildDependency Project="vendor/glfw/src/glfw.vcxproj"/>
+			<BuildDependency Project="cli/ume.vcxproj"/>
+			<BuildDependency Project="compiler/ume_compiler_lib.vcxproj"/>
+			<BuildDependency Project="graphics/ume_graphics_lib.vcxproj"/>
+			<BuildDependency Project="interpreter/ume_interpreter_lib.vcxproj"/>
+		</Project>
+		<Project Path="INSTALL.vcxproj" Type="8bc9ceb8-8b4a-11d0-8d11-00a0c91bc942" Id="d7484a67-24c5-3618-87bb-4f60dd3784ec">
+			<BuildDependency Project="ALL_BUILD.vcxproj"/>
+			<BuildDependency Project="ZERO_CHECK.vcxproj"/>
+			<Build Solution="Debug|*" Project="false"/>
+			<Build Solution="Release|*" Project="false"/>
+			<Build Solution="MinSizeRel|*" Project="false"/>
+			<Build Solution="RelWithDebInfo|*" Project="false"/>
+		</Project>
+		<Project Path="ZERO_CHECK.vcxproj" Type="8bc9ceb8-8b4a-11d0-8d11-00a0c91bc942" Id="cf306ab6-5de9-3b77-985f-86b7f402efca"/>
+	</Folder>
+	<Folder Name="/GLFW3/">
+		<Project Path="vendor/glfw/src/glfw.vcxproj" Type="8bc9ceb8-8b4a-11d0-8d11-00a0c91bc942" Id="9867f619-36b9-3005-95df-4ddf37d2b352">
+			<BuildDependency Project="ZERO_CHECK.vcxproj"/>
+		</Project>
+		<Project Path="vendor/glfw/uninstall.vcxproj" Type="8bc9ceb8-8b4a-11d0-8d11-00a0c91bc942" Id="8ca31508-0ad6-3262-8209-9c6d5ed092ca">
+			<BuildDependency Project="ZERO_CHECK.vcxproj"/>
+			<Build Solution="Debug|*" Project="false"/>
+			<Build Solution="Release|*" Project="false"/>
+			<Build Solution="MinSizeRel|*" Project="false"/>
+			<Build Solution="RelWithDebInfo|*" Project="false"/>
+		</Project>
+	</Folder>
+</Solution>

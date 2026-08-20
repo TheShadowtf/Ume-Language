@@ -1,0 +1,44 @@
+package Benchmarks;
+
+import std.thread.*;
+import std.system.*;
+
+public class Main {
+    public static func void main() {
+        AtomicInt atomicCounter = new AtomicInt(0);
+        Mutex mtx = new Mutex();
+        AtomicInt mutexProtectedSum = new AtomicInt(0);
+
+        long t0 = System.currentTimeMillis();
+
+        // 1. Atomic increments benchmark (100,000 iterations)
+        int i = 0;
+        while (i < 50000) {
+            atomicCounter.getAndIncrement();
+            i++;
+        }
+
+        // 2. Mutex locking contention benchmark (50,000 iterations)
+        int j = 0;
+        while (j < 50000) {
+            mtx.lock();
+            int current = mutexProtectedSum.get();
+            mutexProtectedSum.set(current + 1);
+            mtx.unlock();
+            j++;
+        }
+
+        // 3. Task evaluation
+        Task taskObj = new Task(() -> { return 42; });
+        int taskRes = cast<int>(taskObj.get());
+
+        long t1 = System.currentTimeMillis();
+        double timeMs = cast<double>(t1 - t0);
+
+        int finalAtomic = atomicCounter.get();
+        int finalMutex = mutexProtectedSum.get();
+        string res = "atomic=" + finalAtomic + ";mutex=" + finalMutex + ";task=" + taskRes;
+
+        Console.println("[BENCHMARK_RESULT] {\"name\": \"concurrency_atomics_and_mutex\", \"time_ms\": " + timeMs + ", \"result\": \"" + res + "\"}");
+    }
+}
