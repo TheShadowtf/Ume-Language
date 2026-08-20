@@ -39,7 +39,9 @@ Do I understand what I have done? No, not really.
 Is this language useable? Not even a bit.  
 Is this language usefull? Not even a bit.  
 Do I regret making this project? My heart say yes, but my brain say no. And the monsters under my bed say to shut up.   
-Maybe have fun using it? I guess have fun!
+Maybe have fun using it? I guess have fun!  
+
+The minecraft demo it is made with AI (forgive me but I really didn't want to also make minecraft rn, maybe after one year) and u can run it using ume build (ume run for some reason does not work, I get an error but ANYWAYS)
 
 ## 🚀 Installation & Quick Start
 

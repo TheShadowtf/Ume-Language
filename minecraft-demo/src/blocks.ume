@@ -1,0 +1,278 @@
+// ═══════════════════════════════════════════════════════════════════════════
+// blocks.ume — Block definitions, BlockRegistry, terrain generation
+// ═══════════════════════════════════════════════════════════════════════════
+//
+// Block IDs are kept as ints so existing world-save code keeps working.
+// All metadata (name, UV, color, hardness, behavior flags) lives in a
+// BlockDef instance registered in the global BlockRegistry.
+//
+// Face indices (used everywhere):
+//   0 = top   1 = bottom   2 = +X   3 = -X   4 = +Z   5 = -Z
+
+import std.math.*;
+
+// ── Atlas constants ──────────────────────────────────────────────────────────
+public int ATLAS_COLS = 5;
+public int ATLAS_ROWS = 3;
+
+// ── Block IDs (kept as ints for save compatibility) ──────────────────────────
+public int BLOCK_AIR        = 0;
+public int BLOCK_GRASS      = 1;
+public int BLOCK_DIRT       = 2;
+public int BLOCK_STONE      = 3;
+public int BLOCK_LOG        = 4;
+public int BLOCK_LEAVES     = 5;
+public int BLOCK_SAND       = 6;
+public int BLOCK_GRAVEL     = 7;
+public int BLOCK_WATER      = 8;
+public int BLOCK_COBBLE     = 9;
+public int BLOCK_PLANKS     = 10;
+public int BLOCK_SNOW       = 11;
+public int BLOCK_BEDROCK    = 12;
+public int BLOCK_GLASS      = 13;
+public int BLOCK_COAL_ORE   = 14;
+public int BLOCK_IRON_ORE   = 15;
+public int BLOCK_DIAMOND_ORE= 16;
+public int BLOCK_SNOW_BLOCK = 17;
+public int BLOCK_FLOWER     = 18;
+public int BLOCK_BRICK      = 19;
+public int BLOCK_GOLD_ORE   = 20;
+public int BLOCK_CRAFTING   = 21;   // placeholder for crafting-table item (decorative)
+
+public int BLOCK_MAX_ID     = 22;
+
+// ── Render / behavior flags ──────────────────────────────────────────────────
+public int BLOCK_FLAG_SOLID        = 1;   // collides with player
+public int BLOCK_FLAG_TRANSPARENT  = 2;   // neighbor faces are not culled
+public int BLOCK_FLAG_CROSS        = 4;   // X-shaped sprite (flowers, grass)
+public int BLOCK_FLAG_LIQUID       = 8;   // water-like (no collision)
+public int BLOCK_FLAG_UNBREAKABLE  = 16;  // bedrock
+
+// ═══════════════════════════════════════════════════════════════════════════
+// BlockDef — all metadata for one block type
+// ═══════════════════════════════════════════════════════════════════════════
+public class BlockDef {
+    public int    id;
+    public string name;
+
+    // Atlas tile coords (col, row) per face: [topCol,topRow, botCol,botRow, sideCol,sideRow]
+    // For most blocks top/bot/side is enough; cross blocks only use 'side'.
+    public int topCol;   public int topRow;
+    public int botCol;   public int botRow;
+    public int sideCol;  public int sideRow;
+
+    // HUD / fallback color
+    public float hudR; public float hudG; public float hudB;
+
+    // Gameplay
+    public int    flags;
+    public int    hardness;       // ticks to break (0=instant, -1=unbreakable)
+    public int    lightLevel;     // 0..15 emitted (0 = none)
+
+    public BlockDef(int id, string name) {
+        this.id = id; this.name = name;
+        topCol = 4; topRow = 2; botCol = 4; botRow = 2; sideCol = 4; sideRow = 2;
+        hudR = 0.5; hudG = 0.5; hudB = 0.5;
+        flags = BLOCK_FLAG_SOLID;
+        hardness = 6;
+        lightLevel = 0;
+    }
+
+    public func BlockDef setTop(int col, int row)    { topCol = col; topRow = row; return this; }
+    public func BlockDef setBottom(int col, int row) { botCol = col; botRow = row; return this; }
+    public func BlockDef setSide(int col, int row)   { sideCol = col; sideRow = row; return this; }
+    public func BlockDef setAll(int col, int row)    { topCol = col; topRow = row; botCol = col; botRow = row; sideCol = col; sideRow = row; return this; }
+    public func BlockDef setHud(float r, float g, float b) { hudR = r; hudG = g; hudB = b; return this; }
+    public func BlockDef setFlags(int f)             { flags = f; return this; }
+    public func BlockDef setHardness(int h)          { hardness = h; return this; }
+    public func BlockDef setLight(int l)             { lightLevel = l; return this; }
+
+    public func bool isSolid()        { return (flags & BLOCK_FLAG_SOLID) != 0; }
+    public func bool isTransparent()  { return (flags & BLOCK_FLAG_TRANSPARENT) != 0; }
+    public func bool isCross()        { return (flags & BLOCK_FLAG_CROSS) != 0; }
+    public func bool isLiquid()       { return (flags & BLOCK_FLAG_LIQUID) != 0; }
+    public func bool isUnbreakable()  { return (flags & BLOCK_FLAG_UNBREAKABLE) != 0; }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// BlockRegistry — global registry, accessed by id
+// ═══════════════════════════════════════════════════════════════════════════
+public class BlockRegistry {
+    public BlockDef[] defs;
+    public int        count;
+
+    public BlockRegistry() {
+        defs = new BlockDef[BLOCK_MAX_ID + 4];
+        count = 0;
+        registerDefaults();
+    }
+
+    public func void registerDef(BlockDef def) {
+        if (def.id < 0 || def.id >= defs.length()) return;
+        defs[def.id] = def;
+        if (def.id >= count) count = def.id + 1;
+    }
+
+    public func BlockDef get(int id) {
+        if (id < 0 || id >= count) return null;
+        return defs[id];
+    }
+
+    public func string name(int id) {
+        BlockDef d = get(id);
+        if (d == null) return "Unknown";
+        return d.name;
+    }
+
+    public func bool isSolid(int id) {
+        BlockDef d = get(id);
+        if (d == null) return false;
+        return d.isSolid();
+    }
+
+    public func bool isAir(int id) { return id == 0; }
+
+    // ── Atlas UV helpers ────────────────────────────────────────────────────
+    public func float[] atlasUV(int col, int row) {
+        float[] uv = new float[4];
+        float tw = 1.0 / cast<float>(ATLAS_COLS);
+        float th = 1.0 / cast<float>(ATLAS_ROWS);
+        uv[0] = cast<float>(col) * tw;
+        uv[1] = cast<float>(row) * th;
+        uv[2] = uv[0] + tw;
+        uv[3] = uv[1] + th;
+        return uv;
+    }
+
+    // face: 0=top, 1=bottom, 2..5=side
+    public func float[] faceUV(int bt, int face) {
+        BlockDef d = get(bt);
+        if (d == null) return atlasUV(4, 2);
+        int col; int row;
+        if      (face == 0) { col = d.topCol;  row = d.topRow;  }
+        else if (face == 1) { col = d.botCol;  row = d.botRow;  }
+        else                { col = d.sideCol; row = d.sideRow; }
+        return atlasUV(col, row);
+    }
+
+    public func float faceAO(int face) {
+        if (face == 0) return 1.00;
+        if (face == 1) return 0.50;
+        if (face == 2) return 0.80;
+        if (face == 3) return 0.70;
+        if (face == 4) return 0.85;
+        return 0.65;
+    }
+
+    public func float[] hudColor(int bt) {
+        BlockDef d = get(bt);
+        float[] c = new float[3];
+        if (d == null) { c[0] = 0.5; c[1] = 0.5; c[2] = 0.5; return c; }
+        c[0] = d.hudR; c[1] = d.hudG; c[2] = d.hudB;
+        return c;
+    }
+
+    // ── Default block registrations (matches old atlas layout) ──────────────
+    private func void registerDefaults() {
+        // Row 0: grass_top(0,0) grass_side(1,0) dirt(2,0) stone(3,0) cobble(4,0)
+        // Row 1: sand(0,1) gravel(1,1) planks(2,1) log_side(3,1) log_top(4,1)
+        // Row 2: leaves(0,2) snow(1,2) water(2,2) bedrock(3,2) fallback(4,2)
+
+        registerDef(new BlockDef(BLOCK_GRASS, "Grass Block")
+            .setTop(0,0).setBottom(2,0).setSide(1,0)
+            .setHud(0.34, 0.76, 0.26).setHardness(3));
+
+        registerDef(new BlockDef(BLOCK_DIRT, "Dirt")
+            .setAll(2,0).setHud(0.52, 0.36, 0.20).setHardness(3));
+
+        registerDef(new BlockDef(BLOCK_STONE, "Stone")
+            .setAll(3,0).setHud(0.56, 0.55, 0.58).setHardness(10));
+
+        registerDef(new BlockDef(BLOCK_LOG, "Oak Log")
+            .setTop(4,1).setBottom(4,1).setSide(3,1)
+            .setHud(0.38, 0.27, 0.10).setHardness(8));
+
+        registerDef(new BlockDef(BLOCK_LEAVES, "Leaves")
+            .setAll(0,2).setHud(0.22, 0.50, 0.17)
+            .setFlags(BLOCK_FLAG_SOLID | BLOCK_FLAG_TRANSPARENT).setHardness(2));
+
+        registerDef(new BlockDef(BLOCK_SAND, "Sand")
+            .setAll(0,1).setHud(0.80, 0.73, 0.46).setHardness(3));
+
+        registerDef(new BlockDef(BLOCK_GRAVEL, "Gravel")
+            .setAll(1,1).setHud(0.48, 0.45, 0.43).setHardness(4));
+
+        registerDef(new BlockDef(BLOCK_WATER, "Water")
+            .setAll(2,2).setHud(0.20, 0.40, 0.85)
+            .setFlags(BLOCK_FLAG_LIQUID | BLOCK_FLAG_TRANSPARENT).setHardness(-1));
+
+        registerDef(new BlockDef(BLOCK_COBBLE, "Cobblestone")
+            .setAll(4,0).setHud(0.55, 0.55, 0.55).setHardness(12));
+
+        registerDef(new BlockDef(BLOCK_PLANKS, "Oak Planks")
+            .setAll(2,1).setHud(0.73, 0.58, 0.32).setHardness(6));
+
+        registerDef(new BlockDef(BLOCK_SNOW, "Snow")
+            .setAll(1,2).setHud(0.92, 0.94, 0.98).setHardness(2));
+
+        registerDef(new BlockDef(BLOCK_BEDROCK, "Bedrock")
+            .setAll(3,2).setHud(0.15, 0.15, 0.15)
+            .setFlags(BLOCK_FLAG_SOLID | BLOCK_FLAG_UNBREAKABLE).setHardness(-1));
+
+        registerDef(new BlockDef(BLOCK_GLASS, "Glass")
+            .setAll(3,0).setHud(0.65, 0.85, 0.95)
+            .setFlags(BLOCK_FLAG_SOLID | BLOCK_FLAG_TRANSPARENT).setHardness(2));
+
+        registerDef(new BlockDef(BLOCK_COAL_ORE, "Coal Ore")
+            .setAll(3,0).setHud(0.25, 0.25, 0.27).setHardness(12));
+
+        registerDef(new BlockDef(BLOCK_IRON_ORE, "Iron Ore")
+            .setAll(3,0).setHud(0.62, 0.52, 0.42).setHardness(14));
+
+        registerDef(new BlockDef(BLOCK_DIAMOND_ORE, "Diamond Ore")
+            .setAll(3,0).setHud(0.30, 0.80, 0.90).setHardness(18));
+
+        registerDef(new BlockDef(BLOCK_SNOW_BLOCK, "Snow Block")
+            .setAll(1,2).setHud(0.92, 0.94, 0.98).setHardness(3));
+
+        registerDef(new BlockDef(BLOCK_FLOWER, "Rose Flower")
+            .setSide(0,2).setHud(0.85, 0.30, 0.30)
+            .setFlags(BLOCK_FLAG_CROSS | BLOCK_FLAG_TRANSPARENT).setHardness(0));
+
+        registerDef(new BlockDef(BLOCK_BRICK, "Bricks")
+            .setAll(3,1).setHud(0.65, 0.30, 0.25).setHardness(8));
+
+        registerDef(new BlockDef(BLOCK_GOLD_ORE, "Gold Ore")
+            .setAll(3,0).setHud(0.85, 0.75, 0.20).setHardness(14));
+
+        registerDef(new BlockDef(BLOCK_CRAFTING, "Crafting Table")
+            .setTop(4,1).setBottom(2,1).setSide(3,1)
+            .setHud(0.55, 0.40, 0.20).setHardness(6));
+    }
+}
+
+// ── Global registry instance ─────────────────────────────────────────────────
+public BlockRegistry Blocks = new BlockRegistry();
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Terrain height (used by both Chunk.generate and World.spawnMobsForChunk)
+// ═══════════════════════════════════════════════════════════════════════════
+public func int worldSurfaceAt(int wx, int wz) {
+    double fx = cast<double>(wx);
+    double fz = cast<double>(wz);
+    double h = 4.0
+        + Math.sin(fx * 0.08) * Math.cos(fz * 0.08) * 2.0
+        + Math.sin(fx * 0.19 + 1.3) * 1.0
+        + Math.cos(fz * 0.13 + 0.7) * 1.0
+        + Math.sin(fx * 0.04 + fz * 0.031) * 1.5;
+    int ih = cast<int>(h);
+    if (ih < 1) ih = 1;
+    if (ih > 6) ih = 6;
+    return ih;
+}
+
+// ── Backward-compatible helpers (kept so old code paths still work) ──────────
+public func float[] getBlockFaceUV(int bt, int face) { return Blocks.faceUV(bt, face); }
+public func float getBlockFaceAO(int face)           { return Blocks.faceAO(face); }
+public func float[] getBlockHUDColor(int bt)         { return Blocks.hudColor(bt); }
+public func string getBlockName(int bt)              { return Blocks.name(bt); }

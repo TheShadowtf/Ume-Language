@@ -1,0 +1,8 @@
+name    = "Minecraft"
+version = "1.0.0"
+
+# Entry point: path to the main .ume file (relative to project root)
+entry   = "src/main.ume"
+
+# Compiler backend: "cpp" (default) or "llvm" (requires clang on PATH)
+backend = "cpp"

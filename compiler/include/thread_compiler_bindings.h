@@ -39,7 +39,7 @@ struct Thread {
         return is_alive;
     }
 
-    static void sleep(_ume_rt::Long milliseconds) {
+    static void sleep(Long milliseconds) {
         std::this_thread::sleep_for(std::chrono::milliseconds(milliseconds));
     }
     
@@ -88,31 +88,31 @@ struct ConditionVariable {
 };
 
 struct AtomicInt {
-    std::atomic<_ume_rt::Int> val;
+    std::atomic<Int> val;
 
-    AtomicInt(_ume_rt::Int initialValue) : val(initialValue) {}
+    AtomicInt(Int initialValue) : val(initialValue) {}
 
-    _ume_rt::Int get() {
+    Int get() {
         return val.load();
     }
 
-    void set(_ume_rt::Int value) {
+    void set(Int value) {
         val.store(value);
     }
 
-    _ume_rt::Int addAndGet(_ume_rt::Int delta) {
+    Int addAndGet(Int delta) {
         return val.fetch_add(delta) + delta;
     }
 
-    _ume_rt::Int getAndIncrement() {
+    Int getAndIncrement() {
         return val.fetch_add(1);
     }
 
-    _ume_rt::Int getAndDecrement() {
+    Int getAndDecrement() {
         return val.fetch_sub(1);
     }
 
-    bool compareAndSet(_ume_rt::Int expected, _ume_rt::Int update) {
+    bool compareAndSet(Int expected, Int update) {
         return val.compare_exchange_strong(expected, update);
     }
 };

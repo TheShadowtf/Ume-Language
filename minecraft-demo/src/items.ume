@@ -1,0 +1,104 @@
+// ═══════════════════════════════════════════════════════════════════════════
+// items.ume — ItemStack, Inventory helpers
+// ═══════════════════════════════════════════════════════════════════════════
+//
+// A slot in the inventory / hotbar / crafting grid holds an ItemStack:
+//   - blockId  : which block (0 = empty stack)
+//   - count    : how many (1..MAX_STACK)
+//   - (no NBT / durability for now — keep it simple)
+//
+// All slot arrays are ItemStack[] of fixed length. Empty slots have blockId=0.
+
+public int MAX_STACK = 64;
+
+public class ItemStack {
+    public int blockId;
+    public int count;
+
+    public ItemStack() {
+        blockId = 0;
+        count = 0;
+    }
+
+    public ItemStack(int id, int n) {
+        blockId = id;
+        count = n;
+        if (count < 0) count = 0;
+        if (count > MAX_STACK) count = MAX_STACK;
+    }
+
+    public func bool isEmpty() { return blockId == 0 || count <= 0; }
+
+    public func void setEmpty() { blockId = 0; count = 0; }
+
+    public func void set(int id, int n) {
+        blockId = id;
+        count = n;
+        if (count < 0) count = 0;
+        if (count > MAX_STACK) count = MAX_STACK;
+    }
+
+    public func void add(int n) {
+        count += n;
+        if (count > MAX_STACK) count = MAX_STACK;
+        if (count <= 0) { blockId = 0; count = 0; }
+    }
+
+    public func ItemStack copy() {
+        return new ItemStack(blockId, count);
+    }
+}
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+
+// Allocate a fresh array of empty stacks
+public func ItemStack[] newStacks(int n) {
+    ItemStack[] arr = new ItemStack[n];
+    for (int i = 0; i < n; i++) arr[i] = new ItemStack();
+    return arr;
+}
+
+// Add a block to the inventory. Returns leftover (count that did not fit).
+public func int addItem(ItemStack[] inv, int blockId, int count) {
+    if (blockId == 0 || count <= 0) return 0;
+    // First pass: merge into existing stacks
+    for (int i = 0; i < inv.length() && count > 0; i++) {
+        if (inv[i].blockId == blockId && inv[i].count < MAX_STACK) {
+            int space = MAX_STACK - inv[i].count;
+            int take = (count <= space) ? count : space;
+            inv[i].count += take;
+            count -= take;
+        }
+    }
+    // Second pass: fill empty slots
+    for (int i = 0; i < inv.length() && count > 0; i++) {
+        if (inv[i].isEmpty()) {
+            int take = (count <= MAX_STACK) ? count : MAX_STACK;
+            inv[i].blockId = blockId;
+            inv[i].count = take;
+            count -= take;
+        }
+    }
+    return count;
+}
+
+// Try to consume one item from the active hotbar slot. Returns true on success.
+public func bool consumeOne(ItemStack[] hotbar, int sel) {
+    if (sel < 0 || sel >= hotbar.length()) return false;
+    if (hotbar[sel].isEmpty()) return false;
+    hotbar[sel].count--;
+    if (hotbar[sel].count <= 0) hotbar[sel].setEmpty();
+    return true;
+}
+
+// Convert int-based hotbar (old save format) to ItemStack[]
+public func ItemStack[] hotbarFromInts(int[] arr) {
+    ItemStack[] out = newStacks(arr.length());
+    for (int i = 0; i < arr.length(); i++) {
+        if (arr[i] != 0) {
+            out[i].blockId = arr[i];
+            out[i].count = 1;
+        }
+    }
+    return out;
+}

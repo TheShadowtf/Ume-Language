@@ -40,6 +40,11 @@ static const char* kRuntimeHeader = R"CPP(
 #include <chrono>
 #include <fstream>
 #include <filesystem>
+#include <thread>
+#include <mutex>
+#include <condition_variable>
+#include <atomic>
+#include <future>
 #include "json.hpp"
 namespace _ume_rt {
 
@@ -343,10 +348,31 @@ inline auto& _ume_iter(const T& c) {
     }
 }
 
-// ── Length helper ───────────────────────────────────────────
 template<typename T> inline Int _ume_length(const std::vector<T>& v)          { return (Int)v.size(); }
 inline Int _ume_length(const String& s)                                        { return (Int)s.size(); }
-template<typename T> inline Int _ume_length(const std::shared_ptr<T>& p)      { return _ume_length(*p); }
+inline Int _ume_length(const std::string& s)                                   { return (Int)s.size(); }
+inline Int _ume_length(const char* s)                                          { return (Int)std::strlen(s); }
+template<typename T>
+inline Int _ume_length(const std::shared_ptr<T>& p) {
+    if (!p) return 0;
+    if constexpr (requires { p->size(); }) {
+        return (Int)p->size();
+    } else if constexpr (requires { p->length(); }) {
+        return (Int)p->length();
+    } else {
+        return _ume_length(*p);
+    }
+}
+template<typename T>
+inline Int _ume_length(const T& val) {
+    if constexpr (requires { val.size(); }) {
+        return (Int)val.size();
+    } else if constexpr (requires { val.length(); }) {
+        return (Int)val.length();
+    } else {
+        return 0;
+    }
+}
 
 // ── Lvalue reference helper ──────────────────────────────────
 template<typename T> inline T& _ume_lref(T& v) { return v; }
@@ -1280,7 +1306,7 @@ void CodeGenerator::genClassDecl(const ClassDecl& cls) {
     }
 
     if (isSerializable) {
-        emitLine("_ume_rt::UmeString toJsonString() const {");
+        emitLine("::_ume_rt::UmeString toJsonString() const {");
         indent();
         emitLine("nlohmann::json _j;");
         for (const auto& f : cls.fields) {
@@ -1293,18 +1319,17 @@ void CodeGenerator::genClassDecl(const ClassDecl& cls) {
                     }
                 }
             }
-            // For strings, we need to convert _ume_rt::UmeString to std::string for nlohmann json
-            if (mapType(f->type) == "String" || mapType(f->type) == "_ume_rt::UmeString") {
+            if (mapType(f->type) == "String" || mapType(f->type) == "::_ume_rt::UmeString") {
                 emitLine("_j[\"" + jsonName + "\"] = " + f->name + ".std::string::c_str();");
             } else {
                 emitLine("_j[\"" + jsonName + "\"] = " + f->name + ";");
             }
         }
-        emitLine("return _ume_rt::UmeString(_j.dump());");
+        emitLine("return ::_ume_rt::UmeString(_j.dump());");
         dedent();
         emitLine("}");
         
-        emitLine("static std::shared_ptr<" + cls.name + "> fromJsonString(const _ume_rt::UmeString& _str) {");
+        emitLine("static std::shared_ptr<" + cls.name + "> fromJsonString(const ::_ume_rt::UmeString& _str) {");
         indent();
         emitLine("auto _j = nlohmann::json::parse(_str.std::string::c_str());");
         emitLine("auto _obj = std::make_shared<" + cls.name + ">();");
@@ -1318,8 +1343,8 @@ void CodeGenerator::genClassDecl(const ClassDecl& cls) {
                     }
                 }
             }
-            if (mapType(f->type) == "String" || mapType(f->type) == "_ume_rt::UmeString") {
-                emitLine("if (_j.contains(\"" + jsonName + "\")) _obj->" + f->name + " = _ume_rt::UmeString(_j[\"" + jsonName + "\"].get<std::string>());");
+            if (mapType(f->type) == "String" || mapType(f->type) == "::_ume_rt::UmeString") {
+                emitLine("if (_j.contains(\"" + jsonName + "\")) _obj->" + f->name + " = ::_ume_rt::UmeString(_j[\"" + jsonName + "\"].get<std::string>());");
             } else {
                 emitLine("if (_j.contains(\"" + jsonName + "\")) _obj->" + f->name + " = _j[\"" + jsonName + "\"].get<" + mapType(f->type) + ">();");
             }
@@ -1649,7 +1674,7 @@ std::string CodeGenerator::genExpr(const ASTNode& node) {
     if (auto* n = dynamic_cast<const BoolLiteralExpr*>(&node))   return n->value ? "true" : "false";
     if (dynamic_cast<const NullLiteralExpr*>(&node))             return "_ume_null";
     if (auto* n = dynamic_cast<const IdentifierExpr*>(&node)) {
-        if (n->name == "this") return "_ume_rt::_ume_this(this)";
+        if (n->name == "this") return "::_ume_rt::_ume_this(this)";
         if (n->name == "super") return "__super";
         return escapeCppKeyword(n->name);
     }
@@ -1725,20 +1750,8 @@ std::string CodeGenerator::genCall(const CallExpr& expr) {
         std::string obj    = genExpr(*ma->object);
         std::string method = ma->member;
 
-        // length() → _ume_length(obj) — works for vector, string, and shared_ptr<List>
-        if (method == "length" && expr.args.empty())
-            return "_ume_length(" + obj + ")";
-
-        // NOTE: Mesh.Create, Mesh.Quad, Shader.Create, etc. are stdlib class static
-        // methods — they get compiled normally as Window::Create(...), Mesh::Quad(), etc.
-        // No special-casing needed. The stdlib classes call Graphics::createXxx() internally.
-
-        // Variadic for-each over an initializer_list parameter (the param itself is iterable)
-        // No special action needed here — just let fall through
-
-        // String-only methods that UmeString provides via operator->()
-        // These work automatically because UmeString::operator->() returns this*.
-        // Nothing to do — the generated obj->method(args) form is correct.
+        if ((method == "length" || method == "size") && expr.args.empty())
+            return "::_ume_rt::_ume_length(" + obj + ")";
     }
 
     return callee + "(" + args + ")";
@@ -1747,11 +1760,10 @@ std::string CodeGenerator::genCall(const CallExpr& expr) {
 std::string CodeGenerator::genMemberAccess(const MemberAccessExpr& expr) {
     std::string obj = genExpr(*expr.object);
 
-    // Built-in static classes use '::'; all others use '->'
-    // NOTE: Graphics is the only runtime struct. Window, Shader, Mesh, Texture,
-    // Key, MouseButton, Time, Thread, Mutex, etc. are all stdlib classes that
-    // get compiled from .ume source — they use '::' for static access and '->'
-    // for instance access, determined by the uppercase-first-letter heuristic below.
+    if (expr.member == "length" || expr.member == "size") {
+        return "::_ume_rt::_ume_length(" + obj + ")";
+    }
+
     static const std::unordered_set<std::string> staticBuiltins = {
         "Console", "Math", "System", "String", "FileSystem",
         "Graphics"
@@ -1765,7 +1777,7 @@ std::string CodeGenerator::genMemberAccess(const MemberAccessExpr& expr) {
 }
 
 std::string CodeGenerator::genIndex(const IndexExpr& expr) {
-    return "(_ume_rt::_ume_iter(" + genExpr(*expr.object) + ")[" + genExpr(*expr.index) + "])";
+    return "(::_ume_rt::_ume_iter(" + genExpr(*expr.object) + ")[" + genExpr(*expr.index) + "])";
 }
 
 std::string CodeGenerator::genNew(const NewExpr& expr) {
@@ -1785,16 +1797,16 @@ std::string CodeGenerator::genNew(const NewExpr& expr) {
         int rank = expr.type.arrayRank > 0 ? expr.type.arrayRank : (!expr.args.empty() ? (int)expr.args.size() : 1);
         if (rank == 1) {
             std::string sizeArg = (!expr.args.empty()) ? genExpr(*expr.args[0]) : "0";
-            return "_ume_rt::_ume_make_vec<" + elemType + ">((size_t)(" + sizeArg + "))";
+            return "::_ume_rt::_ume_make_vec<" + elemType + ">((size_t)(" + sizeArg + "))";
         } else {
             std::function<std::string(int)> buildNestedVec = [&](int dimIndex) -> std::string {
                 std::string subType = elemType;
                 for (int i = 0; i < rank - dimIndex - 1; i++) subType = "std::vector<" + subType + ">";
                 std::string sizeArg = (dimIndex < (int)expr.args.size()) ? genExpr(*expr.args[dimIndex]) : "0";
                 if (dimIndex == rank - 1) {
-                    return "_ume_rt::_ume_make_vec<" + elemType + ">((size_t)(" + sizeArg + "))";
+                    return "::_ume_rt::_ume_make_vec<" + elemType + ">((size_t)(" + sizeArg + "))";
                 }
-                return "_ume_rt::_ume_make_vec<" + subType + ">((size_t)(" + sizeArg + "), " + buildNestedVec(dimIndex + 1) + ")";
+                return "::_ume_rt::_ume_make_vec<" + subType + ">((size_t)(" + sizeArg + "), " + buildNestedVec(dimIndex + 1) + ")";
             };
             return buildNestedVec(0);
         }
@@ -1965,14 +1977,14 @@ std::string CodeGenerator::genAlloc(const AllocExpr& expr) {
             for (int i = 0; i < rank - dimIndex - 1; i++) subType = "std::vector<" + subType + ">";
             std::string sizeArg = genExpr(*arr->elements[dimIndex]);
             if (dimIndex == rank - 1) {
-                return "_ume_rt::_ume_make_vec<" + elemType + ">((size_t)(" + sizeArg + "))";
+                return "::_ume_rt::_ume_make_vec<" + elemType + ">((size_t)(" + sizeArg + "))";
             }
-            return "_ume_rt::_ume_make_vec<" + subType + ">((size_t)(" + sizeArg + "), " + buildNestedVec(dimIndex + 1) + ")";
+            return "::_ume_rt::_ume_make_vec<" + subType + ">((size_t)(" + sizeArg + "), " + buildNestedVec(dimIndex + 1) + ")";
         };
         return buildNestedVec(0);
     }
 
-    return "_ume_rt::_ume_make_vec<" + elemType + ">((size_t)(" + genExpr(*expr.count) + "))";
+    return "::_ume_rt::_ume_make_vec<" + elemType + ">((size_t)(" + genExpr(*expr.count) + "))";
 }
 
 std::string CodeGenerator::genDeref(const DerefExpr& expr) {

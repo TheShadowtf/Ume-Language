@@ -1,0 +1,429 @@
+// ═══════════════════════════════════════════════════════════════════════════
+// mobs.ume — Single Mob class with switch-based AI dispatch + MobRegistry
+// ═══════════════════════════════════════════════════════════════════════════
+//
+// Note: this language does NOT support inheriting from regular classes —
+// only interfaces can be implemented. So instead of subclassing Mob per
+// mob type, we use ONE Mob class and dispatch behavior via a switch on
+// `mobType` inside aiUpdate(). Per-type state (creeper fuse, chicken flap)
+// lives as fields on Mob itself.
+//
+// Mob types (id constant, see mob_models.ume):
+//   0 Pig   1 Cow   2 Chicken   3 Sheep   4 Zombie   5 Skeleton
+//   6 Spider  7 Creeper  8 Player
+
+import std.random.*;
+import std.math.*;
+
+// ── AI / behavior flags ──────────────────────────────────────────────────────
+public int MOB_HOSTILE     = 1;
+public int MOB_BURNS_IN_DAY= 2;
+public int MOB_PASSIVE     = 4;
+public int MOB_FLYING      = 8;
+
+// ═══════════════════════════════════════════════════════════════════════════
+// MobDef — static metadata per mob type
+// ═══════════════════════════════════════════════════════════════════════════
+public class MobDef {
+    public int    id;
+    public string name;
+    public int    maxHealth;
+    public int    flags;
+    public float  walkSpeed;
+    public float  chaseSpeed;
+    public float  modelScale;
+    public float  width;
+    public float  height;
+    public int    dropBlockId;
+    public int    dropCount;
+
+    public MobDef(int id, string name) {
+        this.id = id; this.name = name;
+        maxHealth = 10;
+        flags = MOB_PASSIVE;
+        walkSpeed = 0.02;
+        chaseSpeed = 0.045;
+        modelScale = 1.0;
+        width = 0.6; height = 0.8;
+        dropBlockId = 0;
+        dropCount = 0;
+    }
+
+    public func MobDef setHealth(int h) { maxHealth = h; return this; }
+    public func MobDef setFlags(int f)  { flags = f; return this; }
+    public func MobDef setSpeeds(float w, float c) { walkSpeed = w; chaseSpeed = c; return this; }
+    public func MobDef setModelScale(float s) { modelScale = s; return this; }
+    public func MobDef setSize(float w, float h) { width = w; height = h; return this; }
+    public func MobDef setDrop(int blockId, int count) { dropBlockId = blockId; dropCount = count; return this; }
+
+    public func bool isHostile()    { return (flags & MOB_HOSTILE) != 0; }
+    public func bool burnsInDay()   { return (flags & MOB_BURNS_IN_DAY) != 0; }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// MobRegistry — global registry of MobDef
+// ═══════════════════════════════════════════════════════════════════════════
+public class MobRegistry {
+    public MobDef[] defs;
+
+    public MobRegistry() {
+        defs = new MobDef[MOB_MAX];
+        registerDefaults();
+    }
+
+    public func void registerDef(MobDef d) {
+        if (d.id < 0 || d.id >= defs.length()) return;
+        defs[d.id] = d;
+    }
+
+    public func MobDef get(int id) {
+        if (id < 0 || id >= defs.length()) return null;
+        return defs[id];
+    }
+
+    public func string name(int id) {
+        MobDef d = get(id);
+        return (d == null) ? "Unknown" : d.name;
+    }
+
+    private func void registerDefaults() {
+        registerDef(new MobDef(MOB_PIG, "Pig")
+            .setHealth(10).setFlags(MOB_PASSIVE)
+            .setSpeeds(0.020, 0.020).setModelScale(1.0)
+            .setSize(0.7, 0.7).setDrop(BLOCK_PLANKS, 1));
+
+        registerDef(new MobDef(MOB_COW, "Cow")
+            .setHealth(10).setFlags(MOB_PASSIVE)
+            .setSpeeds(0.018, 0.018).setModelScale(1.0)
+            .setSize(0.8, 0.9).setDrop(BLOCK_LEAVES, 2));
+
+        registerDef(new MobDef(MOB_CHICKEN, "Chicken")
+            .setHealth(6).setFlags(MOB_PASSIVE)
+            .setSpeeds(0.025, 0.025).setModelScale(0.7)
+            .setSize(0.4, 0.5).setDrop(BLOCK_SNOW, 1));
+
+        registerDef(new MobDef(MOB_SHEEP, "Sheep")
+            .setHealth(10).setFlags(MOB_PASSIVE)
+            .setSpeeds(0.018, 0.018).setModelScale(1.0)
+            .setSize(0.7, 0.8).setDrop(BLOCK_PLANKS, 1));
+
+        registerDef(new MobDef(MOB_ZOMBIE, "Zombie")
+            .setHealth(20).setFlags(MOB_HOSTILE | MOB_BURNS_IN_DAY)
+            .setSpeeds(0.020, 0.040).setModelScale(1.0)
+            .setSize(0.6, 1.7).setDrop(BLOCK_DIRT, 1));
+
+        registerDef(new MobDef(MOB_SKELETON, "Skeleton")
+            .setHealth(16).setFlags(MOB_HOSTILE | MOB_BURNS_IN_DAY)
+            .setSpeeds(0.022, 0.045).setModelScale(1.0)
+            .setSize(0.6, 1.75).setDrop(BLOCK_COBBLE, 1));
+
+        registerDef(new MobDef(MOB_SPIDER, "Spider")
+            .setHealth(14).setFlags(MOB_HOSTILE)
+            .setSpeeds(0.030, 0.060).setModelScale(1.0)
+            .setSize(0.9, 0.6).setDrop(BLOCK_COBBLE, 1));
+
+        registerDef(new MobDef(MOB_CREEPER, "Creeper")
+            .setHealth(20).setFlags(MOB_HOSTILE)
+            .setSpeeds(0.020, 0.050).setModelScale(1.0)
+            .setSize(0.6, 1.5).setDrop(BLOCK_COAL_ORE, 1));
+    }
+}
+
+public MobRegistry Mobs = new MobRegistry();
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Mob — single class, all mob types. Behavior dispatched by switch.
+// ═══════════════════════════════════════════════════════════════════════════
+public class Mob {
+    // Position / velocity
+    public double x; public double y; public double z;
+    public double vx; public double vy; public double vz;
+
+    // Identity
+    public int mobType;
+    public int health;
+    public bool alive;
+
+    // Wander AI state
+    public double wanderTimer;
+    public double wanderDirX;
+    public double wanderDirZ;
+    public Random rng;
+
+    // Animation state
+    public float  walkPhase;
+    public float  facingYaw;
+    public float  walkAmp;
+
+    // Damage / status
+    public double hurtFlash;
+    public double burnTimer;
+
+    // Per-type state (kept on base Mob to avoid subclassing)
+    public double fuseTimer;     // creeper only
+    public bool   exploded;      // creeper only — set when explosion should happen
+    public double flapTimer;     // chicken only
+
+    // ── Constructor ──────────────────────────────────────────────────────────
+    public Mob(double sx, double sy, double sz, int type) {
+        x = sx; y = sy; z = sz;
+        vx = 0; vy = 0; vz = 0;
+        mobType = type;
+        MobDef def = Mobs.get(type);
+        health = (def == null) ? 10 : def.maxHealth;
+        alive = true;
+        wanderTimer = 0;
+        wanderDirX = 0; wanderDirZ = 0;
+        rng = new Random(System.currentTimeMillis() + cast<long>(type * 1000));
+        walkPhase = 0.0;
+        facingYaw = 0.0;
+        walkAmp = 0.0;
+        hurtFlash = 0.0;
+        burnTimer = 0.0;
+        fuseTimer = 0.0;
+        exploded = false;
+        flapTimer = 0.0;
+    }
+
+    // ── Damage ───────────────────────────────────────────────────────────────
+    public func void takeDamage(int dmg) {
+        if (!alive) return;
+        health -= dmg;
+        hurtFlash = 0.4;
+        if (health <= 0) {
+            health = 0;
+            alive = false;
+        }
+    }
+
+    // ── Per-type AI dispatch (single switch, no subclassing) ─────────────────
+    public func void aiUpdate(double dt, double px, double pz, bool isNight, int groundBlock) {
+        switch (mobType) {
+            case 0: aiPig(dt, px, pz, isNight, groundBlock); break;
+            case 1: aiCow(dt, px, pz, isNight, groundBlock); break;
+            case 2: aiChicken(dt, px, pz, isNight, groundBlock); break;
+            case 3: aiSheep(dt, px, pz, isNight, groundBlock); break;
+            case 4: aiZombie(dt, px, pz, isNight, groundBlock); break;
+            case 5: aiSkeleton(dt, px, pz, isNight, groundBlock); break;
+            case 6: aiSpider(dt, px, pz, isNight, groundBlock); break;
+            case 7: aiCreeper(dt, px, pz, isNight, groundBlock); break;
+            default: aiPig(dt, px, pz, isNight, groundBlock); break;
+        }
+    }
+
+    // ── Per-type AI implementations ──────────────────────────────────────────
+
+    private func void aiPig(double dt, double px, double pz, bool isNight, int groundBlock) {
+        wanderTimer -= dt;
+        if (wanderTimer <= 0) {
+            wanderTimer = 3.0 + rng.nextDouble() * 4.0;
+            wanderDirX = (rng.nextDouble() - 0.5) * 0.025;
+            wanderDirZ = (rng.nextDouble() - 0.5) * 0.025;
+        }
+        vx = wanderDirX; vz = wanderDirZ;
+    }
+
+    private func void aiCow(double dt, double px, double pz, bool isNight, int groundBlock) {
+        wanderTimer -= dt;
+        if (wanderTimer <= 0) {
+            double r = rng.nextDouble();
+            if (r < 0.25) {
+                wanderDirX = 0; wanderDirZ = 0;
+                wanderTimer = 2.0 + rng.nextDouble() * 2.0;
+            } else {
+                wanderDirX = (rng.nextDouble() - 0.5) * 0.022;
+                wanderDirZ = (rng.nextDouble() - 0.5) * 0.022;
+                wanderTimer = 3.0 + rng.nextDouble() * 4.0;
+            }
+        }
+        vx = wanderDirX; vz = wanderDirZ;
+    }
+
+    private func void aiChicken(double dt, double px, double pz, bool isNight, int groundBlock) {
+        wanderTimer -= dt;
+        flapTimer   -= dt;
+        if (wanderTimer <= 0) {
+            wanderDirX = (rng.nextDouble() - 0.5) * 0.04;
+            wanderDirZ = (rng.nextDouble() - 0.5) * 0.04;
+            wanderTimer = 1.5 + rng.nextDouble() * 2.5;
+        }
+        vx = wanderDirX; vz = wanderDirZ;
+        if (flapTimer <= 0 && groundBlock != 0 && rng.nextDouble() < 0.005) {
+            vy = 0.10;
+            flapTimer = 1.0;
+        }
+    }
+
+    private func void aiSheep(double dt, double px, double pz, bool isNight, int groundBlock) {
+        wanderTimer -= dt;
+        if (wanderTimer <= 0) {
+            wanderTimer = 4.0 + rng.nextDouble() * 5.0;
+            wanderDirX = (rng.nextDouble() - 0.5) * 0.020;
+            wanderDirZ = (rng.nextDouble() - 0.5) * 0.020;
+        }
+        vx = wanderDirX; vz = wanderDirZ;
+    }
+
+    private func void aiZombie(double dt, double px, double pz, bool isNight, int groundBlock) {
+        if (isNight) {
+            double dx = px - x; double dz = pz - z;
+            double dist = Math.sqrt(dx*dx + dz*dz);
+            if (dist < 16.0 && dist > 0.5) {
+                MobDef d = Mobs.get(mobType);
+                double sp = (d == null) ? 0.040 : cast<double>(d.chaseSpeed);
+                vx = (dx / dist) * sp;
+                vz = (dz / dist) * sp;
+                if (groundBlock != 0 && rng.nextDouble() < 0.3) vy = 0.10;
+            } else {
+                vx = 0; vz = 0;
+            }
+        } else {
+            wanderTimer -= dt;
+            if (wanderTimer <= 0) {
+                wanderTimer = 2.0 + rng.nextDouble() * 3.0;
+                wanderDirX = (rng.nextDouble() - 0.5) * 0.02;
+                wanderDirZ = (rng.nextDouble() - 0.5) * 0.02;
+            }
+            vx = wanderDirX; vz = wanderDirZ;
+        }
+    }
+
+    private func void aiSkeleton(double dt, double px, double pz, bool isNight, int groundBlock) {
+        if (isNight) {
+            double dx = px - x; double dz = pz - z;
+            double dist = Math.sqrt(dx*dx + dz*dz);
+            MobDef d = Mobs.get(mobType);
+            double sp = (d == null) ? 0.045 : cast<double>(d.chaseSpeed);
+            if (dist > 8.0 && dist < 20.0) {
+                vx = (dx / dist) * sp;
+                vz = (dz / dist) * sp;
+            } else if (dist < 5.0) {
+                vx = -(dx / dist) * sp;
+                vz = -(dz / dist) * sp;
+            } else {
+                wanderTimer -= dt;
+                if (wanderTimer <= 0) {
+                    if (dist > 0.001) {
+                        wanderDirX = -dz / dist * sp * 0.6;
+                        wanderDirZ =  dx / dist * sp * 0.6;
+                    } else {
+                        wanderDirX = 0; wanderDirZ = 0;
+                    }
+                    wanderTimer = 1.0 + rng.nextDouble() * 1.5;
+                }
+                vx = wanderDirX; vz = wanderDirZ;
+            }
+        } else {
+            wanderTimer -= dt;
+            if (wanderTimer <= 0) {
+                wanderTimer = 2.0 + rng.nextDouble() * 3.0;
+                wanderDirX = (rng.nextDouble() - 0.5) * 0.02;
+                wanderDirZ = (rng.nextDouble() - 0.5) * 0.02;
+            }
+            vx = wanderDirX; vz = wanderDirZ;
+        }
+    }
+
+    private func void aiSpider(double dt, double px, double pz, bool isNight, int groundBlock) {
+        double dx = px - x; double dz = pz - z;
+        double dist = Math.sqrt(dx*dx + dz*dz);
+        MobDef d = Mobs.get(mobType);
+        double sp = (d == null) ? 0.060 : cast<double>(d.chaseSpeed);
+        if (isNight && dist < 14.0 && dist > 0.5) {
+            vx = (dx / dist) * sp;
+            vz = (dz / dist) * sp;
+            if (groundBlock != 0 && rng.nextDouble() < 0.4) vy = 0.13;
+        } else {
+            wanderTimer -= dt;
+            if (wanderTimer <= 0) {
+                wanderTimer = 2.0 + rng.nextDouble() * 3.0;
+                wanderDirX = (rng.nextDouble() - 0.5) * 0.04;
+                wanderDirZ = (rng.nextDouble() - 0.5) * 0.04;
+            }
+            vx = wanderDirX; vz = wanderDirZ;
+        }
+    }
+
+    private func void aiCreeper(double dt, double px, double pz, bool isNight, int groundBlock) {
+        double dx = px - x; double dz = pz - z;
+        double dist = Math.sqrt(dx*dx + dz*dz);
+        MobDef d = Mobs.get(mobType);
+        double sp = (d == null) ? 0.050 : cast<double>(d.chaseSpeed);
+
+        if (dist < 3.0) {
+            fuseTimer += dt;
+            vx = 0; vz = 0;
+            if (fuseTimer >= 1.5 && !exploded) {
+                exploded = true;
+                alive = false;
+            }
+        } else if (dist < 12.0) {
+            fuseTimer = 0.0;
+            vx = (dx / dist) * sp;
+            vz = (dz / dist) * sp;
+        } else {
+            fuseTimer = 0.0;
+            wanderTimer -= dt;
+            if (wanderTimer <= 0) {
+                wanderTimer = 3.0 + rng.nextDouble() * 3.0;
+                wanderDirX = (rng.nextDouble() - 0.5) * 0.025;
+                wanderDirZ = (rng.nextDouble() - 0.5) * 0.025;
+            }
+            vx = wanderDirX; vz = wanderDirZ;
+        }
+    }
+
+    // ── Per-frame physics update (called by World.updateMobs) ────────────────
+    public func void update(double dt, double px, double py, double pz, bool isNight, int groundBlock) {
+        if (!alive) return;
+
+        // Update AI (sets vx, vz, possibly vy for jumps)
+        aiUpdate(dt, px, pz, isNight, groundBlock);
+
+        // Burn in daylight if flagged
+        MobDef def = Mobs.get(mobType);
+        if (def != null && def.burnsInDay() && !isNight && py < 8.0) {
+            burnTimer = 0.5;
+            takeDamage(cast<int>(dt * 1.5));
+        } else if (burnTimer > 0) {
+            burnTimer -= dt;
+        }
+
+        // Horizontal movement
+        x += vx;
+        z += vz;
+
+        // Update facing — point in movement direction
+        double horizVx = vx; double horizVz = vz;
+        double speed = Math.sqrt(horizVx*horizVx + horizVz*horizVz);
+        if (speed > 0.001) {
+            facingYaw = cast<float>(Math.atan2(-horizVx, -horizVz));
+            walkPhase += cast<float>(speed * 25.0);
+            walkAmp = 1.0;
+        } else {
+            walkAmp = walkAmp * 0.85;
+        }
+
+        // Gravity
+        vy -= 0.0089;
+        if (vy < -0.4) vy = -0.4;
+        y += vy;
+        if (groundBlock != 0) {
+            y = cast<double>(cast<int>(Math.floor(y))) + 1.0;
+            vy = 0;
+        }
+
+        // Hurt flash timer
+        if (hurtFlash > 0) hurtFlash -= dt;
+
+        if (health <= 0) alive = false;
+    }
+
+    // ── Bounding box (for collision / attack hit detection) ──────────────────
+    public func double boxMinX() { MobDef d = Mobs.get(mobType); float w = (d==null)?0.6:d.width; return x - cast<double>(w*0.5); }
+    public func double boxMaxX() { MobDef d = Mobs.get(mobType); float w = (d==null)?0.6:d.width; return x + cast<double>(w*0.5); }
+    public func double boxMinZ() { MobDef d = Mobs.get(mobType); float w = (d==null)?0.6:d.width; return z - cast<double>(w*0.5); }
+    public func double boxMaxZ() { MobDef d = Mobs.get(mobType); float w = (d==null)?0.6:d.width; return z + cast<double>(w*0.5); }
+    public func double boxMinY() { return y; }
+    public func double boxMaxY() { MobDef d = Mobs.get(mobType); float h = (d==null)?0.8:d.height; return y + cast<double>(h); }
+}

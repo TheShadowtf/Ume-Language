@@ -37,7 +37,7 @@ struct Sound {
     ma_sound sound;
     bool initialized = false;
 
-    Sound(std::shared_ptr<AudioEngine> engine, _ume_rt::UmeString filepath) {
+    Sound(std::shared_ptr<AudioEngine> engine, UmeString filepath) {
         if (engine && engine->initialized) {
             if (ma_sound_init_from_file(&engine->engine, filepath.c_str(), 0, NULL, NULL, &sound) == MA_SUCCESS) {
                 initialized = true;
