@@ -1,9 +1,0 @@
-D:\Projects\C++\Ume-Language\compiler\src\lexer.cpp;D:\Projects\C++\Ume-Language\build\compiler\ume_compiler_lib.dir\Release\lexer.obj
-D:\Projects\C++\Ume-Language\compiler\src\ast.cpp;D:\Projects\C++\Ume-Language\build\compiler\ume_compiler_lib.dir\Release\ast.obj
-D:\Projects\C++\Ume-Language\compiler\src\parser.cpp;D:\Projects\C++\Ume-Language\build\compiler\ume_compiler_lib.dir\Release\parser.obj
-D:\Projects\C++\Ume-Language\compiler\src\semantic.cpp;D:\Projects\C++\Ume-Language\build\compiler\ume_compiler_lib.dir\Release\semantic.obj
-D:\Projects\C++\Ume-Language\compiler\src\codegen.cpp;D:\Projects\C++\Ume-Language\build\compiler\ume_compiler_lib.dir\Release\codegen.obj
-D:\Projects\C++\Ume-Language\compiler\src\llvm_codegen.cpp;D:\Projects\C++\Ume-Language\build\compiler\ume_compiler_lib.dir\Release\llvm_codegen.obj
-D:\Projects\C++\Ume-Language\compiler\src\package_resolver.cpp;D:\Projects\C++\Ume-Language\build\compiler\ume_compiler_lib.dir\Release\package_resolver.obj
-D:\Projects\C++\Ume-Language\compiler\src\compiler.cpp;D:\Projects\C++\Ume-Language\build\compiler\ume_compiler_lib.dir\Release\compiler.obj
-D:\Projects\C++\Ume-Language\compiler\src\diagnostics.cpp;D:\Projects\C++\Ume-Language\build\compiler\ume_compiler_lib.dir\Release\diagnostics.obj
