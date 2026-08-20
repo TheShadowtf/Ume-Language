@@ -40,7 +40,7 @@ private:
     int                     currentSourceLine_ = -1;
     bool                    inMainFunction_   = false; // true while generating body of top-level main()
 
-    // ── Indentation helpers ───────────────────────────────
+    // ── Indentation helpers
     void indent();
     void dedent();
     void emit(const std::string& text);
@@ -48,11 +48,11 @@ private:
     void emitIndent();
     void emitLineDirective(const ASTNode& node);
 
-    // ── Top-level generators ──────────────────────────────
+    // ── Top-level generators
     void genProgram(const Program& prog);
     void genNode(const ASTNode& node);
 
-    // ── Declaration generators ────────────────────────────
+    // ── Declaration generators
     void genClassDecl(const ClassDecl& cls);
     void genInterfaceDecl(const InterfaceDecl& iface);
     void genEnumDecl(const EnumDecl& enm);
@@ -60,7 +60,7 @@ private:
     void genFuncDecl(const FuncDecl& func, const std::string& ownerClass = "");
     void genOperatorDecl(const OperatorDecl& op, const std::string& className);
 
-    // ── Statement generators ──────────────────────────────
+    // ── Statement generators
     void genBlock(const BlockStmt& block);
     void genVarDecl(const VarDeclStmt& stmt);
     void genReturnStmt(const ReturnStmt& stmt);
@@ -75,7 +75,7 @@ private:
     void genUnsafeBlock(const UnsafeBlock& block);
     void genExprStmt(const ExprStmt& stmt);
 
-    // ── Expression generators ─────────────────────────────
+    // ── Expression generators
     std::string genExpr(const ASTNode& node);
     std::string genBinary(const BinaryExpr& expr);
     std::string genUnary(const UnaryExpr& expr);
@@ -95,12 +95,12 @@ private:
     std::string genAlloc(const AllocExpr& expr);
     std::string genDeref(const DerefExpr& expr);
 
-    // ── Type mapping ──────────────────────────────────────
+    // ── Type mapping
     std::string mapType(const TypeAnnotation& ta, bool asParam = false);
     std::string mapTypeName(const std::string& umeName);
     std::string accessStr(AccessModifier access);
 
-    // ── Helpers ───────────────────────────────────────────
+    // ── Helpers
     std::string genParamList(const std::vector<Parameter>& params);
     std::string genTypeParamList(const std::vector<std::string>& typeParams);
     std::string escapeCppString(const std::string& s);

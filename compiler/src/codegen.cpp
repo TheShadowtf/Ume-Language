@@ -1,4 +1,13 @@
 // codegen.cpp — C++ Transpiler for the Ume Language
+
+/*
+    Is the code bad? Yes
+    Does the code work? Also yes
+    Will I refactor this? Maybe, but don't count on it.
+    Will anyone else wants to refactor this? Nope, no one is crazy enough to refactor this code.
+    If anyone wants to refactor this code, they are either brave or dumb.
+    Good luck to them.
+*/
 #include "../include/codegen.h"
 #include "../include/lexer.h"
 #include <sstream>
@@ -10,9 +19,6 @@
 
 namespace Ume {
 
-// ─────────────────────────────────────────────────────────────
-// Runtime header embedded as a string (prepended to all output)
-// ─────────────────────────────────────────────────────────────
 static const char* kRuntimeHeader = R"CPP(
 // ── Ume Runtime v2.1 (2025-01-31) ─────────────────────────
 #include <iostream>
@@ -666,9 +672,6 @@ using namespace _ume_rt;
 // ───────────────────────────────────────────────────────────────
 )CPP";
 
-// ─────────────────────────────────────────────────────────────
-// Constructor
-// ─────────────────────────────────────────────────────────────
 static std::string escapeCppKeyword(const std::string& name) {
     static const std::unordered_set<std::string> kCppKeywords = {
         "alignas", "alignof", "and", "and_eq", "asm", "atomic_cancel", "atomic_commit",
@@ -688,9 +691,6 @@ static std::string escapeCppKeyword(const std::string& name) {
 
 CodeGenerator::CodeGenerator() = default;
 
-// ─────────────────────────────────────────────────────────────
-// Indentation helpers
-// ─────────────────────────────────────────────────────────────
 void CodeGenerator::indent()  { indent_ += 4; }
 void CodeGenerator::dedent()  { if (indent_ >= 4) indent_ -= 4; }
 void CodeGenerator::emitIndent() { out_ << std::string(static_cast<size_t>(indent_), ' '); }
@@ -706,9 +706,6 @@ void CodeGenerator::emitLine(const std::string& line) {
     atStartOfLine_ = true;
 }
 
-// ─────────────────────────────────────────────────────────────
-// Type mapping
-// ─────────────────────────────────────────────────────────────
 std::string CodeGenerator::mapTypeName(const std::string& name) {
     if (name == "int")    return "Int";
     if (name == "long")   return "Long";
@@ -838,9 +835,7 @@ std::string CodeGenerator::accessStr(AccessModifier am) {
     }
 }
 
-// ─────────────────────────────────────────────────────────────
 // Main entry
-// ─────────────────────────────────────────────────────────────
 std::string CodeGenerator::generate(const Program& program) {
     return generate(program, "");
 }
@@ -1079,9 +1074,6 @@ void CodeGenerator::genNode(const ASTNode& node) {
     if (dynamic_cast<const ImportDecl*>(&node))  return; // ignore
 }
 
-// ─────────────────────────────────────────────────────────────
-// Class / Interface / Enum / Struct
-// ─────────────────────────────────────────────────────────────
 // Helper: find and extract super() call args from a constructor body
 // Returns the args string, and sets skipIdx to the index of the super() statement (or -1)
 static std::string extractSuperArgs(const BlockStmt* block, int& skipIdx,
@@ -1483,9 +1475,6 @@ void CodeGenerator::genOperatorDecl(const OperatorDecl& op, const std::string& /
     emitLine();
 }
 
-// ─────────────────────────────────────────────────────────────
-// Statements
-// ─────────────────────────────────────────────────────────────
 void CodeGenerator::genBlock(const BlockStmt& block) {
     emit("{\n");
     indent();
@@ -1639,9 +1628,7 @@ void CodeGenerator::genExprStmt(const ExprStmt& stmt) {
     emitLine(genExpr(*stmt.expr) + ";");
 }
 
-// ─────────────────────────────────────────────────────────────
 // Expressions
-// ─────────────────────────────────────────────────────────────
 std::string CodeGenerator::genExpr(const ASTNode& node) {
     if (auto* n = dynamic_cast<const IntLiteralExpr*>(&node))    return std::to_string(n->value);
     if (auto* n = dynamic_cast<const FloatLiteralExpr*>(&node)) {
@@ -1992,9 +1979,6 @@ std::string CodeGenerator::genDeref(const DerefExpr& expr) {
     return "(*" + genExpr(*expr.pointer) + ")";
 }
 
-// ─────────────────────────────────────────────────────────────
-// Helpers
-// ─────────────────────────────────────────────────────────────
 std::string CodeGenerator::genParamList(const std::vector<Parameter>& params) {
     std::string s;
     for (size_t i = 0; i < params.size(); i++) {
@@ -2035,4 +2019,4 @@ std::string CodeGenerator::escapeCppString(const std::string& s) {
     return out;
 }
 
-} // namespace Ume
+}

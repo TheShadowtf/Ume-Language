@@ -13,9 +13,6 @@ namespace Ume {
 // Forward declare Value (defined in evaluator.h)
 struct Value;
 
-// ─────────────────────────────────────────────────────────────
-// Environment — a single lexical scope
-// ─────────────────────────────────────────────────────────────
 class Environment : public std::enable_shared_from_this<Environment> {
 public:
     // Create a new top-level environment
@@ -47,4 +44,4 @@ private:
     mutable std::recursive_mutex           mtx_;
 };
 
-} // namespace Ume
+}

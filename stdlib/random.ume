@@ -32,7 +32,7 @@ public class Random {
         _next(); _next(); _next();
     }
 
-    // ── Core LCG step (private) ──────────────────────────────────────
+    // ── Core LCG step (private)
     private func long _next() {
         // Numerical Recipes LCG — overflow-safe for 64-bit signed arithmetic:
         //   1664525 * state < 1664525 * 2^32 ≈ 7.14e15  <<  INT64_MAX ≈ 9.2e18
@@ -40,7 +40,7 @@ public class Random {
         return state;
     }
 
-    // ── Public API ───────────────────────────────────────────────────
+    // ── Public API
 
     /// Returns a non-negative random int in [0, 2147483647]
     public func int nextInt() {

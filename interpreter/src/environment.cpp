@@ -56,4 +56,4 @@ std::shared_ptr<Environment> Environment::child() {
     return std::make_shared<Environment>(shared_from_this());
 }
 
-} // namespace Ume
+}

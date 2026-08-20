@@ -38,4 +38,4 @@ private:
     std::string getDeclName(const ASTNode* decl) const;
 };
 
-} // namespace Ume
+}

@@ -5,9 +5,6 @@
 
 namespace Ume {
 
-// ─────────────────────────────────────────────────────────────
-// Constructor / navigation
-// ─────────────────────────────────────────────────────────────
 Parser::Parser(std::vector<Token> tokens, std::string filename)
     : tokens_(std::move(tokens)), filename_(std::move(filename)), rootFilename_(filename_) {
     // Ensure there's always an EOF
@@ -195,9 +192,6 @@ Token Parser::findLikelyBlockStarter() const {
     return current();
 }
 
-// ─────────────────────────────────────────────────────────────
-// Type annotation
-// ─────────────────────────────────────────────────────────────
 static bool isTypeKeyword(TokenType t) {
     switch (t) {
     case TokenType::KW_INT: case TokenType::KW_LONG:  case TokenType::KW_SHORT:
@@ -275,13 +269,9 @@ TypeAnnotation Parser::parseTypeAnnotation() {
         ta.pointerLevel++;
     }
 
-    // Variadic suffix handled in parseParameter: int...
     return ta;
 }
 
-// ─────────────────────────────────────────────────────────────
-// Access modifiers
-// ─────────────────────────────────────────────────────────────
 bool Parser::hasAccessModifier() const {
     switch (current().type) {
     case TokenType::KW_PUBLIC: case TokenType::KW_PRIVATE:
@@ -300,9 +290,6 @@ AccessModifier Parser::parseAccessModifier() {
     }
 }
 
-// ─────────────────────────────────────────────────────────────
-// Parameters
-// ─────────────────────────────────────────────────────────────
 Parameter Parser::parseParameter() {
     bool variadic = false;
     if (match(TokenType::ELLIPSIS)) variadic = true;
@@ -334,9 +321,6 @@ std::vector<Parameter> Parser::parseParamList() {
     return params;
 }
 
-// ─────────────────────────────────────────────────────────────
-// Top-level parsing
-// ─────────────────────────────────────────────────────────────
 std::unique_ptr<Program> Parser::parse() {
     auto prog        = std::make_unique<Program>();
     prog->filename   = rootFilename_;
@@ -521,9 +505,6 @@ ASTNodePtr Parser::parseImportDecl() {
     return node;
 }
 
-// ─────────────────────────────────────────────────────────────
-// Function declaration
-// ─────────────────────────────────────────────────────────────
 ASTNodePtr Parser::parseFuncDecl(AccessModifier access, bool isStatic,
                                   bool isAbstract, bool isOverride, bool isFinal) {
     int l = current().line, c = current().column;
@@ -561,9 +542,6 @@ ASTNodePtr Parser::parseFuncDecl(AccessModifier access, bool isStatic,
     return decl;
 }
 
-// ─────────────────────────────────────────────────────────────
-// Class declaration
-// ─────────────────────────────────────────────────────────────
 ASTNodePtr Parser::parseClassDecl(AccessModifier access) {
     int l = current().line, c = current().column;
 
@@ -727,9 +705,6 @@ ASTNodePtr Parser::parseClassDecl(AccessModifier access) {
     return decl;
 }
 
-// ─────────────────────────────────────────────────────────────
-// Interface declaration
-// ─────────────────────────────────────────────────────────────
 ASTNodePtr Parser::parseInterfaceDecl(AccessModifier access) {
     int l = current().line, c = current().column;
     expect(TokenType::KW_INTERFACE, "Expected 'interface'");
@@ -770,9 +745,6 @@ ASTNodePtr Parser::parseInterfaceDecl(AccessModifier access) {
     return decl;
 }
 
-// ─────────────────────────────────────────────────────────────
-// Enum declaration
-// ─────────────────────────────────────────────────────────────
 ASTNodePtr Parser::parseEnumDecl(AccessModifier access) {
     int l = current().line, c = current().column;
     expect(TokenType::KW_ENUM, "Expected 'enum'");
@@ -816,9 +788,6 @@ ASTNodePtr Parser::parseEnumDecl(AccessModifier access) {
     return decl;
 }
 
-// ─────────────────────────────────────────────────────────────
-// Struct declaration
-// ─────────────────────────────────────────────────────────────
 ASTNodePtr Parser::parseStructDecl() {
     int l = current().line, c = current().column;
     expect(TokenType::KW_STRUCT, "Expected 'struct'");
@@ -841,9 +810,6 @@ ASTNodePtr Parser::parseStructDecl() {
     return decl;
 }
 
-// ─────────────────────────────────────────────────────────────
-// Class member helpers
-// ─────────────────────────────────────────────────────────────
 std::unique_ptr<ConstructorDecl> Parser::parseConstructor(AccessModifier access,
                                                            const std::string& /*className*/) {
     auto ctor    = std::make_unique<ConstructorDecl>();
@@ -987,9 +953,6 @@ std::unique_ptr<OperatorDecl> Parser::parseOperatorDecl(AccessModifier access) {
     return od;
 }
 
-// ─────────────────────────────────────────────────────────────
-// Statements
-// ─────────────────────────────────────────────────────────────
 ASTNodePtr Parser::parseBlock() {
     int l = current().line, c = current().column;
     expect(TokenType::LBRACE, "Expected '{'");
@@ -1289,9 +1252,6 @@ ASTNodePtr Parser::parseUnsafeBlock() {
     return node;
 }
 
-// ─────────────────────────────────────────────────────────────
-// Expressions (precedence climbing)
-// ─────────────────────────────────────────────────────────────
 std::vector<ASTNodePtr> Parser::parseArgList() {
     expect(TokenType::LPAREN, "Expected '('");
     std::vector<ASTNodePtr> args;
@@ -1893,4 +1853,4 @@ ASTNodePtr Parser::parsePrimary() {
     throw error(std::string("Unexpected token '") + current().value + "'");
 }
 
-} // namespace Ume
+}

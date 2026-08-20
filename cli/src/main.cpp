@@ -162,7 +162,7 @@ static int cmdCompile(const std::string& inputFile, const std::string& outputFil
         opts.libs.push_back("ume_graphics_lib.lib");
         opts.libs.push_back("glfw3dll.lib");
         opts.libs.push_back("glad.lib");
-        opts.libs.push_back("opengl32.lib"); // Required for GLAD
+        opts.libs.push_back("opengl32.lib");
         opts.libs.push_back("User32.lib");
         opts.libs.push_back("Gdi32.lib");
         opts.libs.push_back("Shell32.lib");
@@ -183,7 +183,6 @@ static int cmdNew(const std::string& projectName) {
         return 1;
     }
 
-    // Sanitize project name
     for (char c : projectName) {
         if (!std::isalnum(static_cast<unsigned char>(c)) && c != '_' && c != '-') {
             std::cerr << "Error: Project name contains invalid characters\n";
@@ -212,7 +211,7 @@ static int cmdNew(const std::string& projectName) {
          << "backend = \"cpp\"\n";
     toml.close();
 
-    // src/main.ume â€” Hello World
+    // src/main.ume Hello World
     std::ofstream main_ume((base / "src" / "main.ume").string());
     main_ume <<
         "package " << projectName << ";\n\n"

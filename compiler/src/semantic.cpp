@@ -5,9 +5,6 @@
 
 namespace Ume {
 
-// ─────────────────────────────────────────────────────────────
-// TypeInfo
-// ─────────────────────────────────────────────────────────────
 static const std::vector<std::string> kPrimitives = {
     "int","long","short","byte","float","double","bool","char","string","void","any"
 };
@@ -34,9 +31,6 @@ std::string TypeInfo::toString() const {
     return s;
 }
 
-// ─────────────────────────────────────────────────────────────
-// SymbolTable
-// ─────────────────────────────────────────────────────────────
 void SymbolTable::pushScope() { scopes_.emplace_back(); }
 void SymbolTable::popScope()  { if (!scopes_.empty()) scopes_.pop_back(); }
 
@@ -58,9 +52,6 @@ bool SymbolTable::isDeclaredInCurrentScope(const std::string& name) const {
     return scopes_.back().count(name) > 0;
 }
 
-// ─────────────────────────────────────────────────────────────
-// SemanticAnalyzer
-// ─────────────────────────────────────────────────────────────
 SemanticAnalyzer::SemanticAnalyzer() {
     // Pre-register built-in types
     for (const auto& p : kPrimitives) {
@@ -86,9 +77,6 @@ void SemanticAnalyzer::analyze(Program& program) {
     symbols_.popScope();
 }
 
-// ─────────────────────────────────────────────────────────────
-// Pass 1: collect
-// ─────────────────────────────────────────────────────────────
 void SemanticAnalyzer::collectDeclarations(Program& program) {
     for (auto& node : program.declarations) {
         if (auto* cls  = dynamic_cast<ClassDecl*>(node.get()))     collectClass(*cls);
@@ -184,9 +172,6 @@ void SemanticAnalyzer::collectFunc(FuncDecl& func) {
     functions_[func.name] = sig;
 }
 
-// ─────────────────────────────────────────────────────────────
-// Pass 2: check
-// ─────────────────────────────────────────────────────────────
 void SemanticAnalyzer::checkNode(ASTNode& node) {
     if (auto* cls  = dynamic_cast<ClassDecl*>(&node))   checkClassDecl(*cls);
     if (auto* func = dynamic_cast<FuncDecl*>(&node))    checkFuncDecl(*func);
@@ -357,9 +342,6 @@ void SemanticAnalyzer::checkTryCatch(TryCatchStmt& stmt) {
     if (stmt.finallyBody) checkNode(*stmt.finallyBody);
 }
 
-// ─────────────────────────────────────────────────────────────
-// Type inference
-// ─────────────────────────────────────────────────────────────
 TypeInfo SemanticAnalyzer::inferExprType(ASTNode& expr) {
     TypeInfo unknown; unknown.name = "any";
 
@@ -506,4 +488,4 @@ bool SemanticAnalyzer::isAssignable(const TypeInfo& target, const TypeInfo& sour
     return target.isCompatibleWith(source);
 }
 
-} // namespace Ume
+}

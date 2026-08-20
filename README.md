@@ -31,6 +31,16 @@ Write expressive, high-productivity code — run at native machine speed.
 
 ---
 
+## TLDR
+Is this project good? No.   
+Is the code good? No.   
+Is the code messy? Yes.  
+Do I understand what I have done? No, not really.   
+Is this language useable? Not even a bit.  
+Is this language usefull? Not even a bit.  
+Do I regret making this project? My heart say yes, but my brain say no. And the monsters under my bed say to shut up.   
+Maybe have fun using it? I guess have fun!
+
 ## 🚀 Installation & Quick Start
 
 ### 1. Prerequisites

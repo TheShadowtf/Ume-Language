@@ -28,11 +28,6 @@ struct CompilerResult {
     int         exitCode = 0;
 };
 
-// ─────────────────────────────────────────────────────────────
-// Preprocessor
-//   Handles #include directives, resolves and inlines files,
-//   and applies include guards.
-// ─────────────────────────────────────────────────────────────
 class Preprocessor {
 public:
     explicit Preprocessor(std::vector<std::string> includePaths = {});
@@ -53,9 +48,6 @@ private:
     std::vector<std::string> included_; // processed include guard list
 };
 
-// ─────────────────────────────────────────────────────────────
-// Compiler
-// ─────────────────────────────────────────────────────────────
 class Compiler {
 public:
     explicit Compiler(CompilerOptions opts);
@@ -84,4 +76,4 @@ private:
                                      const std::string& outFile);
 };
 
-} // namespace Ume
+}

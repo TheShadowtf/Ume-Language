@@ -235,9 +235,7 @@ void PackageResolver::resolveImports(Program& program, const std::string& curren
     std::vector<ASTNodePtr> resolvedDecls;
     resolvedDecls.reserve(program.declarations.size());
 
-    // --- MAKE SURE THIS LINE IS HERE ---
     scanPackages(); 
-    // -----------------------------------
 
     // 1. Detect current file package/namespace name
     std::string currentPkgName;
@@ -377,7 +375,6 @@ void PackageResolver::resolveImports(Program& program, const std::string& curren
         std::string targetSymbol = imp->symbol;
         bool wildcard = imp->wildcard;
 
-        // --- NEW: Handle wildcard imports by loading ALL files in the package ---
         if (wildcard) {
             std::string pkgName = imp->path;
             if (pkgName.size() >= 2 && pkgName.substr(pkgName.size() - 2) == ".*") {
@@ -401,7 +398,6 @@ void PackageResolver::resolveImports(Program& program, const std::string& curren
             }
             continue;
         }
-        // -----------------------------------------------------------------------
 
         std::string pkgFile = findPackageFile(imp->path, currentDir, targetSymbol, wildcard);
 
@@ -418,10 +414,7 @@ void PackageResolver::resolveImports(Program& program, const std::string& curren
             continue;
         }
 
-        // Recursively resolve imports in the package file
         resolveImports(*pkgAST, pkgFile);
-
-        // Filter and inject declarations from loaded package AST
         extractDecls(pkgAST->declarations, targetSymbol, wildcard);
     }
 
@@ -441,4 +434,4 @@ void PackageResolver::resolveImports(Program& program, const std::string& curren
     program.declarations = std::move(resolvedDecls);
 }
 
-} // namespace Ume
+}

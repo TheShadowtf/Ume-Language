@@ -36,7 +36,7 @@ using NativeMesh    = Ume::Graphics::Mesh;
 using NativeTexture = Ume::Graphics::Texture;
 using NativeFont    = Ume::Graphics::Font;
 
-// ── Pointer extraction helpers (handle both shared_ptr and Any) ──────────
+// ── Pointer extraction helpers (handle both shared_ptr and Any)
 inline std::shared_ptr<NativeFont> _extractFont(const std::shared_ptr<NativeFont>& f) { return f; }
 inline std::shared_ptr<NativeFont> _extractFont(const Any& a) {
     if (!a.value_.has_value()) return nullptr;
@@ -81,7 +81,7 @@ struct Graphics {
     static inline Any Keys{};
     static inline Any MouseButtons{};
 
-    // ── Window creation ───────────────────────────────────────────
+    // ── Window creation
     static std::shared_ptr<NativeWindow> createWindow(Int width, Int height, UmeString title) {
         auto w = NativeWindow::Create(width, height, title.c_str());
         return std::shared_ptr<NativeWindow>(w);
@@ -101,7 +101,7 @@ struct Graphics {
         // Poll events is handled per-window in SwapBuffers
     }
 
-    // ── Clearing ──────────────────────────────────────────────────
+    // ── Clearing
     // windowClear(window, r, g, b) and windowClear(window, r, g, b, a) —
     // the stdlib Window class calls Graphics.windowClear with 4 or 5 args.
     template<typename W>
@@ -117,7 +117,7 @@ struct Graphics {
         if (auto ptr = _extractWindow(w)) ptr->Clear(r, g, b, a);
     }
 
-    // ── Swap buffers ──────────────────────────────────────────────
+    // ── Swap buffers
     template<typename W>
     static void windowSwapBuffers(const W& w) {
         if (auto ptr = _extractWindow(w)) {
@@ -130,7 +130,7 @@ struct Graphics {
         if (auto ptr = _extractWindow(w)) ptr->PollEvents();
     }
 
-    // ── Input ─────────────────────────────────────────────────────
+    // ── Input
     // Key/button parameter is templated so both Int and enum-class Key values
     // work without ambiguity (enum class doesn't implicitly convert to Int).
     template<typename W, typename K>
@@ -193,7 +193,7 @@ struct Graphics {
         return ptr ? ptr->GetAspectRatio() : 1.0f;
     }
 
-    // ── Drawing primitives ────────────────────────────────────────
+    // ── Drawing primitives
     template<typename W>
     static void windowDrawLine(const W& w, Float x1, Float y1, Float x2, Float y2, Float r, Float g, Float b) {
         if (auto ptr = _extractWindow(w)) ptr->DrawLine(x1, y1, x2, y2, r, g, b);
@@ -207,7 +207,7 @@ struct Graphics {
         if (auto ptr = _extractWindow(w)) ptr->DrawCircle(x, y, radius, r, g, b, segments);
     }
 
-    // ── Shader ────────────────────────────────────────────────────
+    // ── Shader
     static std::shared_ptr<NativeShader> createShader(UmeString vs, UmeString fs) {
         auto s = NativeShader::Create(vs.c_str(), fs.c_str());
         return std::shared_ptr<NativeShader>(s);
@@ -249,7 +249,7 @@ struct Graphics {
         if (sptr && tptr) sptr->SetTexture(name.c_str(), tptr.get(), slot);
     }
 
-    // ── Texture ───────────────────────────────────────────────────
+    // ── Texture
     static std::shared_ptr<NativeTexture> createTexture(UmeString path) {
         // Load a texture from file via Texture::Load (implemented in graphics lib)
         auto t = NativeTexture::Load(path.std::string::c_str());
@@ -267,7 +267,7 @@ struct Graphics {
         if (auto ptr = _extractTexture(tex)) ptr->Bind(slot);
     }
 
-    // ── Mesh ──────────────────────────────────────────────────────
+    // ── Mesh
     static std::shared_ptr<NativeMesh> createCustomMesh(const std::vector<Float>& verts, const std::vector<Int>& inds, Int stride = 6) {
         std::vector<unsigned int> uinds(inds.begin(), inds.end());
         auto m = NativeMesh::Create(verts.data(), verts.size(), uinds.data(), uinds.size(), stride);
@@ -301,7 +301,7 @@ struct Graphics {
         ptr->UpdateData(verts.data(), floatCount, uinds.data(), indexCount);
     }
 
-    // ── Draw mesh with shader ─────────────────────────────────────
+    // ── Draw mesh with shader
     template<typename W, typename M, typename S>
     static void windowDrawMesh(const W& w, const M& m, const S& s) {
         auto wptr = _extractWindow(w);
@@ -310,7 +310,7 @@ struct Graphics {
         if (wptr && mptr && sptr) wptr->DrawMesh(mptr.get(), sptr.get());
     }
 
-    // ── Font & Text ───────────────────────────────────────────────
+    // ── Font & Text
     static std::shared_ptr<NativeFont> createFont(UmeString path, Float fontSize = 18.0f) {
         auto f = NativeFont::Load(path.std::string::c_str(), fontSize);
         return std::shared_ptr<NativeFont>(f);
@@ -356,4 +356,4 @@ struct Graphics {
     }
 };
 
-} // namespace _ume_rt
+}

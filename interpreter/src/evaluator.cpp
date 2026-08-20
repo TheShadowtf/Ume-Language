@@ -1,4 +1,14 @@
 // evaluator.cpp — Tree-Walk Evaluator for the Ume Language
+
+/*
+    Is the code bad? Yes
+    Does the code work? Also yes
+    Will I refactor this? Maybe, but don't count on it.
+    Will anyone else wants to refactor this? Nope, no one is crazy enough to refactor this code.
+    If anyone wants to refactor this code, they are either brave or dumb.
+    Good luck to them.
+    Also, this is the largest file in the entire project sooo glhf.
+*/
 #include "../include/evaluator.h"
 #include <thread>
 #include <mutex>
@@ -23,9 +33,6 @@ namespace Ume {
 // Forward declaration — defined near end of file; used in callMethod()
 static const FuncDecl* findEnumMethod(const EnumDecl& enm, const std::string& name);
 
-// ─────────────────────────────────────────────────────────────
-// Value helpers
-// ─────────────────────────────────────────────────────────────
 double Value::toDouble() const {
     if (kind == Kind::Int)    return static_cast<double>(intVal);
     if (kind == Kind::Float)  return floatVal;
@@ -124,9 +131,6 @@ bool Value::operator<(const Value& other) const {
     return false;
 }
 
-// ─────────────────────────────────────────────────────────────
-// UmeRuntimeException
-// ─────────────────────────────────────────────────────────────
 const char* UmeRuntimeException::what() const noexcept {
     static std::string msg;
     if (value.isObject() && value.objVal) {
@@ -153,9 +157,6 @@ static void throwRuntimeError(const std::string& msg,
     throw UmeRuntimeException(Value::makeString(msg), line, column, filename);
 }
 
-// ─────────────────────────────────────────────────────────────
-// Evaluator
-// ─────────────────────────────────────────────────────────────
 Evaluator::Evaluator()
     : global_(std::make_shared<Environment>()) {}
 
@@ -252,7 +253,7 @@ int Evaluator::run(const Program& program) {
 }
 
 Value Evaluator::eval(const ASTNode& node, std::shared_ptr<Environment> env) {
-    // ── Literals ──────────────────────────────────────────
+    // ── Literals
     if (auto* n = dynamic_cast<const IntLiteralExpr*>(&node))    return Value::makeInt(n->value);
     if (auto* n = dynamic_cast<const FloatLiteralExpr*>(&node))  return Value::makeFloat(n->value);
     if (auto* n = dynamic_cast<const StringLiteralExpr*>(&node)) return Value::makeString(n->value);
@@ -260,8 +261,7 @@ Value Evaluator::eval(const ASTNode& node, std::shared_ptr<Environment> env) {
     if (auto* n = dynamic_cast<const BoolLiteralExpr*>(&node))   return Value::makeBool(n->value);
     if (dynamic_cast<const NullLiteralExpr*>(&node))             return Value::makeNull();
 
-    // ── Identifier ────────────────────────────────────────
-        // ── Identifier ────────────────────────────────────────
+    // ── Identifier 
     if (auto* n = dynamic_cast<const IdentifierExpr*>(&node)) {
         if (n->name == "null")  return Value::makeNull();
         if (n->name == "true")  return Value::makeBool(true);
@@ -315,13 +315,12 @@ Value Evaluator::eval(const ASTNode& node, std::shared_ptr<Environment> env) {
             }
         }
         
-        // 3. ONLY THEN check global variables (like enums)
         if (global_->has(n->name)) return global_->get(n->name);
         
         throwRuntimeError("Undefined variable: " + n->name, *n);
     }
 
-    // ── Expressions ───────────────────────────────────────
+    // ── Expressions
     if (auto* n = dynamic_cast<const BinaryExpr*>(&node))            return evalBinary(*n, env);
     if (auto* n = dynamic_cast<const UnaryExpr*>(&node))             return evalUnary(*n, env);
     if (auto* n = dynamic_cast<const AssignExpr*>(&node))            return evalAssign(*n, env);
@@ -380,7 +379,7 @@ Value Evaluator::eval(const ASTNode& node, std::shared_ptr<Environment> env) {
         return eval(*n->value, env);
     }
 
-    // ── Statements ────────────────────────────────────────
+    // ── Statements
     if (auto* n = dynamic_cast<const BlockStmt*>(&node))    return evalBlock(*n, env);
     if (auto* n = dynamic_cast<const ExprStmt*>(&node))     { eval(*n->expr, env); return Value::makeNull(); }
     if (auto* n = dynamic_cast<const VarDeclStmt*>(&node))  return evalVarDecl(*n, env);
@@ -403,7 +402,7 @@ Value Evaluator::eval(const ASTNode& node, std::shared_ptr<Environment> env) {
     if (dynamic_cast<const ContinueStmt*>(&node)) throw ContinueSignal{};
     if (auto* n = dynamic_cast<const UnsafeBlock*>(&node))  return evalUnsafe(*n, env);
 
-    // ── Declarations (inside functions) ───────────────────
+    // ── Declarations (inside functions)
     if (auto* n = dynamic_cast<const FuncDecl*>(&node)) {
         auto fi      = std::make_shared<FunctionInstance>();
         fi->name     = n->name;
@@ -431,9 +430,6 @@ Value Evaluator::eval(const ASTNode& node, std::shared_ptr<Environment> env) {
     return Value::makeNull();
 }
 
-// ─────────────────────────────────────────────────────────────
-// Collect top-level declarations
-// ─────────────────────────────────────────────────────────────
 void Evaluator::collectDeclarations(const Program& program,
                                      std::shared_ptr<Environment> env) {
     std::function<void(const std::vector<ASTNodePtr>&)> collect = [&](const std::vector<ASTNodePtr>& decls) {
@@ -501,9 +497,6 @@ void Evaluator::collectDeclarations(const Program& program,
     collect(program.declarations);
 }
 
-// ─────────────────────────────────────────────────────────────
-// Built-ins registration
-// ─────────────────────────────────────────────────────────────
 void Evaluator::registerBuiltins(std::shared_ptr<Environment> env) {
     registerConsole(env);
     registerMathExtended(env);
@@ -536,19 +529,11 @@ void Evaluator::registerBuiltins(std::shared_ptr<Environment> env) {
             fi->name = name; fi->native = std::move(fn);
             return Value::makeFunction(fi);
         };
-        // StringBuilder is a class — register a factory that creates instances
-        // We can't easily make a native class, so we register it as a function
-        // that creates a StringBuilder-like object.
-        // Actually, StringBuilder from the prelude should work if the prelude loads.
-        // As a fallback, we register a native StringBuilder constructor.
         auto sbObj = std::make_shared<ObjectInstance>();
         sbObj->className = "StringBuilder";
         sbObj->fields["append"] = mkFn("append", [](std::vector<Value> args) -> Value {
-            // This is called on an instance, but since we can't easily store
-            // per-instance state in a static object, we rely on the prelude version.
             return Value::makeNull();
         });
-        // Don't register — let the prelude handle it
     }
 
     // Register native Pair (always available)
@@ -558,9 +543,6 @@ void Evaluator::registerBuiltins(std::shared_ptr<Environment> env) {
             fi->name = name; fi->native = std::move(fn);
             return Value::makeFunction(fi);
         };
-        // Pair is a class — handled by prelude. But as a fallback, register
-        // a native Pair constructor that creates an object with first/second fields.
-        // We can't register a class here, so we rely on the prelude.
     }
 }
 
@@ -885,17 +867,7 @@ void Evaluator::registerConsole(std::shared_ptr<Environment> env) {
     env->declare("Console", Value::makeObject(consoleObj));
 }
 
-// ─────────────────────────────────────────────────────────────
-// Statement evaluation
-// ─────────────────────────────────────────────────────────────
 Value Evaluator::evalBlock(const BlockStmt& block, std::shared_ptr<Environment> env) {
-    // Evaluate statements in the SAME environment (inline).
-    // This is important because parseVarDecl wraps multi-variable declarations
-    // (int a=1, b=2, c=3) and for-loop multi-init in a BlockStmt wrapper.
-    // Creating a child scope here would make those variables go out of scope
-    // immediately. Real code blocks { } are handled by parseBlock which creates
-    // a BlockStmt that we also evaluate inline — the scoping for real blocks
-    // is handled by the caller (e.g. evalFor creates forEnv, evalIf passes env->child()).
     for (auto& stmt : block.stmts)
         eval(*stmt, env);
     return Value::makeNull();
@@ -910,9 +882,6 @@ Value Evaluator::evalVarDecl(const VarDeclStmt& stmt, std::shared_ptr<Environmen
             val.objVal->className = stmt.type.name;
     }
 
-    // --- FIX: Typeless assignment to existing fields ---
-    // If the parser parsed `rng2 = new Random()` as a VarDeclStmt with no type,
-    // and we are inside a class, we should assign to the field if it exists!
     if (env->has("__this")) {
         Value& tv = env->get("__this");
         if (tv.isObject() && tv.objVal) {
@@ -934,7 +903,6 @@ Value Evaluator::evalVarDecl(const VarDeclStmt& stmt, std::shared_ptr<Environmen
             }
         }
     }
-    // ----------------------------------------------------
 
     env->declare(stmt.name, val);
     return Value::makeNull();
@@ -1057,8 +1025,6 @@ Value Evaluator::evalTryCatch(const TryCatchStmt& stmt, std::shared_ptr<Environm
             if (cc.type.name == "Exception" || cc.type.name == "any") {
                 matches = true;
             } else if (ex.value.isObject() && ex.value.objVal) {
-                // Walk the class hierarchy to see if the thrown object's class
-                // is cc.type or a subclass of it.
                 std::string cn = ex.value.objVal->className;
                 const ClassDecl* cls = findClass(cn);
                 auto matchesName = [](const std::string& full, const std::string& shortName) {
@@ -1073,7 +1039,6 @@ Value Evaluator::evalTryCatch(const TryCatchStmt& stmt, std::shared_ptr<Environm
                     if (cls->superClass) cls = findClass(cls->superClass->name);
                     else break;
                 }
-                // Also match by direct class name
                 if (!matches && matchesName(cn, cc.type.name)) matches = true;
             }
             if (matches) {
@@ -1098,9 +1063,6 @@ Value Evaluator::evalUnsafe(const UnsafeBlock& block, std::shared_ptr<Environmen
     return eval(*block.body, env);
 }
 
-// ─────────────────────────────────────────────────────────────
-// Expression evaluation
-// ─────────────────────────────────────────────────────────────
 Value Evaluator::evalBinary(const BinaryExpr& expr, std::shared_ptr<Environment> env) {
     // Short-circuit logical
     if (expr.op == "&&") {
@@ -1525,12 +1487,7 @@ Value Evaluator::evalCall(const CallExpr& expr, std::shared_ptr<Environment> env
         }
     }
 
-    // Regular call
-    // Fast-path: unqualified identifier call that resolves via __class__ or __this
-    // (we dispatch directly from FuncDecl to preserve default param values)
     if (auto* cid = dynamic_cast<const IdentifierExpr*>(expr.callee.get())) {
-        // Check if it's a local variable OR a global variable (like enums)
-        // BUT we must skip this fast-path if the variable is actually a static class field!
         bool isLocalOrGlobal = env->has(cid->name) || global_->has(cid->name);
         bool isClassField = false;
         
@@ -1884,7 +1841,7 @@ Value Evaluator::evalNew(const NewExpr& expr, std::shared_ptr<Environment> env) 
         return Value::makeFunction(fi);
     };
 
-    // ── Built-in collections ──────────────────────────────
+    // ── Built-in collections
     if (expr.type.name == "List") {
         auto obj = std::make_shared<ObjectInstance>();
         obj->className = "List";
@@ -1915,15 +1872,13 @@ Value Evaluator::evalNew(const NewExpr& expr, std::shared_ptr<Environment> env) 
         return Value::makeObject(obj);
     }
 
-    // ── StringBuilder (native, always works even without prelude) ──
+    // ── StringBuilder (native, always works even without prelude)
     if (expr.type.name == "StringBuilder") {
         auto obj = std::make_shared<ObjectInstance>();
         obj->className = "StringBuilder";
         auto buf = std::make_shared<std::string>();
         obj->fields["append"] = mkFn("append", [buf](std::vector<Value> args) -> Value {
             if (!args.empty()) *buf += args[0].toString();
-            // Return a function-like that allows chaining
-            // We can't return 'this' easily, so we return a native function
             auto chainFi = std::make_shared<FunctionInstance>();
             chainFi->name = "append";
             chainFi->native = [buf](std::vector<Value> a) -> Value {
@@ -1957,7 +1912,7 @@ Value Evaluator::evalNew(const NewExpr& expr, std::shared_ptr<Environment> env) 
         return Value::makeObject(obj);
     }
 
-    // ── Pair (native) ─────────────────────────────────────
+    // ── Pair (native)
     if (expr.type.name == "Pair") {
         auto obj = std::make_shared<ObjectInstance>();
         obj->className = "Pair";
@@ -1971,7 +1926,7 @@ Value Evaluator::evalNew(const NewExpr& expr, std::shared_ptr<Environment> env) 
         return Value::makeObject(obj);
     }
 
-    // ── Random ───────────────────────────────────────────
+    // ── Random
     if (expr.type.name == "Random") {
         uint64_t seed;
         if (!expr.args.empty()) {
@@ -2036,7 +1991,7 @@ Value Evaluator::evalNew(const NewExpr& expr, std::shared_ptr<Environment> env) 
         return Value::makeObject(obj);
     }
 
-    // ── File ─────────────────────────────────────────────
+    // ── File
     if (expr.type.name == "File") {
         std::string path = expr.args.empty() ? "" : eval(*expr.args[0], env).toString();
         auto obj = std::make_shared<ObjectInstance>();
@@ -2080,7 +2035,7 @@ Value Evaluator::evalNew(const NewExpr& expr, std::shared_ptr<Environment> env) 
         return Value::makeObject(obj);
     }
 
-    // ── Thread / Mutex / Atomic / Audio Native Classes ──
+    // ── Thread / Mutex / Atomic / Audio Native Classes
     if (expr.type.name == "Thread") {
         FuncPtr task = expr.args.empty() ? nullptr : eval(*expr.args[0], env).funcVal;
         auto obj = std::make_shared<ObjectInstance>();
@@ -2092,9 +2047,7 @@ Value Evaluator::evalNew(const NewExpr& expr, std::shared_ptr<Environment> env) 
             return Value::makeNull();
         });
         obj->fields["start"] = mkFn("start", [tHandle, task, this](std::vector<Value>) -> Value {
-            // [DISABLED] Tree-walking interpreters are not thread-safe. 
-            // Spawning a real std::thread here corrupts memory and causes null crashes.
-            // We swallow the thread call so the interpreter runs synchronously.
+            // Do not ask, I have no idea why it does not work and neither do I know how to fix it so I will just leave it like this.
             /*
             if (task) {
                 *tHandle = std::thread([this, task]() {
@@ -2163,7 +2116,7 @@ Value Evaluator::evalNew(const NewExpr& expr, std::shared_ptr<Environment> env) 
         return Value::makeObject(obj);
     }
 
-    // ── HttpClient ───────────────────────────────────────
+    // ── HttpClient
     if (expr.type.name == "HttpClient") {
         auto obj = std::make_shared<ObjectInstance>();
         obj->className = "HttpClient";
@@ -2274,7 +2227,7 @@ Value Evaluator::evalNew(const NewExpr& expr, std::shared_ptr<Environment> env) 
         return Value::makeObject(obj);
     }
 
-    // ── User-defined struct ──────────────────────────────
+    // ── User-defined struct
     {
         auto sit = structDefs_.find(expr.type.name);
         if (sit != structDefs_.end()) {
@@ -2294,7 +2247,7 @@ Value Evaluator::evalNew(const NewExpr& expr, std::shared_ptr<Environment> env) 
         }
     }
 
-    // ── User-defined class ────────────────────────────────
+    // ── User-defined class
     const ClassDecl* cls = findClass(expr.type.name);
     if (!cls) {
         if (expr.type.name != "Exception" && expr.type.name != "Error") {
@@ -2379,13 +2332,11 @@ void Evaluator::instantiateFields(ObjectInstance& obj, const ClassDecl& cls,
 void Evaluator::runConstructor(ObjectInstance& obj, const ClassDecl& cls,
                                 std::vector<Value> args,
                                 std::shared_ptr<Environment> env) {
-    // If the class has proper constructors (ClassName(...)), use those
     if (!cls.constructors.empty()) {
-        // Find best-matching constructor (by arg count)
         const ConstructorDecl* ctor = nullptr;
         for (auto& c : cls.constructors) {
             if (c->params.size() == args.size()) { ctor = c.get(); break; }
-            if (!ctor) ctor = c.get(); // fallback
+            if (!ctor) ctor = c.get();
         }
         if (!ctor) return;
 
@@ -2413,7 +2364,6 @@ void Evaluator::runConstructor(ObjectInstance& obj, const ClassDecl& cls,
         return;
     }
 
-    // Fallback: look for a method named "constructor" (old prelude style)
     for (auto& m : cls.methods) {
         if (m->name == "constructor" && m->body) {
             auto ctorEnv = env->child();
@@ -2444,9 +2394,6 @@ void Evaluator::runConstructor(ObjectInstance& obj, const ClassDecl& cls,
     }
 }
 
-// ─────────────────────────────────────────────────────────────
-// Method dispatch
-// ─────────────────────────────────────────────────────────────
 Value Evaluator::callMethod(Value& object, const std::string& method,
                              std::vector<Value> args,
                              std::shared_ptr<Environment> env) {
@@ -3285,9 +3232,6 @@ Value Evaluator::evalStructInit(const StructInitExpr& expr, std::shared_ptr<Envi
     return Value::makeObject(obj);
 }
 
-// ─────────────────────────────────────────────────────────────
-// Arithmetic / comparison
-// ─────────────────────────────────────────────────────────────
 Value Evaluator::arith(const std::string& op, const Value& l, const Value& r) {
     // String concatenation
     if (op == "+") {
@@ -3330,9 +3274,6 @@ Value Evaluator::arith(const std::string& op, const Value& l, const Value& r) {
 
 bool Evaluator::isTruthy(const Value& v) const { return v.toBool(); }
 
-// ─────────────────────────────────────────────────────────────
-// Class lookup helpers
-// ─────────────────────────────────────────────────────────────
 const ClassDecl* Evaluator::findClass(const std::string& name) const {
     auto it = classDefs_.find(name);
     if (it != classDefs_.end()) return it->second;
@@ -3392,4 +3333,4 @@ const FieldDecl* Evaluator::findField(const ClassDecl& cls, const std::string& n
     return nullptr;
 }
 
-} // namespace Ume
+}

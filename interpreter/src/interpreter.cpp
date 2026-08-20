@@ -82,9 +82,6 @@ static void loadLibraryFile(const std::string& path, Evaluator& evaluator,
     evaluator.loadLibrary(*prog);
 }
 
-// ─────────────────────────────────────────────────────────────
-// Interpreter::runSource
-// ─────────────────────────────────────────────────────────────
 InterpreterResult Interpreter::runSource(const std::string& source,
                                           const std::string& filename) {
     InterpreterResult result;
@@ -194,10 +191,6 @@ InterpreterResult Interpreter::runSourceCombined(const std::string& source,
         Parser parser(std::move(tokens), filename);
         auto program = parser.parse();
 
-        // NOTE: Skip PackageResolver here — all project files are already combined.
-        // resolveImports strips class declarations from inlined sources when it
-        // detects a matching package name and attempts to re-import files.
-
         Evaluator evaluator;
         evaluator.setArgs(opts_.args);
 
@@ -251,9 +244,6 @@ InterpreterResult Interpreter::runSourceCombined(const std::string& source,
     return result;
 }
 
-// ─────────────────────────────────────────────────────────────
-// Interpreter::run
-// ─────────────────────────────────────────────────────────────
 InterpreterResult Interpreter::run() {
     InterpreterResult result;
 
@@ -282,11 +272,8 @@ InterpreterResult Interpreter::run() {
             std::filesystem::path entryAbsPath = projectDir / entryRel;
             
             if (std::filesystem::exists(entryAbsPath)) {
-                // Just set the filename to the entry file. The runSource() call 
-                // at the bottom of run() will handle parsing and PackageResolver!
                 opts_.filename = entryAbsPath.string();
             } else {
-                // Fallback if entry doesn't exist
                 opts_.filename = (projectDir / "src" / "main.ume").string();
             }
         }
@@ -304,9 +291,6 @@ InterpreterResult Interpreter::run() {
     return runSource(buf.str(), opts_.filename);
 }
 
-// ─────────────────────────────────────────────────────────────
-// Interpreter::runREPL
-// ─────────────────────────────────────────────────────────────
 InterpreterResult Interpreter::runREPL() {
     std::cout << "Ume Language 1.0.0 \xe2\x80\x94 Interactive Mode\n";
     std::cout << "Enter code. Empty line runs it. Type 'exit' to quit.\n\n" << std::flush;
@@ -338,4 +322,4 @@ InterpreterResult Interpreter::runREPL() {
     return {true, 0, ""};
 }
 
-} // namespace Ume
+}

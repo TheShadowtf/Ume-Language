@@ -22,9 +22,6 @@ namespace fs = std::filesystem;
 
 namespace Ume {
 
-// ─────────────────────────────────────────────────────────────
-// Preprocessor
-// ─────────────────────────────────────────────────────────────
 Preprocessor::Preprocessor(std::vector<std::string> includePaths)
     : includePaths_(std::move(includePaths)) {}
 
@@ -132,9 +129,6 @@ std::string Preprocessor::process(const std::string& source, const std::string& 
     return out.str();
 }
 
-// ─────────────────────────────────────────────────────────────
-// Compiler
-// ─────────────────────────────────────────────────────────────
 Compiler::Compiler(CompilerOptions opts) : opts_(std::move(opts)) {}
 
 std::string Compiler::derivedOutputName() const {
@@ -373,9 +367,6 @@ int Compiler::invokeCppCompiler(const std::string& cppFile,
     return rc;
 }
 
-// ─────────────────────────────────────────────────────────────
-// LLVM pipeline
-// ─────────────────────────────────────────────────────────────
 int Compiler::invokeLLVMCompiler(const std::string& llFile,
                                   const std::string& outFile) {
     std::string clang = findClang();
@@ -515,4 +506,4 @@ CompilerResult Compiler::compile() {
     return result;
 }
 
-} // namespace Ume
+}

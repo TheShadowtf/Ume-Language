@@ -18,9 +18,6 @@ namespace Ume {
 
 LLVMCodegen::LLVMCodegen(LLVMCodegenOptions opts) : opts_(std::move(opts)) {}
 
-// ─────────────────────────────────────────────────────────────
-// Type helpers
-// ─────────────────────────────────────────────────────────────
 std::string LLVMCodegen::llvmTy(const std::string& name) const {
     if (name == "int"  || name == "long")             return "i64";
     if (name == "short")                              return "i32";
@@ -48,9 +45,6 @@ std::string LLVMCodegen::defaultVal(const std::string& ty) const {
     return "null";
 }
 
-// ─────────────────────────────────────────────────────────────
-// Global string constant interning
-// ─────────────────────────────────────────────────────────────
 std::string LLVMCodegen::globalStr(const std::string& raw) {
     auto it = strCache_.find(raw);
     if (it != strCache_.end()) return it->second;
@@ -83,9 +77,6 @@ std::string LLVMCodegen::globalStr(const std::string& raw) {
     return name;
 }
 
-// ─────────────────────────────────────────────────────────────
-// Scope management
-// ─────────────────────────────────────────────────────────────
 void LLVMCodegen::pushScope() { scopes_.push_back({}); }
 void LLVMCodegen::popScope()  { if (!scopes_.empty()) scopes_.pop_back(); }
 
@@ -154,9 +145,6 @@ std::string LLVMCodegen::coerce(const std::string& val,
     return val;
 }
 
-// ─────────────────────────────────────────────────────────────
-// toBool: convert any type to i1 for branch conditions
-// ─────────────────────────────────────────────────────────────
 LLVMCodegen::TV LLVMCodegen::toBool(const TV& v) {
     if (v.second == "i1") return v;
     std::string r = tmp();
@@ -173,9 +161,6 @@ LLVMCodegen::TV LLVMCodegen::toBool(const TV& v) {
     return {r, "i1"};
 }
 
-// ─────────────────────────────────────────────────────────────
-// toStr: convert any type to i8* string via helper functions
-// ─────────────────────────────────────────────────────────────
 LLVMCodegen::TV LLVMCodegen::toStr(const TV& v) {
     if (v.second == "i8*") return v;
     std::string r = tmp();
@@ -196,9 +181,6 @@ LLVMCodegen::TV LLVMCodegen::toStr(const TV& v) {
     return {r, "i8*"};
 }
 
-// ─────────────────────────────────────────────────────────────
-// emitStrConcat — call the __ume_strconcat helper
-// ─────────────────────────────────────────────────────────────
 LLVMCodegen::TV LLVMCodegen::emitStrConcat(const TV& a, const TV& b) {
     auto [as, at] = toStr(a);
     auto [bs, bt] = toStr(b);
@@ -207,9 +189,6 @@ LLVMCodegen::TV LLVMCodegen::emitStrConcat(const TV& a, const TV& b) {
     return {r, "i8*"};
 }
 
-// ─────────────────────────────────────────────────────────────
-// emitBuiltins — external decls + private helper defs
-// ─────────────────────────────────────────────────────────────
 void LLVMCodegen::emitBuiltins() {
     globals_ << "\n; ── External C library declarations ──────────────────────────\n";
     globals_ << "declare i32    @printf(i8* nocapture readonly, ...)\n";
@@ -297,18 +276,12 @@ void LLVMCodegen::emitBuiltins() {
     globals_ << "\n";
 }
 
-// ─────────────────────────────────────────────────────────────
-// Collect class declarations for struct layout queries
-// ─────────────────────────────────────────────────────────────
 void LLVMCodegen::collectClasses(const Program& prog) {
     for (auto& node : prog.declarations)
         if (auto* cls = dynamic_cast<const ClassDecl*>(node.get()))
             classDecls_[cls->name] = cls;
 }
 
-// ─────────────────────────────────────────────────────────────
-// Main entry — generate() assembles all sections
-// ─────────────────────────────────────────────────────────────
 LLVMCodegenResult LLVMCodegen::generate(const Program& program) {
     // Reset
     types_.str(""); types_.clear();
@@ -364,9 +337,6 @@ LLVMCodegenResult LLVMCodegen::generate(const Program& program) {
     }
 }
 
-// ─────────────────────────────────────────────────────────────
-// Top-level declarations
-// ─────────────────────────────────────────────────────────────
 void LLVMCodegen::genProgramDecl(const ASTNode& node) {
     cur_ = &funcs_;
     if (auto* cls = dynamic_cast<const ClassDecl*>(&node)) { genClassDecl(*cls); return; }
@@ -516,9 +486,6 @@ void LLVMCodegen::genFuncDecl(const FuncDecl& fn, const std::string& cls) {
     curClassName_ = "";
 }
 
-// ─────────────────────────────────────────────────────────────
-// Statements
-// ─────────────────────────────────────────────────────────────
 bool LLVMCodegen::genStmt(const ASTNode& node) {
     if (auto* n = dynamic_cast<const BlockStmt*>(&node))    return genBlock(*n);
     if (auto* n = dynamic_cast<const VarDeclStmt*>(&node))  { genVarDecl(*n); return false; }
@@ -674,9 +641,6 @@ void LLVMCodegen::genForEach(const ForEachStmt&) {
     emit(endL + ":\n");
 }
 
-// ─────────────────────────────────────────────────────────────
-// Expressions
-// ─────────────────────────────────────────────────────────────
 LLVMCodegen::TV LLVMCodegen::genExpr(const ASTNode& node) {
     if (auto* e = dynamic_cast<const IntLiteralExpr*>(&node))
         return {std::to_string(e->value), "i64"};
@@ -948,7 +912,7 @@ LLVMCodegen::TV LLVMCodegen::genCall(const CallExpr& e) {
 
 LLVMCodegen::TV LLVMCodegen::genMemberCall(const MemberAccessExpr& ma,
                                              const std::vector<ASTNodePtr>& args) {
-    // ── Console ──────────────────────────────────────────────
+    // ── Console
     if (auto* id = dynamic_cast<const IdentifierExpr*>(ma.object.get())) {
         if (id->name == "Console") {
             bool nl = (ma.member == "println");
@@ -982,7 +946,7 @@ LLVMCodegen::TV LLVMCodegen::genMemberCall(const MemberAccessExpr& ma,
             return {"0", "i64"};
         }
 
-        // ── Math ─────────────────────────────────────────────
+        // ── Math
         if (id->name == "Math") {
             std::vector<TV> av;
             for (auto& a : args) av.push_back(genExpr(*a));
@@ -1046,7 +1010,7 @@ LLVMCodegen::TV LLVMCodegen::genMemberCall(const MemberAccessExpr& ma,
             return {"0.0", "double"};
         }
 
-        // ── System.exit ───────────────────────────────────────
+        // ── System.exit
         if (id->name == "System" && ma.member == "exit") {
             TV code = args.empty() ? TV{"0", "i64"} : genExpr(*args[0]);
             std::string c32 = tmp();
@@ -1057,13 +1021,13 @@ LLVMCodegen::TV LLVMCodegen::genMemberCall(const MemberAccessExpr& ma,
         }
     }
 
-    // ── obj.toString() ────────────────────────────────────────
+    // ── obj.toString()
     if (ma.member == "toString") {
         auto [objV, objT] = genExpr(*ma.object);
         return toStr({objV, objT});
     }
 
-    // ── string.length() ───────────────────────────────────────
+    // ── string.length()
     if (ma.member == "length") {
         auto [objV, objT] = genExpr(*ma.object);
         if (objT == "i8*") {
@@ -1073,7 +1037,7 @@ LLVMCodegen::TV LLVMCodegen::genMemberCall(const MemberAccessExpr& ma,
         }
     }
 
-    // ── User-defined method call ──────────────────────────────
+    // ── User-defined method call
     auto [objV, objT] = genExpr(*ma.object);
     std::vector<TV> argVals;
     for (auto& a : args) argVals.push_back(genExpr(*a));
@@ -1211,4 +1175,4 @@ LLVMCodegen::TV LLVMCodegen::genIndex(const IndexExpr& e) {
     return {r, "i64"};
 }
 
-} // namespace Ume
+}

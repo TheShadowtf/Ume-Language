@@ -11,9 +11,6 @@
 
 namespace Ume::Graphics {
 
-// ─────────────────────────────────────────────────────────────
-// Input Handling
-// ─────────────────────────────────────────────────────────────
 enum class Key {
     // Letter keys
     A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y, Z,
@@ -31,9 +28,6 @@ enum class MouseButton {
     Left, Right, Middle
 };
 
-// ─────────────────────────────────────────────────────────────
-// Texture
-// ─────────────────────────────────────────────────────────────
 class Texture {
 public:
     static Texture* Create(int width, int height, const unsigned char* pixels, int channels = 4);
@@ -60,9 +54,6 @@ private:
     int height_;
 };
 
-// ─────────────────────────────────────────────────────────────
-// Shader
-// ─────────────────────────────────────────────────────────────
 class Shader {
 public:
     static Shader* Create(const std::string& vertexSource, const std::string& fragmentSource);
@@ -106,9 +97,6 @@ private:
     static unsigned int CompileShader(const std::string& source, unsigned int type);
 };
 
-// ─────────────────────────────────────────────────────────────
-// Vertex Array Object (VAO) + VBO management
-// ─────────────────────────────────────────────────────────────
 class Mesh {
 public:
     static Mesh* CreateQuad();
@@ -166,9 +154,6 @@ private:
     void SetupVertexAttribs(int stride = 6);
 };
 
-// ─────────────────────────────────────────────────────────────
-// Font & Text Rendering
-// ─────────────────────────────────────────────────────────────
 struct GlyphQuad {
     float x0, y0, s0, t0;
     float x1, y1, s1, t1;
@@ -205,9 +190,6 @@ private:
     float pixel_height_;
 };
 
-// ─────────────────────────────────────────────────────────────
-// Window with Input and Rendering
-// ─────────────────────────────────────────────────────────────
 class Window {
 public:
     static Window* Create(int width, int height, const std::string& title);
@@ -321,4 +303,4 @@ private:
     bool InitOpenGL();
 };
 
-} // namespace Ume::Graphics
+}

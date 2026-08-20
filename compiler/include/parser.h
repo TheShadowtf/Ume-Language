@@ -8,9 +8,6 @@
 
 namespace Ume {
 
-// ─────────────────────────────────────────────────────────────
-// ParseError — thrown on syntax errors
-// ─────────────────────────────────────────────────────────────
 class ParseError : public std::runtime_error {
 public:
     int line;
@@ -26,9 +23,6 @@ public:
           expectedToken(std::move(expectedToken)), foundToken(std::move(foundToken)), hint(std::move(hint)) {}
 };
 
-// ─────────────────────────────────────────────────────────────
-// Parser
-// ─────────────────────────────────────────────────────────────
 class Parser {
 public:
     explicit Parser(std::vector<Token> tokens, std::string filename = "<unknown>");
@@ -42,7 +36,7 @@ private:
     size_t             pos_ = 0;
     int                pendingGT_ = 0; // for >> in nested generics
 
-    // ── Token navigation ─────────────────────────────────
+    // ── Token navigation
     const Token& current()                              const;
     const Token& peek(int offset = 1)                   const;
     const Token& advance();
@@ -66,15 +60,15 @@ private:
         return node;
     }
 
-    // ── Type annotation parsing ───────────────────────────
+    // ── Type annotation parsing
     TypeAnnotation parseTypeAnnotation();
     TypeAnnotation parseTypeAnnotationBasic();
 
-    // ── Access modifiers ─────────────────────────────────
+    // ── Access modifiers
     AccessModifier parseAccessModifier();
     bool           hasAccessModifier()                  const;
 
-    // ── Top-level declarations ────────────────────────────
+    // ── Top-level declarations
     std::vector<Attribute> parseAttributes();
     ASTNodePtr parseTopLevel();
     ASTNodePtr parseIncludeDirective();
@@ -89,7 +83,7 @@ private:
     ASTNodePtr parseEnumDecl(AccessModifier access);
     ASTNodePtr parseStructDecl();
 
-    // ── Class member parsing ──────────────────────────────
+    // ── Class member parsing
     std::unique_ptr<ConstructorDecl> parseConstructor(AccessModifier access,
                                                        const std::string& className);
     std::unique_ptr<DestructorDecl>  parseDestructor();
@@ -98,11 +92,11 @@ private:
     std::unique_ptr<IndexerDecl>     parseIndexer(AccessModifier access, TypeAnnotation type);
     std::unique_ptr<OperatorDecl>    parseOperatorDecl(AccessModifier access);
 
-    // ── Parameters ───────────────────────────────────────
+    // ── Parameters
     std::vector<Parameter> parseParamList();
     Parameter              parseParameter();
 
-    // ── Statements ───────────────────────────────────────
+    // ── Statements
     ASTNodePtr parseStatement();
     ASTNodePtr parseBlock();
     ASTNodePtr parseVarDecl(bool isConst = false);
@@ -116,7 +110,7 @@ private:
     ASTNodePtr parseThrowStmt();
     ASTNodePtr parseUnsafeBlock();
 
-    // ── Expressions (precedence climbing) ────────────────
+    // ── Expressions (precedence climbing)
     ASTNodePtr parseExpression();
     ASTNodePtr parseAssignment();
     ASTNodePtr parseTernary();
@@ -135,16 +129,16 @@ private:
     ASTNodePtr parsePostfix(ASTNodePtr expr);
     ASTNodePtr parsePrimary();
 
-    // ── Lambda parsing ────────────────────────────────────
+    // ── Lambda parsing
     ASTNodePtr parseLambda();
 
-    // ── Argument list ─────────────────────────────────────
+    // ── Argument list
     std::vector<ASTNodePtr> parseArgList();
 
-    // ── Interpolated string ───────────────────────────────
+    // ── Interpolated string
     ASTNodePtr parseInterpolatedString(const std::string& raw);
 
-    // ── Helpers ───────────────────────────────────────────
+    // ── Helpers
     bool isTypeStart() const;
     bool isForEachLoop();
     bool isLambdaStart();
@@ -153,4 +147,4 @@ private:
     Token findLikelyBlockStarter() const;
 };
 
-} // namespace Ume
+}

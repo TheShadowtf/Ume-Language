@@ -1,5 +1,5 @@
 #pragma once
-// llvm_codegen.h — LLVM IR text emitter for the Ume Language (Phase 3)
+// llvm_codegen.h — LLVM IR text emitter for the Ume Language
 //
 // Emits human-readable LLVM IR (.ll) suitable for compilation via:
 //   clang -O2 out.ll -o out
@@ -28,9 +28,6 @@ struct LLVMCodegenResult {
     std::string irOutput;   // the complete .ll text
 };
 
-// ─────────────────────────────────────────────────────────────
-// LLVMCodegen — walks the Ume AST and emits LLVM IR text
-// ─────────────────────────────────────────────────────────────
 class LLVMCodegen {
 public:
     explicit LLVMCodegen(LLVMCodegenOptions opts = {});
@@ -40,36 +37,36 @@ public:
 private:
     LLVMCodegenOptions opts_;
 
-    // ── Output sections ──────────────────────────────────────
+    // ── Output sections
     std::ostringstream types_;    // %struct / %class type defs
     std::ostringstream globals_;  // global constants + extern decls
     std::ostringstream helpers_;  // private helper functions
     std::ostringstream funcs_;    // user-defined functions
     std::ostringstream* cur_ = nullptr; // points to active section
 
-    // ── Counters ─────────────────────────────────────────────
+    // ── Counters
     int tmpN_  = 0;
     int lblN_  = 0;
     int gstrN_ = 0;
 
-    // ── Current function context ─────────────────────────────
+    // ── Current function context
     std::string curRetTy_;
     std::string curFnName_;
     std::string curClassName_;
     bool        hasMainWrapper_ = false;
 
-    // ── Variable scope: name -> (allocaReg, llvmType) ────────
+    // ── Variable scope: name -> (allocaReg, llvmType)
     struct VarInfo { std::string alloca; std::string type; };
     using VarMap = std::unordered_map<std::string, VarInfo>;
     std::vector<VarMap> scopes_;
 
-    // ── Global string constant cache: raw -> @.str.N ─────────
+    // ── Global string constant cache: raw -> @.str.N
     std::unordered_map<std::string, std::string> strCache_;
 
-    // ── Known class declarations (for struct layout) ──────────
+    // ── Known class declarations (for struct layout)
     std::unordered_map<std::string, const ClassDecl*> classDecls_;
 
-    // ── Helpers ───────────────────────────────────────────────
+    // ── Helpers
     std::string tmp()   { return "%t" + std::to_string(tmpN_++); }
     std::string lbl()   { return "lbl" + std::to_string(lblN_++); }
     void emit  (const std::string& s) { *cur_ << s; }
@@ -92,14 +89,14 @@ private:
                 const std::string& ty);
     VarInfo* lookupVar(const std::string& name);
 
-    // ── Typed value (register, llvmType) ─────────────────────
+    // ── Typed value (register, llvmType)
     using TV = std::pair<std::string, std::string>;
 
     TV toBool    (const TV& v);          // returns (reg, "i1")
     TV toStr     (const TV& v);          // returns (reg, "i8*")
     TV emitStrConcat(const TV& a, const TV& b); // returns (reg, "i8*")
 
-    // ── Code generation ───────────────────────────────────────
+    // ── Code generation
     void collectClasses(const Program& prog);
     void emitBuiltins();
 
@@ -133,4 +130,4 @@ private:
     TV genIndex      (const IndexExpr& e);
 };
 
-} // namespace Ume
+}

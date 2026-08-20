@@ -11,9 +11,6 @@
 
 namespace Ume {
 
-// ─────────────────────────────────────────────────────────────
-// Resolved type info (used during analysis)
-// ─────────────────────────────────────────────────────────────
 struct TypeInfo {
     std::string name;
     bool        nullable = false;
@@ -47,9 +44,6 @@ struct ClassInfo {
     bool                                        isFinal    = false;
 };
 
-// ─────────────────────────────────────────────────────────────
-// SemanticError
-// ─────────────────────────────────────────────────────────────
 class SemanticError : public std::runtime_error {
 public:
     int line;
@@ -59,9 +53,6 @@ public:
         : std::runtime_error(msg), line(line), column(column), filename(std::move(filename)) {}
 };
 
-// ─────────────────────────────────────────────────────────────
-// Symbol table (scoped)
-// ─────────────────────────────────────────────────────────────
 class SymbolTable {
 public:
     void pushScope();
@@ -75,9 +66,6 @@ private:
     std::vector<std::unordered_map<std::string, TypeInfo>> scopes_;
 };
 
-// ─────────────────────────────────────────────────────────────
-// SemanticAnalyzer
-// ─────────────────────────────────────────────────────────────
 class SemanticAnalyzer {
 public:
     SemanticAnalyzer();
@@ -98,7 +86,7 @@ private:
     TypeInfo                                             currentReturnType_;
     bool                                                 inUnsafe_ = false;
 
-    // ── First pass: collect top-level declarations ────────
+    // ── First pass: collect top-level declarations
     void collectDeclarations(Program& program);
     void collectClass(ClassDecl& cls);
     void collectInterface(InterfaceDecl& iface);
@@ -106,7 +94,7 @@ private:
     void collectStruct(StructDecl& strct);
     void collectFunc(FuncDecl& func);
 
-    // ── Second pass: validate bodies ─────────────────────
+    // ── Second pass: validate bodies
     void checkNode(ASTNode& node);
     void checkAttributes(const std::vector<Attribute>& attrs);
     void checkFuncDecl(FuncDecl& func);
@@ -132,4 +120,4 @@ private:
     void     warn(const std::string& msg, int line = 0);
 };
 
-} // namespace Ume
+}

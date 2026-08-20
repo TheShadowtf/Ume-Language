@@ -178,4 +178,4 @@ void DiagnosticEngine::print(const Diagnostic& diag, const std::string& fallback
     std::cerr << format(diag, fallbackSource);
 }
 
-} // namespace Ume
+}

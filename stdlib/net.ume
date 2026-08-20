@@ -1,4 +1,7 @@
 // net.ume — Ume Standard Library (Networking)
+
+// Networking does not work yet but the std for it is kinda there. 
+// I might change things from here or I might not, we will see.
 package std.net;
 
 /// HTTP response

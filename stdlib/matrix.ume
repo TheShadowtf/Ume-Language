@@ -10,9 +10,6 @@ package std.matrix;
 
 import std.vector.*;
 
-// ═══════════════════════════════════════════════════════════════════════════
-// Matrix2x2
-// ═══════════════════════════════════════════════════════════════════════════
 public class Matrix2x2 {
     public float[] m;
 
@@ -80,9 +77,6 @@ public class Matrix2x2 {
     }
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
-// Matrix3x3
-// ═══════════════════════════════════════════════════════════════════════════
 public class Matrix3x3 {
     public float[] m;
 
@@ -172,9 +166,6 @@ public class Matrix3x3 {
     }
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
-// Matrix4x4
-// ═══════════════════════════════════════════════════════════════════════════
 public class Matrix4x4 {
     public float[] m;
 
@@ -194,7 +185,7 @@ public class Matrix4x4 {
         m[col * 4 + row] = val;
     }
 
-    // ── Operator overloading ──────────────────────────────
+    // ── Operator overloading
     public operator * (Matrix4x4 other) -> Matrix4x4 {
         Matrix4x4 r = new Matrix4x4();
         for (int c = 0; c < 4; c++) {
@@ -224,7 +215,7 @@ public class Matrix4x4 {
         return true;
     }
 
-    // ── Transforms ────────────────────────────────────────
+    // ── Transforms
     public func Matrix4x4 transposed() {
         Matrix4x4 r = new Matrix4x4();
         for (int c = 0; c < 4; c++) {
@@ -239,7 +230,7 @@ public class Matrix4x4 {
         return m;
     }
 
-    // ── Static factories ──────────────────────────────────
+    // ── Static factories
     public static func Matrix4x4 identity() {
         return new Matrix4x4([
             1.0, 0.0, 0.0, 0.0,

@@ -45,4 +45,4 @@ private:
     InterpreterOptions opts_;
 };
 
-} // namespace Ume
+}

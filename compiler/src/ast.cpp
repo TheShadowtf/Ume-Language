@@ -32,4 +32,4 @@ std::string TypeAnnotation::toString() const {
     return oss.str();
 }
 
-} // namespace Ume
+}

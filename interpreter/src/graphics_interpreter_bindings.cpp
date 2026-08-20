@@ -618,4 +618,4 @@ void Evaluator::registerGraphics(std::shared_ptr<Environment> env) {
     env->declare("Graphics", Value::makeObject(graphicsObj));
 }
 
-} // namespace Ume
+}

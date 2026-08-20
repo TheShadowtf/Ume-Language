@@ -181,6 +181,6 @@ namespace Thread_bindings {
     inline std::shared_ptr<AtomicInt> createAtomicInt(Int initial = 0) {
         return std::make_shared<AtomicInt>(initial);
     }
-} // namespace Thread_bindings
+}
 
-} // namespace _ume_rt
+}

@@ -8,7 +8,7 @@
 namespace Ume {
 
 enum class TokenType {
-    // ── Literals ──────────────────────────────────────────
+    // ── Literals
     INTEGER_LITERAL,
     FLOAT_LITERAL,      // ends with f
     DOUBLE_LITERAL,
@@ -16,54 +16,54 @@ enum class TokenType {
     CHAR_LITERAL,
     INTERP_STRING,      // $"..." — handed to parser for interpolation
     BOOL_LITERAL,       // true / false (also keywords)
-    // ── Identifier ────────────────────────────────────────
+    // ── Identifier
     IDENTIFIER,
-    // ── Type keywords ─────────────────────────────────────
+    // ── Type keywords
     KW_INT, KW_LONG, KW_SHORT, KW_BYTE,
     KW_FLOAT, KW_DOUBLE, KW_BOOL, KW_CHAR,
     KW_STRING, KW_VOID, KW_ANY,
-    // ── Control flow ──────────────────────────────────────
+    // ── Control flow
     KW_IF, KW_ELSE, KW_WHILE, KW_DO, KW_FOR, KW_FOREACH, KW_IN,
     KW_SWITCH, KW_CASE, KW_DEFAULT,
     KW_BREAK, KW_CONTINUE, KW_RETURN,
-    // ── OOP ───────────────────────────────────────────────
+    // ── OOP
     KW_CLASS, KW_INTERFACE, KW_ENUM, KW_STRUCT,
     KW_EXTENDS, KW_IMPLEMENTS,
     KW_PUBLIC, KW_PRIVATE, KW_PROTECTED, KW_INTERNAL,
     KW_STATIC, KW_ABSTRACT, KW_FINAL, KW_OVERRIDE,
     KW_NEW, KW_THIS, KW_SUPER,
-    // ── Function / Variable ───────────────────────────────
+    // ── Function / Variable
     KW_FUNC, KW_VAR, KW_CONST,
-    // ── Values ────────────────────────────────────────────
+    // ── Values
     KW_NULL, KW_TRUE, KW_FALSE,
-    // ── Exception handling ────────────────────────────────
+    // ── Exception handling
     KW_TRY, KW_CATCH, KW_FINALLY, KW_THROW,
-    // ── Module system ─────────────────────────────────────
+    // ── Module system
     KW_IMPORT, KW_PACKAGE, KW_NAMESPACE,
-    // ── Special ───────────────────────────────────────────
+    // ── Special
     KW_OPERATOR, KW_CAST, KW_ALLOC, KW_FREE, KW_UNSAFE, KW_AS,
-    // ── Arithmetic operators ──────────────────────────────
+    // ── Arithmetic operators
     PLUS, MINUS, STAR, SLASH, PERCENT,
-    // ── Assignment operators ──────────────────────────────
+    // ── Assignment operators
     ASSIGN,
     PLUS_ASSIGN, MINUS_ASSIGN, STAR_ASSIGN, SLASH_ASSIGN, PERCENT_ASSIGN,
-    // ── Comparison operators ──────────────────────────────
+    // ── Comparison operators
     EQ, NEQ, LT, GT, LTE, GTE,
-    // ── Logical operators ─────────────────────────────────
+    // ── Logical operators
     AND, OR, NOT,
-    // ── Bitwise operators ─────────────────────────────────
+    // ── Bitwise operators
     BIT_AND, BIT_OR, BIT_XOR, BIT_NOT,
     LSHIFT, RSHIFT,
-    // ── Increment / Decrement ─────────────────────────────
+    // ── Increment / Decrement
     INCREMENT, DECREMENT,
-    // ── Arrow operators ───────────────────────────────────
+    // ── Arrow operators
     ARROW,          // ->
     FAT_ARROW,      // =>
-    // ── Null safety ───────────────────────────────────────
+    // ── Null safety
     QUESTION,       // ?
     SAFE_DOT,       // ?.
     NULL_COALESCE,  // ??
-    // ── Delimiters ────────────────────────────────────────
+    // ── Delimiters
     LPAREN, RPAREN,
     LBRACE, RBRACE,
     LBRACKET, RBRACKET,
@@ -71,11 +71,11 @@ enum class TokenType {
     DOT, COMMA,
     AT, HASH, DOLLAR, TILDE,
     ELLIPSIS,       // ...
-    // ── Preprocessor ──────────────────────────────────────
+    // ── Preprocessor
     DIRECTIVE_INCLUDE,  // #include
     DIRECTIVE_IMPORT,   // #import
     DIRECTIVE_LINE,     // #line
-    // ── Misc ──────────────────────────────────────────────
+    // ── Misc
     EOF_TOKEN,
     ERROR
 };
@@ -94,9 +94,6 @@ struct Token {
     bool isAny(std::initializer_list<TokenType>) const;
 };
 
-// ─────────────────────────────────────────────────────────────
-// Lexer
-// ─────────────────────────────────────────────────────────────
 class Lexer {
 public:
     explicit Lexer(std::string source, std::string filename = "<unknown>");
@@ -133,4 +130,4 @@ private:
     Token errorToken(const std::string& msg);
 };
 
-} // namespace Ume
+}

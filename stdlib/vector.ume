@@ -2,9 +2,6 @@
 // Provides Vector2, Vector3, Vector4 with operator overloading.
 package std.vector;
 
-// ═══════════════════════════════════════════════════════════════════════════
-// Vector2
-// ═══════════════════════════════════════════════════════════════════════════
 public class Vector2 {
     public float x;
     public float y;
@@ -16,7 +13,7 @@ public class Vector2 {
 
     public Vector2() { this.x = 0.0; this.y = 0.0; }
 
-    // ── Operator overloading ──────────────────────────────
+    // ── Operator overloading
     public operator + (Vector2 other) -> Vector2 {
         return new Vector2(x + other.x, y + other.y);
     }
@@ -30,12 +27,12 @@ public class Vector2 {
         return x == other.x && y == other.y;
     }
 
-    // ── Named methods (for compatibility) ─────────────────
+    // ── Named methods (for compatibility)
     public func Vector2 add(Vector2 other) { return new Vector2(x + other.x, y + other.y); }
     public func Vector2 sub(Vector2 other) { return new Vector2(x - other.x, y - other.y); }
     public func Vector2 mul(float scalar) { return new Vector2(x * scalar, y * scalar); }
 
-    // ── Math ──────────────────────────────────────────────
+    // ── Math
     public func float dot(Vector2 other) {
         return x * other.x + y * other.y;
     }
@@ -66,9 +63,6 @@ public class Vector2 {
     }
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
-// Vector3
-// ═══════════════════════════════════════════════════════════════════════════
 public class Vector3 {
     public float x;
     public float y;
@@ -82,7 +76,7 @@ public class Vector3 {
 
     public Vector3() { this.x = 0.0; this.y = 0.0; this.z = 0.0; }
 
-    // ── Operator overloading ──────────────────────────────
+    // ── Operator overloading
     public operator + (Vector3 other) -> Vector3 {
         return new Vector3(x + other.x, y + other.y, z + other.z);
     }
@@ -96,12 +90,12 @@ public class Vector3 {
         return x == other.x && y == other.y && z == other.z;
     }
 
-    // ── Named methods (for compatibility) ─────────────────
+    // ── Named methods (for compatibility)
     public func Vector3 add(Vector3 other) { return new Vector3(x + other.x, y + other.y, z + other.z); }
     public func Vector3 sub(Vector3 other) { return new Vector3(x - other.x, y - other.y, z - other.z); }
     public func Vector3 mul(float scalar) { return new Vector3(x * scalar, y * scalar, z * scalar); }
 
-    // ── Math ──────────────────────────────────────────────
+    // ── Math
     public func float dot(Vector3 other) {
         return x * other.x + y * other.y + z * other.z;
     }
@@ -143,7 +137,7 @@ public class Vector3 {
         return "(" + x + ", " + y + ", " + z + ")";
     }
 
-    // ── Static factories ──────────────────────────────────
+    // ── Static factories
     public static func Vector3 zero()    { return new Vector3(0.0, 0.0, 0.0); }
     public static func Vector3 one()     { return new Vector3(1.0, 1.0, 1.0); }
     public static func Vector3 up()      { return new Vector3(0.0, 1.0, 0.0); }
@@ -151,9 +145,6 @@ public class Vector3 {
     public static func Vector3 right()   { return new Vector3(1.0, 0.0, 0.0); }
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
-// Vector4
-// ═══════════════════════════════════════════════════════════════════════════
 public class Vector4 {
     public float x;
     public float y;
@@ -169,7 +160,7 @@ public class Vector4 {
 
     public Vector4() { this.x = 0.0; this.y = 0.0; this.z = 0.0; this.w = 0.0; }
 
-    // ── Operator overloading ──────────────────────────────
+    // ── Operator overloading
     public operator + (Vector4 other) -> Vector4 {
         return new Vector4(x + other.x, y + other.y, z + other.z, w + other.w);
     }
@@ -183,7 +174,7 @@ public class Vector4 {
         return x == other.x && y == other.y && z == other.z && w == other.w;
     }
 
-    // ── Math ──────────────────────────────────────────────
+    // ── Math
     public func float dot(Vector4 other) {
         return x * other.x + y * other.y + z * other.z + w * other.w;
     }
@@ -203,9 +194,6 @@ public class Vector4 {
     }
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
-// Vector3f Struct (Value-type)
-// ═══════════════════════════════════════════════════════════════════════════
 public struct Vector3f {
     public float x;
     public float y;

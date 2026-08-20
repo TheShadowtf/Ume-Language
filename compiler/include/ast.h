@@ -10,10 +10,6 @@
 
 namespace Ume {
 
-// ============================================================
-// TYPE ANNOTATION
-// ============================================================
-
 struct TypeAnnotation {
     std::string name;                       // base type name (int, string, Dog, ...)
     std::vector<TypeAnnotation> typeArgs;   // generic args: List<int>
@@ -36,10 +32,6 @@ struct TypeAnnotation {
 
     std::string toString() const;
 };
-
-// ============================================================
-// PARAMETER
-// ============================================================
 
 struct ASTNode; // forward declare for default values
 
@@ -65,15 +57,7 @@ struct Parameter {
     Parameter& operator=(Parameter&&) = default;
 };
 
-// ============================================================
-// ACCESS MODIFIER
-// ============================================================
-
 enum class AccessModifier { Public, Private, Protected, Internal, Default };
-
-// ============================================================
-// BASE AST NODE
-// ============================================================
 
 struct ASTNode {
     int line   = 0;
@@ -84,18 +68,10 @@ struct ASTNode {
 
 using ASTNodePtr = std::unique_ptr<ASTNode>;
 
-// ============================================================
-// ATTRIBUTES
-// ============================================================
-
 struct Attribute {
     std::string name;
     std::vector<ASTNodePtr> args;
 };
-
-// ============================================================
-// EXPRESSIONS
-// ============================================================
 
 struct IntLiteralExpr : ASTNode {
     int64_t value;
@@ -272,10 +248,6 @@ struct AddressOfExpr : ASTNode {
     explicit AddressOfExpr(ASTNodePtr v) : value(std::move(v)) {}
 };
 
-// ============================================================
-// STATEMENTS
-// ============================================================
-
 struct ExprStmt : ASTNode {
     ASTNodePtr expr;
     explicit ExprStmt(ASTNodePtr e) : expr(std::move(e)) {}
@@ -372,10 +344,6 @@ struct UnsafeBlock : ASTNode {
     ASTNodePtr body;
     explicit UnsafeBlock(ASTNodePtr b) : body(std::move(b)) {}
 };
-
-// ============================================================
-// DECLARATIONS
-// ============================================================
 
 struct IncludeDirective : ASTNode {
     std::string path;
@@ -518,13 +486,9 @@ struct StructDecl : ASTNode {
     std::vector<std::unique_ptr<FuncDecl>>   methods;
 };
 
-// ============================================================
-// PROGRAM (root node)
-// ============================================================
-
 struct Program : ASTNode {
     std::string             filename;
     std::vector<ASTNodePtr> declarations;
 };
 
-} // namespace Ume
+}

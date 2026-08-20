@@ -15,9 +15,6 @@
 
 namespace Ume::Graphics {
 
-// ─────────────────────────────────────────────────────────────
-// Shader Implementation
-// ─────────────────────────────────────────────────────────────
 unsigned int Shader::CompileShader(const std::string& source, unsigned int type) {
     const char* src = source.c_str();
     unsigned int id = glCreateShader(type);
@@ -121,9 +118,6 @@ void Shader::SetTexture(const std::string& name, const Texture* texture, int slo
     SetInt(name, slot);
 }
 
-// ─────────────────────────────────────────────────────────────
-// Texture Implementation
-// ─────────────────────────────────────────────────────────────
 Texture::Texture(unsigned int id, int width, int height) : id_(id), width_(width), height_(height) {}
 
 Texture* Texture::Create(int width, int height, const unsigned char* pixels, int channels) {
@@ -182,7 +176,7 @@ Texture* Texture::Load(const std::string& path) {
     stbi_image_free(data);
     return tex;
 #else
-    // stb_image not available — return nullptr (user can add stb_image to vendor/)
+    // stb_image not available — return nullptr
     (void)path;
     return nullptr;
 #endif
@@ -193,9 +187,6 @@ void Texture::Bind(unsigned int slot) const {
     glBindTexture(GL_TEXTURE_2D, id_);
 }
 
-// ─────────────────────────────────────────────────────────────
-// Mesh Implementation
-// ─────────────────────────────────────────────────────────────
 Mesh::Mesh() : vao_(0), vbo_(0), ebo_(0), vertex_count_(0), stride_(6) {}
 
 Mesh* Mesh::CreateQuad() {
@@ -414,9 +405,6 @@ void Mesh::Draw() const {
     }
 }
 
-// ─────────────────────────────────────────────────────────────
-// Window Implementation
-// ─────────────────────────────────────────────────────────────
 static bool glfw_initialized = false;
 
 Window::Window(int width, int height, const std::string& title)
@@ -579,15 +567,11 @@ void Window::DrawMesh(Mesh* mesh, Shader* shader) {
 void Window::DrawLine(float x1, float y1, float x2, float y2, float r, float g, float b) {
     if (!native_window_ || !default_shader_) return;
     
-    // We can compute length and angle and draw a rotated quad, or just use GL_LINES
-    // Let's use a quad rotated to form a line. It's cleaner in modern OpenGL.
     float dx = x2 - x1;
     float dy = y2 - y1;
     float length = std::sqrt(dx*dx + dy*dy);
     float angle = std::atan2(dy, dx);
     
-    // Wait, the default shader doesn't support rotation!
-    // Let's just create a quick VBO for the line.
     unsigned int vao, vbo;
     glGenVertexArrays(1, &vao);
     glGenBuffers(1, &vbo);
@@ -603,16 +587,6 @@ void Window::DrawLine(float x1, float y1, float x2, float y2, float r, float g, 
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
     
-    // We need a simple shader without uPos/uSize logic for raw screen coordinates, 
-    // or we can reuse default shader by setting uPos=0, uSize=1, and feeding raw pixel coords?
-    // Wait, if aPos is raw pixel coords, and uPos=0, uSize=1...
-    // The default shader formula: offset = aPos + (0.5, -0.5). pixelPos = offset.
-    // That means it modifies aPos. It expects aPos to be -0.5 to 0.5!
-    // So we can't easily reuse it for raw coordinates unless we add a uniform for "useRawCoords".
-    // Better: create a dedicated shader for raw coordinates, or just use uPos and uSize!
-    // For a line, uPos = (x1,y1), uSize = (dx,dy). 
-    // If aPos goes from (0,0) to (1,1)... 
-    // Let's just compile a static line shader the first time.
     static unsigned int lineShader = 0;
     if (lineShader == 0) {
         const std::string vs = R"(
@@ -633,10 +607,9 @@ void main() { FragColor = uColor; }
         )";
         Shader* s = Shader::Create(vs, fs);
         lineShader = s->GetID();
-        delete s; // We just keep the ID. Wait, no, deleting Shader deletes the program!
+        delete s;
     }
     
-    // Actually, creating a static Shader object is better.
     static Shader* rawShader = nullptr;
     if (!rawShader) {
         const std::string vs = R"(
@@ -881,9 +854,6 @@ void Window::EnableCullFace(bool enabled) {
     }
 }
 
-// ─────────────────────────────────────────────────────────────
-// Font Implementation
-// ─────────────────────────────────────────────────────────────
 Font::Font(Texture* atlas, void* chardata, float pixelHeight)
     : atlas_texture_(atlas), cdata_(chardata), pixel_height_(pixelHeight) {}
 
@@ -1134,9 +1104,6 @@ Mesh* Font::CreateTextMesh(const std::string& text, float scale) const {
     return Mesh::Create(verts.data(), verts.size(), inds.data(), inds.size(), 6);
 }
 
-// ─────────────────────────────────────────────────────────────
-// Window Text Rendering
-// ─────────────────────────────────────────────────────────────
 static Shader* g_text_shader = nullptr;
 
 void Window::DrawText(Font* font, const std::string& text, float x, float y, float r, float g, float b, float a, float scale) {
@@ -1205,4 +1172,4 @@ void Window::DrawTextDefault(const std::string& text, float x, float y, float r,
     DrawText(defaultFont, text, x, y, r, g, b, a, 1.0f);
 }
 
-} // namespace Ume::Graphics
+}

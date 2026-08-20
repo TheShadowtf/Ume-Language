@@ -46,4 +46,4 @@ private:
     static bool useColors_;
 };
 
-} // namespace Ume
+}

@@ -8,9 +8,7 @@
 
 namespace Ume {
 
-// ─────────────────────────────────────────────────────────────
 // Keyword table
-// ─────────────────────────────────────────────────────────────
 const std::unordered_map<std::string, TokenType> Lexer::kKeywords = {
     // Types
     {"int",        TokenType::KW_INT},
@@ -83,15 +81,9 @@ const std::unordered_map<std::string, TokenType> Lexer::kKeywords = {
     {"as",         TokenType::KW_AS},
 };
 
-// ─────────────────────────────────────────────────────────────
-// Constructor
-// ─────────────────────────────────────────────────────────────
 Lexer::Lexer(std::string source, std::string filename)
     : source_(std::move(source)), filename_(std::move(filename)) {}
 
-// ─────────────────────────────────────────────────────────────
-// Navigation helpers
-// ─────────────────────────────────────────────────────────────
 char Lexer::current() const {
     return isAtEnd() ? '\0' : source_[pos_];
 }
@@ -126,9 +118,6 @@ Token Lexer::errorToken(const std::string& msg) {
     return Token(TokenType::ERROR, msg, line_, column_, filename_);
 }
 
-// ─────────────────────────────────────────────────────────────
-// Whitespace / comments
-// ─────────────────────────────────────────────────────────────
 void Lexer::skipWhitespace() {
     while (!isAtEnd()) {
         char c = current();
@@ -159,9 +148,6 @@ void Lexer::skipBlockComment() {
     // unterminated block comment — not fatal for lexer
 }
 
-// ─────────────────────────────────────────────────────────────
-// Number literal
-// ─────────────────────────────────────────────────────────────
 Token Lexer::lexNumber() {
     int    startLine   = line_;
     int    startColumn = column_;
@@ -222,9 +208,6 @@ Token Lexer::lexNumber() {
     return Token(TokenType::INTEGER_LITERAL, num, startLine, startColumn, filename_);
 }
 
-// ─────────────────────────────────────────────────────────────
-// String literal
-// ─────────────────────────────────────────────────────────────
 Token Lexer::lexString() {
     int startLine = line_, startCol = column_;
     advance(); // opening "
@@ -279,9 +262,6 @@ Token Lexer::lexInterpolatedString() {
     return Token(TokenType::INTERP_STRING, raw, startLine, startCol, filename_);
 }
 
-// ─────────────────────────────────────────────────────────────
-// Char literal
-// ─────────────────────────────────────────────────────────────
 Token Lexer::lexChar() {
     int startLine = line_, startCol = column_;
     advance(); // opening '
@@ -305,9 +285,6 @@ Token Lexer::lexChar() {
     return Token(TokenType::CHAR_LITERAL, value, startLine, startCol, filename_);
 }
 
-// ─────────────────────────────────────────────────────────────
-// Identifier or keyword
-// ─────────────────────────────────────────────────────────────
 Token Lexer::lexIdentifierOrKeyword() {
     int startLine = line_, startCol = column_;
     std::string ident;
@@ -321,9 +298,6 @@ Token Lexer::lexIdentifierOrKeyword() {
     return Token(TokenType::IDENTIFIER, ident, startLine, startCol, filename_);
 }
 
-// ─────────────────────────────────────────────────────────────
-// Preprocessor directive  (#include "file.ume")
-// ─────────────────────────────────────────────────────────────
 Token Lexer::lexPreprocessorDirective() {
     int startLine = line_, startCol = column_;
     advance(); // '#'
@@ -388,9 +362,6 @@ Token Lexer::lexPreprocessorDirective() {
     return Token(TokenType::IDENTIFIER, "#" + dir, startLine, startCol, filename_);
 }
 
-// ─────────────────────────────────────────────────────────────
-// Operators & delimiters
-// ─────────────────────────────────────────────────────────────
 Token Lexer::lexOperatorOrDelimiter() {
     int startLine = line_, startCol = column_;
     char c = advance();
@@ -479,17 +450,11 @@ Token Lexer::lexOperatorOrDelimiter() {
     }
 }
 
-// ─────────────────────────────────────────────────────────────
-// Token::isAny
-// ─────────────────────────────────────────────────────────────
 bool Token::isAny(std::initializer_list<TokenType> types) const {
     for (auto t : types) if (type == t) return true;
     return false;
 }
 
-// ─────────────────────────────────────────────────────────────
-// Main tokenize loop
-// ─────────────────────────────────────────────────────────────
 std::vector<Token> Lexer::tokenize() {
     std::vector<Token> tokens;
 
@@ -531,9 +496,6 @@ std::vector<Token> Lexer::tokenize() {
     return tokens;
 }
 
-// ─────────────────────────────────────────────────────────────
-// Debug helper
-// ─────────────────────────────────────────────────────────────
 std::string Lexer::tokenTypeName(TokenType t) {
     switch (t) {
 #define CASE(x) case TokenType::x: return #x
@@ -579,4 +541,4 @@ std::string Lexer::tokenTypeName(TokenType t) {
     }
 }
 
-} // namespace Ume
+}
