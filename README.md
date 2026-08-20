@@ -12,7 +12,7 @@ Write expressive, high-productivity code — run at native machine speed.
 [![License: MIT](https://img.shields.io/badge/License-MIT-teal.svg)](LICENSE)
 [![Target: C++17 / C++20](https://img.shields.io/badge/target-C%2B%2B17%20%2F%20C%2B%2B20-blue.svg)](https://en.cppreference.com/w/cpp/17)
 [![Platform: Windows](https://img.shields.io/badge/platform-Windows%20x64-blueviolet.svg)]()
-[![Documentation: Wiki](https://img.shields.io/badge/docs-Wiki-green.svg)](docs/wiki/index.html)
+[![Documentation: Wiki](https://img.shields.io/badge/docs-Wiki-green.svg)](https://theshadowtf.github.io/Ume-Language/)
 
 </div>
 
@@ -423,32 +423,36 @@ Commands:
 
 ## 📚 Documentation & Guides
 
-Comprehensive documentation is available both offline in **[`docs/`](docs/wiki/index.html)** and via the **Node.js documentation server** in `ume-docs-node/`:
+Comprehensive documentation is available online at **[https://theshadowtf.github.io/Ume-Language/](https://theshadowtf.github.io/Ume-Language/)**:
 
-| Topic / Area | Documentation Page | Description |
+| Topic / Area | Documentation Guide | Description |
 | :--- | :--- | :--- |
-| **Getting Started** | [getting-started.html](docs/wiki/getting-started.html) | Installation, compiler build, Hello World, CLI |
-| **Projects & `ume.toml`** | [project-config.html](docs/wiki/project-config.html) | `ume.toml` specification, build targets, asset copy pipeline (`assets = "..."`) |
-| **Modules & Imports** | [modules.html](docs/wiki/modules.html) | `package`, `namespace`, selective imports (`import pkg.Symbol`), `#include` |
-| **Primitive Types** | [types.html](docs/wiki/types.html) | `int`, `double`, `bool`, `char`, `string`, `any`, nullable `T?` |
-| **Variables & Scope** | [variables.html](docs/wiki/variables.html) | `var`, `const`, explicit types, scoping rules |
-| **Functions** | [functions.html](docs/wiki/functions.html) | Parameters, return types, default values, overloading |
-| **Classes & OOP** | [classes.html](docs/wiki/classes.html) | Constructors, inheritance (`extends`), `super`, `this`, `abstract`, `static` |
-| **Interfaces & Structs** | [interfaces.html](docs/wiki/interfaces.html) | `interface`, `implements`, value-type `struct`, `enum` |
-| **Properties & Indexers**| [properties.html](docs/wiki/properties.html) | `get`/`set` properties, fat-arrow `=>`, custom indexers `this[i]` |
-| **Attributes & JSON** | [attributes.html](docs/wiki/attributes.html) | `[Serializable]`, `[JsonProperty]`, `.toJsonString()` |
-| **Exceptions** | [exceptions.html](docs/wiki/exceptions.html) | `try`, `catch`, `finally`, `throw`, custom exceptions |
-| **Collections** | [stdlib-collections.html](docs/wiki/stdlib-collections.html) | `List<T>`, `Map<K,V>`, `Set<T>`, `Stack`, `Queue` |
-| **Concurrency** | [stdlib-thread.html](docs/wiki/stdlib-thread.html) | `Thread`, `Mutex`, `ConditionVariable`, `AtomicInt`, `Task<T>` |
-| **Audio Engine** | [stdlib-audio.html](docs/wiki/stdlib-audio.html) | `AudioEngine`, `Sound` (playback, volume, looping) |
-| **Graphics & Windowing** | [stdlib-graphics.html](docs/wiki/stdlib-graphics.html) | OpenGL window, shaders, meshes, input handling |
-
-> **To run the interactive docs web app locally:**
-> ```bat
-> cd ume-docs-node
-> npm start
-> ```
-> Then open `http://localhost:3000` in your browser.
+| **Getting Started** | [Getting Started](https://theshadowtf.github.io/Ume-Language/wiki/getting-started.html) | Installation, compiler build, Hello World, CLI reference |
+| **Projects & `ume.toml`** | [Projects & ume.toml](https://theshadowtf.github.io/Ume-Language/wiki/project-config.html) | `ume.toml` specification, build targets, asset copy pipeline (`assets = "..."`) |
+| **Modules & Imports** | [Modules & Imports](https://theshadowtf.github.io/Ume-Language/wiki/modules.html) | `package`, `namespace`, selective imports (`import pkg.Symbol`), `#include` |
+| **Primitive Types** | [Primitive Types](https://theshadowtf.github.io/Ume-Language/wiki/types.html) | `int`, `double`, `bool`, `char`, `string`, `any`, nullable `T?` |
+| **Variables & Scope** | [Variables & Scope](https://theshadowtf.github.io/Ume-Language/wiki/variables.html) | `var`, `const`, explicit types, scoping rules |
+| **Strings & Text** | [Strings & Interpolation](https://theshadowtf.github.io/Ume-Language/wiki/strings.html) | `$"Hello {name}"`, escape sequences, string manipulation |
+| **Expressions** | [Expressions & Operators](https://theshadowtf.github.io/Ume-Language/wiki/expressions.html) | Arithmetic, comparison, logical, ternary conditional operator |
+| **Functions** | [Functions](https://theshadowtf.github.io/Ume-Language/wiki/functions.html) | Parameters, return types, default values, overloading |
+| **Control Flow** | [Control Flow](https://theshadowtf.github.io/Ume-Language/wiki/control-flow.html) | `if`/`else`, `while`, `do-while`, `foreach`, `switch`/`case` |
+| **Classes & OOP** | [Classes & OOP](https://theshadowtf.github.io/Ume-Language/wiki/classes.html) | Constructors, inheritance (`extends`), `super`, `this`, `abstract`, `static` |
+| **Interfaces & Structs** | [Interfaces & Abstract](https://theshadowtf.github.io/Ume-Language/wiki/interfaces.html) | `interface`, `implements`, abstract classes and methods |
+| **Enums & Structs** | [Enums & Structs](https://theshadowtf.github.io/Ume-Language/wiki/enums.html) | Value-type `struct`, auto and explicit `enum` definitions |
+| **Generics** | [Generics](https://theshadowtf.github.io/Ume-Language/wiki/generics.html) | Generic classes (`Box<T>`), multi-parameter generics (`Pair<K,V>`) |
+| **Properties & Indexers**| [Properties & Indexers](https://theshadowtf.github.io/Ume-Language/wiki/properties.html) | `get`/`set` properties, fat-arrow `=>`, custom indexers `this[i]` |
+| **Attributes & JSON** | [Attributes & JSON](https://theshadowtf.github.io/Ume-Language/wiki/attributes.html) | `[Serializable]`, `[JsonProperty]`, `.toJsonString()` |
+| **Exceptions** | [Exceptions & Unwinding](https://theshadowtf.github.io/Ume-Language/wiki/exceptions.html) | `try`, `catch`, `finally`, `throw`, custom exceptions |
+| **Lambdas & Closures** | [Lambdas & Closures](https://theshadowtf.github.io/Ume-Language/wiki/lambdas.html) | Arrow functions `(a, b) -> { }`, closure environment capture |
+| **Operator Overload** | [Operator Overloading](https://theshadowtf.github.io/Ume-Language/wiki/operators.html) | Custom operator implementations (`+`, `-`, `==`, `[]`) |
+| **Unsafe Blocks** | [Unsafe Memory](https://theshadowtf.github.io/Ume-Language/wiki/unsafe.html) | `unsafe { }`, raw pointers `T*`, `alloc<T>()`, `free()` |
+| **Collections** | [Standard Collections](https://theshadowtf.github.io/Ume-Language/wiki/stdlib-collections.html) | `List<T>`, `Map<K,V>`, `Set<T>`, `Stack`, `Queue`, `.filter()`, `.map()` |
+| **I/O & FileSystem** | [I/O & FileSystem](https://theshadowtf.github.io/Ume-Language/wiki/stdlib-io.html) | `Console`, `File.write()`, `File.readAll()`, `FileSystem` helpers |
+| **Concurrency** | [Concurrency & Threading](https://theshadowtf.github.io/Ume-Language/wiki/stdlib-thread.html) | `Thread`, `Mutex`, `ConditionVariable`, `AtomicInt`, `Task<T>` |
+| **Networking** | [Networking & HTTP](https://theshadowtf.github.io/Ume-Language/wiki/stdlib-net.html) | `HttpClient`, `HttpResponse`, URL encoding and query parsing |
+| **Audio Engine** | [Audio Engine](https://theshadowtf.github.io/Ume-Language/wiki/stdlib-audio.html) | `AudioEngine`, `Sound` (playback, volume, looping) |
+| **Graphics & Window** | [Graphics & Windowing](https://theshadowtf.github.io/Ume-Language/wiki/stdlib-graphics.html) | OpenGL window, shaders, meshes, colors, input handling |
+| **Vectors & Math** | [Vectors & Matrices](https://theshadowtf.github.io/Ume-Language/wiki/stdlib-vector.html) | `Vector2`, `Vector3`, `Matrix4`, linear algebra operations |
 
 ## 📄 License
 
