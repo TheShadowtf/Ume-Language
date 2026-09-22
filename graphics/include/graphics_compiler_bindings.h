@@ -192,19 +192,40 @@ struct Graphics {
         auto ptr = _extractWindow(w);
         return ptr ? ptr->GetAspectRatio() : 1.0f;
     }
+    template<typename W>
+    static std::vector<Float> windowGetContentScale(const W& w) {
+        auto ptr = _extractWindow(w);
+        float sx = 1.0f, sy = 1.0f;
+        if (ptr) ptr->GetContentScale(sx, sy);
+        return { sx, sy };
+    }
+    template<typename W>
+    static Int windowGetWindowWidth(const W& w) {
+        auto ptr = _extractWindow(w);
+        return ptr ? ptr->GetWindowWidth() : 0;
+    }
+    template<typename W>
+    static Int windowGetWindowHeight(const W& w) {
+        auto ptr = _extractWindow(w);
+        return ptr ? ptr->GetWindowHeight() : 0;
+    }
 
     // ── Drawing primitives
     template<typename W>
-    static void windowDrawLine(const W& w, Float x1, Float y1, Float x2, Float y2, Float r, Float g, Float b) {
-        if (auto ptr = _extractWindow(w)) ptr->DrawLine(x1, y1, x2, y2, r, g, b);
+    static void windowDrawLine(const W& w, Float x1, Float y1, Float x2, Float y2, Float r, Float g, Float b, Float a = 1.0f) {
+        if (auto ptr = _extractWindow(w)) ptr->DrawLine(x1, y1, x2, y2, r, g, b, a);
     }
     template<typename W>
-    static void windowDrawRect(const W& w, Float x, Float y, Float width, Float height, Float r, Float g, Float b) {
-        if (auto ptr = _extractWindow(w)) ptr->DrawRect(x, y, width, height, r, g, b);
+    static void windowDrawRect(const W& w, Float x, Float y, Float width, Float height, Float r, Float g, Float b, Float a = 1.0f) {
+        if (auto ptr = _extractWindow(w)) ptr->DrawRect(x, y, width, height, r, g, b, a);
     }
     template<typename W>
     static void windowDrawCircle(const W& w, Float x, Float y, Float radius, Float r, Float g, Float b, Int segments = 32) {
-        if (auto ptr = _extractWindow(w)) ptr->DrawCircle(x, y, radius, r, g, b, segments);
+        if (auto ptr = _extractWindow(w)) ptr->DrawCircle(x, y, radius, r, g, b, (int)segments);
+    }
+    template<typename W>
+    static void windowDrawCircle(const W& w, Float x, Float y, Float radius, Float r, Float g, Float b, Float a, Int segments = 32) {
+        if (auto ptr = _extractWindow(w)) ptr->DrawCircle(x, y, radius, r, g, b, a, (int)segments);
     }
 
     // ── Shader

@@ -136,8 +136,9 @@ void Evaluator::registerGraphics(std::shared_ptr<Environment> env) {
     graphicsObj->fields["windowDrawLine"] = mkFn("windowDrawLine", [](std::vector<Value> args) {
         auto w = args.empty() ? nullptr : GraphicsWrapper::GetWindowFromID((int)args[0].intVal);
         if (w && args.size() >= 8) {
+            float a = args.size() >= 9 ? (float)args[8].toDouble() : 1.0f;
             w->DrawLine((float)args[1].toDouble(), (float)args[2].toDouble(), (float)args[3].toDouble(), (float)args[4].toDouble(),
-                        (float)args[5].toDouble(), (float)args[6].toDouble(), (float)args[7].toDouble());
+                        (float)args[5].toDouble(), (float)args[6].toDouble(), (float)args[7].toDouble(), a);
         }
         return Value::makeNull();
     });
@@ -145,8 +146,9 @@ void Evaluator::registerGraphics(std::shared_ptr<Environment> env) {
     graphicsObj->fields["windowDrawRect"] = mkFn("windowDrawRect", [](std::vector<Value> args) {
         auto w = args.empty() ? nullptr : GraphicsWrapper::GetWindowFromID((int)args[0].intVal);
         if (w && args.size() >= 8) {
+            float a = args.size() >= 9 ? (float)args[8].toDouble() : 1.0f;
             w->DrawRect((float)args[1].toDouble(), (float)args[2].toDouble(), (float)args[3].toDouble(), (float)args[4].toDouble(),
-                        (float)args[5].toDouble(), (float)args[6].toDouble(), (float)args[7].toDouble());
+                        (float)args[5].toDouble(), (float)args[6].toDouble(), (float)args[7].toDouble(), a);
         }
         return Value::makeNull();
     });
@@ -154,9 +156,16 @@ void Evaluator::registerGraphics(std::shared_ptr<Environment> env) {
     graphicsObj->fields["windowDrawCircle"] = mkFn("windowDrawCircle", [](std::vector<Value> args) {
         auto w = args.empty() ? nullptr : GraphicsWrapper::GetWindowFromID((int)args[0].intVal);
         if (w && args.size() >= 7) {
-            int seg = args.size() >= 8 ? (int)args[7].intVal : 32;
-            w->DrawCircle((float)args[1].toDouble(), (float)args[2].toDouble(), (float)args[3].toDouble(),
-                          (float)args[4].toDouble(), (float)args[5].toDouble(), (float)args[6].toDouble(), seg);
+            if (args.size() >= 9) {
+                float a = (float)args[7].toDouble();
+                int seg = (int)args[8].intVal;
+                w->DrawCircle((float)args[1].toDouble(), (float)args[2].toDouble(), (float)args[3].toDouble(),
+                              (float)args[4].toDouble(), (float)args[5].toDouble(), (float)args[6].toDouble(), a, seg);
+            } else {
+                int seg = args.size() >= 8 ? (int)args[7].intVal : 32;
+                w->DrawCircle((float)args[1].toDouble(), (float)args[2].toDouble(), (float)args[3].toDouble(),
+                              (float)args[4].toDouble(), (float)args[5].toDouble(), (float)args[6].toDouble(), seg);
+            }
         }
         return Value::makeNull();
     });
@@ -296,6 +305,26 @@ void Evaluator::registerGraphics(std::shared_ptr<Environment> env) {
     graphicsObj->fields["windowGetAspectRatio"] = mkFn("windowGetAspectRatio", [](std::vector<Value> args) {
         auto w = args.empty() ? nullptr : GraphicsWrapper::GetWindowFromID((int)args[0].intVal);
         return Value::makeFloat(w ? w->GetAspectRatio() : 1.0f);
+    });
+
+    graphicsObj->fields["windowGetContentScale"] = mkFn("windowGetContentScale", [](std::vector<Value> args) -> Value {
+        auto w = args.empty() ? nullptr : GraphicsWrapper::GetWindowFromID((int)args[0].intVal);
+        float sx = 1.0f, sy = 1.0f;
+        if (w) w->GetContentScale(sx, sy);
+        auto arr = std::make_shared<ArrayInstance>();
+        arr->elements.push_back(Value::makeFloat(sx));
+        arr->elements.push_back(Value::makeFloat(sy));
+        return Value::makeArray(arr);
+    });
+
+    graphicsObj->fields["windowGetWindowWidth"] = mkFn("windowGetWindowWidth", [](std::vector<Value> args) {
+        auto w = args.empty() ? nullptr : GraphicsWrapper::GetWindowFromID((int)args[0].intVal);
+        return Value::makeInt(w ? w->GetWindowWidth() : 0);
+    });
+
+    graphicsObj->fields["windowGetWindowHeight"] = mkFn("windowGetWindowHeight", [](std::vector<Value> args) {
+        auto w = args.empty() ? nullptr : GraphicsWrapper::GetWindowFromID((int)args[0].intVal);
+        return Value::makeInt(w ? w->GetWindowHeight() : 0);
     });
 
     // Mesh functions

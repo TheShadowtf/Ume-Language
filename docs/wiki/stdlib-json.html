@@ -128,21 +128,23 @@ public class User {
     public double score;   // uses field name &quot;score&quot; as JSON key
 }
 
-func void main() {
-    var u = new User();
-    u.id    = 1;
-    u.name  = &quot;Alice&quot;;
-    u.score = 98.5;
+public class Main {
+    public static func void main() {
+        var u = new User();
+        u.id    = 1;
+        u.name  = &quot;Alice&quot;;
+        u.score = 98.5;
 
-    // Serialize → JSON string
-    string json = u.toJsonString();
-    Console.println(json);
-    // {&quot;user_id&quot;:1,&quot;username&quot;:&quot;Alice&quot;,&quot;score&quot;:98.5}
+        // Serialize → JSON string
+        string json = u.toJsonString();
+        Console.println(json);
+        // {&quot;user_id&quot;:1,&quot;username&quot;:&quot;Alice&quot;,&quot;score&quot;:98.5}
 
-    // Deserialize ← JSON string
-    var u2 = User.fromJsonString(json);
-    Console.println(u2.name);    // Alice
-    Console.println(u2.score);   // 98.5
+        // Deserialize ← JSON string
+        var u2 = User.fromJsonString(json);
+        Console.println(u2.name);    // Alice
+        Console.println(u2.score);   // 98.5
+    }
 }</code></pre>
 
 <h2 id="attributes">The two attributes</h2>

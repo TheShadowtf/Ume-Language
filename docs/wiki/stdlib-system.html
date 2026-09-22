@@ -137,34 +137,36 @@
 </table>
 <pre><code class="language-ume">import std.system.*;
 
-func void main() {
-    // Environment
-    string? home = System.getEnv(&quot;HOME&quot;);
-    if (home != null) {
-        Console.println(&quot;HOME = &quot; + home);
+public class Main {
+    public static func void main() {
+        // Environment
+        string? home = System.getEnv(&quot;HOME&quot;);
+        if (home != null) {
+            Console.println(&quot;HOME = &quot; + home);
+        }
+
+        // Platform
+        Console.println(&quot;Running on &quot; + System.platform());
+
+        // Current working directory
+        Console.println(&quot;CWD: &quot; + System.cwd());
+
+        // Command-line arguments
+        List&lt;string&gt; args = System.args();
+        foreach (string a in args) {
+            Console.println(&quot;arg: &quot; + a);
+        }
+
+        // Timing
+        long start = System.currentTimeMillis();
+        doExpensiveWork();
+        long elapsed = System.currentTimeMillis() - start;
+        Console.println($&quot;took {elapsed} ms&quot;);
+
+        // Shell execution (returns exit code)
+        int rc = System.exec(&quot;echo hello&quot;);
+        Console.println(&quot;exit code: &quot; + rc);
     }
-
-    // Platform
-    Console.println(&quot;Running on &quot; + System.platform());
-
-    // Current working directory
-    Console.println(&quot;CWD: &quot; + System.cwd());
-
-    // Command-line arguments
-    List&lt;string&gt; args = System.args();
-    foreach (string a in args) {
-        Console.println(&quot;arg: &quot; + a);
-    }
-
-    // Timing
-    long start = System.currentTimeMillis();
-    doExpensiveWork();
-    long elapsed = System.currentTimeMillis() - start;
-    Console.println($&quot;took {elapsed} ms&quot;);
-
-    // Shell execution (returns exit code)
-    int rc = System.exec(&quot;echo hello&quot;);
-    Console.println(&quot;exit code: &quot; + rc);
 }</code></pre>
 
 <h2 id="filesystem"><code>FileSystem</code></h2>
@@ -193,33 +195,36 @@ func void main() {
 <pre><code class="language-ume">import std.system.*;
 import std.collections.*;
 
-func void main() {
-    // Create a directory tree
-    string dir = &quot;output/data&quot;;
-    if (!FileSystem.exists(dir)) {
-        FileSystem.createDirs(dir);
-    }
-
-    // Write a file
-    FileSystem.copy(&quot;source.txt&quot;, FileSystem.join(dir, &quot;copy.txt&quot;));
-
-    // List directory contents
-    List&lt;string&gt; entries = FileSystem.listDir(dir);
-    foreach (string entry in entries) {
-        string full = FileSystem.join(dir, entry);
-        if (FileSystem.isFile(full)) {
-            long size = FileSystem.fileSize(full);
-            Console.println($&quot;{entry} ({size} bytes)&quot;);
-        } else {
-            Console.println(entry + &quot;/&quot;);
+public class Main {
+    public static func void main() {
+        // Create a directory tree
+        string dir = &quot;output/data&quot;;
+        if (!FileSystem.exists(dir)) {
+            FileSystem.createDirs(dir);
         }
-    }
 
-    // Path manipulation
-    string path = &quot;src/main.ume&quot;;
-    Console.println(FileSystem.filename(path));    // main.ume
-    Console.println(FileSystem.extension(path));   // .ume
-    Console.println(FileSystem.parentDir(path));   // src</code></pre>
+        // Write a file
+        FileSystem.copy(&quot;source.txt&quot;, FileSystem.join(dir, &quot;copy.txt&quot;));
+
+        // List directory contents
+        List&lt;string&gt; entries = FileSystem.listDir(dir);
+        foreach (string entry in entries) {
+            string full = FileSystem.join(dir, entry);
+            if (FileSystem.isFile(full)) {
+                long size = FileSystem.fileSize(full);
+                Console.println($&quot;{entry} ({size} bytes)&quot;);
+            } else {
+                Console.println(entry + &quot;/&quot;);
+            }
+        }
+
+        // Path manipulation
+        string path = &quot;src/main.ume&quot;;
+        Console.println(FileSystem.filename(path));    // main.ume
+        Console.println(FileSystem.extension(path));   // .ume
+        Console.println(FileSystem.parentDir(path));   // src
+    }
+}</code></pre>
 
 <p><a class="next-link" href="stdlib-graphics.html">Graphics →</a></p>
 </main>

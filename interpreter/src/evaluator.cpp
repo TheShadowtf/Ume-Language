@@ -132,19 +132,24 @@ bool Value::operator<(const Value& other) const {
 }
 
 const char* UmeRuntimeException::what() const noexcept {
-    static std::string msg;
-    if (value.isObject() && value.objVal) {
-        auto it = value.objVal->fields.find("message");
-        if (it != value.objVal->fields.end())
-            msg = it->second.toString();
-        else
-            msg = value.toString();
-    } else if (value.isString()) {
-        msg = value.strVal;
-    } else {
-        msg = value.toString();
+    if (msgCache_.empty()) {
+        try {
+            if (value.isObject() && value.objVal) {
+                auto it = value.objVal->fields.find("message");
+                if (it != value.objVal->fields.end())
+                    msgCache_ = it->second.toString();
+                else
+                    msgCache_ = value.toString();
+            } else if (value.isString()) {
+                msgCache_ = value.strVal;
+            } else {
+                msgCache_ = value.toString();
+            }
+        } catch (...) {
+            return "UmeRuntimeException";
+        }
     }
-    return msg.c_str();
+    return msgCache_.c_str();
 }
 
 static void throwRuntimeError(const std::string& msg,
@@ -187,7 +192,29 @@ int Evaluator::run(const Program& program) {
         }
     };
 
-    // 1. Global func main() — plain script style
+    // 1. REPL wrapper: __repl__() — called by the REPL
+    if (global_->has("__repl__")) {
+        Value& fn = global_->get("__repl__");
+        if (fn.isFunction()) callFunction(*fn.funcVal, {});
+        return 0;
+    }
+
+    // 2. Class-based entry: look for class Main (or *.Main)
+    for (auto& [clsName, cls] : classDefs_) {
+        if (clsName == "Main" || (clsName.size() >= 5 && clsName.compare(clsName.size() - 5, 5, ".Main") == 0)) {
+            for (auto& m : cls->methods) {
+                if (m->name == "main") {
+                    if (m->isStatic) {
+                        return callStaticDecl(m.get(), clsName);
+                    } else {
+                        throwRuntimeError("Entry point 'main' in class '" + clsName + "' must be declared static ('public static func void main()').");
+                    }
+                }
+            }
+        }
+    }
+
+    // 3. Global func main() — plain script style
     if (global_->has("main")) {
         Value& mainVal = global_->get("main");
         if (mainVal.isFunction()) {
@@ -202,53 +229,8 @@ int Evaluator::run(const Program& program) {
         }
     }
 
-    // 2. REPL wrapper: __repl__() — called by the REPL
-    if (global_->has("__repl__")) {
-        Value& fn = global_->get("__repl__");
-        if (fn.isFunction()) callFunction(*fn.funcVal, {});
-        return 0;
-    }
-
-    // 3. Class-based entry: look for class Main (or *.Main)
-    for (auto& [clsName, cls] : classDefs_) {
-        if (clsName == "Main" || (clsName.size() >= 5 && clsName.compare(clsName.size() - 5, 5, ".Main") == 0)) {
-            for (auto& m : cls->methods) {
-                if (m->name == "main") {
-                    if (m->isStatic) {
-                        return callStaticDecl(m.get(), clsName);
-                    } else {
-                        auto obj = std::make_shared<ObjectInstance>();
-                        obj->className = cls->name;
-                        obj->classDef = cls;
-                        instantiateFields(*obj, *cls, global_);
-                        Value thisVal = Value::makeObject(obj);
-                        Value res = callMethod(thisVal, "main", {}, global_);
-                        return res.isInt() ? static_cast<int>(res.intVal) : 0;
-                    }
-                }
-            }
-        }
-    }
-
-    // 4. Fallback: any class that has a main() method
-    for (auto& [clsName, cls] : classDefs_) {
-        for (auto& m : cls->methods) {
-            if (m->name == "main") {
-                if (m->isStatic) {
-                    return callStaticDecl(m.get(), clsName);
-                } else {
-                    auto obj = std::make_shared<ObjectInstance>();
-                    obj->className = cls->name;
-                    obj->classDef = cls;
-                    instantiateFields(*obj, *cls, global_);
-                    Value thisVal = Value::makeObject(obj);
-                    Value res = callMethod(thisVal, "main", {}, global_);
-                    return res.isInt() ? static_cast<int>(res.intVal) : 0;
-                }
-            }
-        }
-    }
-
+    // 4. No entry point found
+    throwRuntimeError("No entry point found. Program must define 'public static func void main()' in class Main or a top-level 'func void main()'.");
     return 0;
 }
 
@@ -266,11 +248,11 @@ Value Evaluator::eval(const ASTNode& node, std::shared_ptr<Environment> env) {
         if (n->name == "null")  return Value::makeNull();
         if (n->name == "true")  return Value::makeBool(true);
         if (n->name == "false") return Value::makeBool(false);
-        if (env->has(n->name)) return env->get(n->name);
+        if (Value* v = env->lookup(n->name)) return *v;
         
         // 1. Check instance fields/methods (this)
-        if (env->has("__this")) {
-            Value& tv = env->get("__this");
+        if (Value* tvPtr = env->lookup("__this")) {
+            Value& tv = *tvPtr;
             if (tv.isObject() && tv.objVal) {
                 auto fit = tv.objVal->fields.find(n->name);
                 if (fit != tv.objVal->fields.end()) return fit->second;
@@ -289,16 +271,16 @@ Value Evaluator::eval(const ASTNode& node, std::shared_ptr<Environment> env) {
                 }
                 // Check class static fields via __this__ className
                 std::string qk = tv.objVal->className + "." + n->name;
-                if (global_->has(qk)) return global_->get(qk);
+                if (Value* gv = global_->lookup(qk)) return *gv;
             }
         }
         
         // 2. Check static fields/methods (current class context)
-        if (env->has("__class__")) {
-            Value& cv = env->get("__class__");
+        if (Value* cvPtr = env->lookup("__class__")) {
+            Value& cv = *cvPtr;
             if (cv.isString()) {
                 std::string qk = cv.strVal + "." + n->name;
-                if (global_->has(qk)) return global_->get(qk);
+                if (Value* gv = global_->lookup(qk)) return *gv;
                 
                 auto cit = classDefs_.find(cv.strVal);
                 if (cit != classDefs_.end()) {
@@ -882,8 +864,8 @@ Value Evaluator::evalVarDecl(const VarDeclStmt& stmt, std::shared_ptr<Environmen
             val.objVal->className = stmt.type.name;
     }
 
-    if (env->has("__this")) {
-        Value& tv = env->get("__this");
+    if (Value* tvPtr = env->lookup("__this")) {
+        Value& tv = *tvPtr;
         if (tv.isObject() && tv.objVal) {
             auto& fields = tv.objVal->fields;
             if (fields.count(stmt.name)) { 
@@ -893,11 +875,11 @@ Value Evaluator::evalVarDecl(const VarDeclStmt& stmt, std::shared_ptr<Environmen
         }
     }
     // Check if it's a static field
-    if (env->has("__class__")) {
-        Value& cv = env->get("__class__");
+    if (Value* cvPtr = env->lookup("__class__")) {
+        Value& cv = *cvPtr;
         if (cv.isString()) {
             std::string qk = cv.strVal + "." + stmt.name;
-            if (global_->has(qk)) { 
+            if (global_->lookup(qk)) { 
                 global_->assign(qk, val); 
                 return Value::makeNull(); 
             }
@@ -1011,8 +993,12 @@ Value Evaluator::evalSwitch(const SwitchStmt& stmt, std::shared_ptr<Environment>
 }
 
 Value Evaluator::evalTryCatch(const TryCatchStmt& stmt, std::shared_ptr<Environment> env) {
+    bool finallyRan = false;
     auto runFinally = [&]() {
-        if (stmt.finallyBody) eval(*stmt.finallyBody, env);
+        if (!finallyRan && stmt.finallyBody) {
+            finallyRan = true;
+            eval(*stmt.finallyBody, env);
+        }
     };
 
     try {
@@ -1120,6 +1106,7 @@ Value Evaluator::evalUnary(const UnaryExpr& expr, std::shared_ptr<Environment> e
             int64_t delta = (expr.op == "++") ? 1 : -1;
             if (ref.isInt())   { ref.intVal   += delta; return ref; }
             if (ref.isFloat()) { ref.floatVal += delta; return ref; }
+            if (ref.isNull())  { ref = Value::makeInt(delta); return ref; }
         }
     } else {
         // Postfix ++ / --
@@ -1127,8 +1114,9 @@ Value Evaluator::evalUnary(const UnaryExpr& expr, std::shared_ptr<Environment> e
             Value& ref = resolveAssignTarget(*expr.operand, env);
             Value old  = ref;
             int64_t delta = (expr.op == "++") ? 1 : -1;
-            if (ref.isInt())   ref.intVal   += delta;
-            if (ref.isFloat()) ref.floatVal += delta;
+            if (ref.isInt())        ref.intVal   += delta;
+            else if (ref.isFloat()) ref.floatVal += delta;
+            else if (ref.isNull())  { old = Value::makeInt(0); ref = Value::makeInt(delta); }
             return old;
         }
     }
@@ -1137,28 +1125,34 @@ Value Evaluator::evalUnary(const UnaryExpr& expr, std::shared_ptr<Environment> e
 
 Value& Evaluator::resolveAssignTarget(const ASTNode& node, std::shared_ptr<Environment> env) {
     if (auto* id = dynamic_cast<const IdentifierExpr*>(&node)) {
-        if (env->has(id->name)) return env->get(id->name);
-        if (global_->has(id->name)) return global_->get(id->name);
-        // Implicit __this field access
-        if (env->has("__this")) {
-            Value& tv = env->get("__this");
+        // 1. Check instance fields (__this) FIRST (matching evalAssign and eval(IdentifierExpr))
+        if (Value* tvPtr = env->lookup("__this")) {
+            Value& tv = *tvPtr;
             if (tv.isObject() && tv.objVal) {
                 auto& fields = tv.objVal->fields;
-                if (fields.count(id->name)) return fields[id->name];
+                auto fit = fields.find(id->name);
+                if (fit != fields.end()) return fit->second;
                 // Class static field
                 std::string qk = tv.objVal->className + "." + id->name;
-                if (global_->has(qk)) return global_->get(qk);
+                if (Value* gv = global_->lookup(qk)) return *gv;
             }
         }
-        // Static field via __class__
-        if (env->has("__class__")) {
-            Value& cv = env->get("__class__");
+        // 2. Static field via __class__
+        if (Value* cvPtr = env->lookup("__class__")) {
+            Value& cv = *cvPtr;
             if (cv.isString()) {
                 std::string qk = cv.strVal + "." + id->name;
-                if (global_->has(qk)) return global_->get(qk);
+                if (Value* gv = global_->lookup(qk)) return *gv;
             }
         }
-        throwRuntimeError("Cannot assign to undefined: " + id->name, node);
+        // 3. Local variables
+        if (Value* lv = env->lookup(id->name)) return *lv;
+        // 4. Global variables
+        if (Value* gv = global_->lookup(id->name)) return *gv;
+
+        // 5. Fallback: declare as local (consistent with evalAssign)
+        env->declare(id->name, Value::makeInt(0));
+        return *env->lookup(id->name);
     }
     if (auto* ma = dynamic_cast<const MemberAccessExpr*>(&node)) {
         // Static class field (ClassName.field)
@@ -1170,17 +1164,13 @@ Value& Evaluator::resolveAssignTarget(const ASTNode& node, std::shared_ptr<Envir
                 return global_->get(key);
             }
         }
-        Value& obj = resolveAssignTarget(*ma->object, env);
+        Value obj = eval(*ma->object, env);
         if (obj.isObject() && obj.objVal) {
             // Check for property setter
             const ClassDecl* cls = obj.objVal->classDef ? obj.objVal->classDef : findClass(obj.objVal->className);
             if (cls) {
                 for (auto& prop : cls->properties) {
                     if (prop->name == ma->member) {
-                        if (prop->hasSet && prop->setDecl) {
-                            // Call the setter
-                            // (handled by evalAssign which calls this for the target)
-                        }
                         if (!prop->hasSet) {
                             throwRuntimeError("Property '" + ma->member + "' is read-only", node);
                         }
@@ -1195,10 +1185,14 @@ Value& Evaluator::resolveAssignTarget(const ASTNode& node, std::shared_ptr<Envir
         }
     }
     if (auto* ix = dynamic_cast<const IndexExpr*>(&node)) {
-        Value& obj = resolveAssignTarget(*ix->object, env);
-        Value idx  = eval(*ix->index, env);
-        if (obj.isArray() && idx.isInt())
+        Value obj = eval(*ix->object, env);
+        Value idx = eval(*ix->index, env);
+        if (obj.isArray() && idx.isInt()) {
+            if (idx.intVal < 0 || static_cast<size_t>(idx.intVal) >= obj.arrVal->elements.size()) {
+                throwRuntimeError("Array index out of bounds: " + std::to_string(idx.intVal), node);
+            }
             return obj.arrVal->elements[static_cast<size_t>(idx.intVal)];
+        }
     }
     // Dereference assignment: *ptr = value
     if (auto* de = dynamic_cast<const DerefExpr*>(&node)) {
@@ -1222,35 +1216,36 @@ Value Evaluator::evalAssign(const AssignExpr& expr, std::shared_ptr<Environment>
     // Assign
     if (auto* id = dynamic_cast<const IdentifierExpr*>(expr.target.get())) {
         // 1. Check instance fields (this) FIRST
-        if (env->has("__this")) {
-            Value& tv = env->get("__this");
+        if (Value* tvPtr = env->lookup("__this")) {
+            Value& tv = *tvPtr;
             if (tv.isObject() && tv.objVal) {
                 auto& fields = tv.objVal->fields;
-                if (fields.count(id->name)) { 
-                    fields[id->name] = newVal; 
+                auto fit = fields.find(id->name);
+                if (fit != fields.end()) { 
+                    fit->second = newVal; 
                     return newVal; 
                 }
             }
         }
         // 2. Check static fields (__class__)
-        if (env->has("__class__")) {
-            Value& cv = env->get("__class__");
+        if (Value* cvPtr = env->lookup("__class__")) {
+            Value& cv = *cvPtr;
             if (cv.isString()) {
                 std::string qk = cv.strVal + "." + id->name;
-                if (global_->has(qk)) { 
-                    global_->assign(qk, newVal); 
+                if (Value* gv = global_->lookup(qk)) { 
+                    *gv = newVal; 
                     return newVal; 
                 }
             }
         }
         // 3. Check local variables
-        if (env->has(id->name)) { 
-            env->assign(id->name, newVal); 
+        if (Value* lv = env->lookup(id->name)) { 
+            *lv = newVal; 
             return newVal; 
         }
         // 4. Check global variables
-        if (global_->has(id->name)) { 
-            global_->assign(id->name, newVal); 
+        if (Value* gv = global_->lookup(id->name)) { 
+            *gv = newVal; 
             return newVal; 
         }
         // 5. Fallback: declare as local
@@ -1295,8 +1290,12 @@ Value Evaluator::evalAssign(const AssignExpr& expr, std::shared_ptr<Environment>
         Value obj = eval(*ix->object, env);
         if (obj.isArray()) {
             Value idx = eval(*ix->index, env);
-            if (idx.isInt())
+            if (idx.isInt()) {
+                if (idx.intVal < 0 || static_cast<size_t>(idx.intVal) >= obj.arrVal->elements.size()) {
+                    throwRuntimeError("Array index out of bounds: " + std::to_string(idx.intVal), expr);
+                }
                 obj.arrVal->elements[static_cast<size_t>(idx.intVal)] = newVal;
+            }
         } else if (obj.isObject() && obj.objVal) {
             const ClassDecl* cls = findClass(obj.objVal->className);
             if (cls) {
@@ -1369,7 +1368,7 @@ Value Evaluator::evalCall(const CallExpr& expr, std::shared_ptr<Environment> env
                     auto newObj = std::make_shared<ObjectInstance>();
                     newObj->className = clsPtr->name;
                     newObj->classDef = clsPtr;
-                    instantiateFields(*newObj, *clsPtr, env);
+                    instantiateFields(newObj, *clsPtr, env);
                     for (auto& f : clsPtr->fields) {
                         size_t p = jsonStr.find("\"" + f->name + "\":");
                         if (p == std::string::npos) {
@@ -1456,10 +1455,10 @@ Value Evaluator::evalCall(const CallExpr& expr, std::shared_ptr<Environment> env
                         for (auto& a : expr.args) args.push_back(eval(*a, env));
                         auto sit = classDefs_.find(superName);
                         if (sit != classDefs_.end()) {
-                            runConstructor(obj, *sit->second, std::move(args), env);
+                            runConstructor(thisVal.objVal, *sit->second, std::move(args), env);
                         } else if (!args.empty()) {
                             // Unknown base class (e.g. Exception): store first arg as message
-                            obj.fields["message"] = args[0];
+                            thisVal.objVal->fields["message"] = args[0];
                         }
                     }
                 }
@@ -1470,8 +1469,7 @@ Value Evaluator::evalCall(const CallExpr& expr, std::shared_ptr<Environment> env
         if (id->name == "this" && env->has("__this")) {
             Value& thisVal = env->get("__this");
             if (thisVal.isObject() && thisVal.objVal) {
-                auto& obj = *thisVal.objVal;
-                std::string currentClass = obj.className;
+                std::string currentClass = thisVal.objVal->className;
                 if (env->has("__class__")) {
                     Value& cv = env->get("__class__");
                     if (cv.isString()) currentClass = cv.strVal;
@@ -1480,7 +1478,7 @@ Value Evaluator::evalCall(const CallExpr& expr, std::shared_ptr<Environment> env
                 if (cit != classDefs_.end()) {
                     std::vector<Value> args;
                     for (auto& a : expr.args) args.push_back(eval(*a, env));
-                    runConstructor(obj, *cit->second, std::move(args), env);
+                    runConstructor(thisVal.objVal, *cit->second, std::move(args), env);
                 }
             }
             return Value::makeNull();
@@ -1554,7 +1552,7 @@ Value Evaluator::evalCall(const CallExpr& expr, std::shared_ptr<Environment> env
                 auto newObj = std::make_shared<ObjectInstance>();
                 newObj->className = cls->name;
                 newObj->classDef = cls;
-                instantiateFields(*newObj, *cls, env);
+                instantiateFields(newObj, *cls, env);
                 for (auto& f : cls->fields) {
                     size_t p = jsonStr.find("\"" + f->name + "\":");
                     if (p == std::string::npos) {
@@ -2040,30 +2038,53 @@ Value Evaluator::evalNew(const NewExpr& expr, std::shared_ptr<Environment> env) 
         FuncPtr task = expr.args.empty() ? nullptr : eval(*expr.args[0], env).funcVal;
         auto obj = std::make_shared<ObjectInstance>();
         obj->className = "Thread";
-        auto tHandle = std::make_shared<std::thread>();
+
+        struct ThreadControl {
+            std::thread th;
+            std::mutex mtx;
+            std::atomic<bool> alive{false};
+            ~ThreadControl() {
+                if (th.joinable()) {
+                    try { th.detach(); } catch (...) {}
+                }
+            }
+        };
+        auto tCtrl = std::make_shared<ThreadControl>();
+
         obj->fields["sleep"] = mkFn("sleep", [](std::vector<Value> args) -> Value {
             int64_t ms = args.empty() ? 0 : args[0].intVal;
             std::this_thread::sleep_for(std::chrono::milliseconds(ms));
             return Value::makeNull();
         });
-        obj->fields["start"] = mkFn("start", [tHandle, task, this](std::vector<Value>) -> Value {
-            // Do not ask, I have no idea why it does not work and neither do I know how to fix it so I will just leave it like this.
-            /*
-            if (task) {
-                *tHandle = std::thread([this, task]() {
-                    try { callFunction(*task, {}); }
-                    catch (...) { }
+        obj->fields["start"] = mkFn("start", [tCtrl, task, this](std::vector<Value>) -> Value {
+            if (!task) return Value::makeNull();
+            std::lock_guard<std::mutex> lock(tCtrl->mtx);
+            if (!tCtrl->th.joinable() && !tCtrl->alive.load()) {
+                tCtrl->alive = true;
+                tCtrl->th = std::thread([this, task, tCtrl]() {
+                    try {
+                        callFunction(*task, {});
+                    } catch (...) {}
+                    tCtrl->alive = false;
                 });
             }
-            */
             return Value::makeNull();
         });
-        obj->fields["join"] = mkFn("join", [tHandle](std::vector<Value>) -> Value {
-            if (tHandle->joinable()) tHandle->join();
+        obj->fields["join"] = mkFn("join", [tCtrl](std::vector<Value>) -> Value {
+            std::thread tToJoin;
+            {
+                std::lock_guard<std::mutex> lock(tCtrl->mtx);
+                if (tCtrl->th.joinable()) {
+                    tToJoin = std::move(tCtrl->th);
+                }
+            }
+            if (tToJoin.joinable()) {
+                try { tToJoin.join(); } catch (...) {}
+            }
             return Value::makeNull();
         });
-        obj->fields["isAlive"] = mkFn("isAlive", [tHandle](std::vector<Value>) -> Value {
-            return Value::makeBool(tHandle->joinable());
+        obj->fields["isAlive"] = mkFn("isAlive", [tCtrl](std::vector<Value>) -> Value {
+            return Value::makeBool(tCtrl->alive.load());
         });
         return Value::makeObject(obj);
     }
@@ -2268,14 +2289,14 @@ Value Evaluator::evalNew(const NewExpr& expr, std::shared_ptr<Environment> env) 
         auto obj = std::make_shared<ObjectInstance>();
         obj->className = "Exception";
         obj->classDef  = cls;
-        instantiateFields(*obj, *cls, env);
+        instantiateFields(obj, *cls, env);
         if (!expr.args.empty()) {
             Value msg = eval(*expr.args[0], env);
             obj->fields["message"] = msg;
         }
         std::vector<Value> args;
         for (auto& a : expr.args) args.push_back(eval(*a, env));
-        try { runConstructor(*obj, *cls, std::move(args), env); }
+        try { runConstructor(obj, *cls, std::move(args), env); }
         catch (...) { /* constructor errors shouldn't crash throw */ }
         return Value::makeObject(obj);
     }
@@ -2285,22 +2306,23 @@ Value Evaluator::evalNew(const NewExpr& expr, std::shared_ptr<Environment> env) 
     obj->classDef  = cls;
 
     // Initialize fields from class hierarchy
-    instantiateFields(*obj, *cls, env);
+    instantiateFields(obj, *cls, env);
 
     // Evaluate constructor args
     std::vector<Value> args;
     for (auto& a : expr.args) args.push_back(eval(*a, env));
 
     // Run constructor
-    runConstructor(*obj, *cls, std::move(args), env);
+    runConstructor(obj, *cls, std::move(args), env);
 
     return Value::makeObject(obj);
 }
 
-void Evaluator::instantiateFields(ObjectInstance& obj, const ClassDecl& cls,
+void Evaluator::instantiateFields(std::shared_ptr<ObjectInstance> obj, const ClassDecl& cls,
                                    std::shared_ptr<Environment> env) {
+    if (!obj) return;
     auto instanceEnv = env->child();
-    Value thisVal = Value::makeObject(std::shared_ptr<ObjectInstance>(&obj, [](ObjectInstance*){}));
+    Value thisVal = Value::makeObject(obj);
     instanceEnv->declare("this",      thisVal);
     instanceEnv->declare("__this",    thisVal);
     instanceEnv->declare("__class__", Value::makeString(cls.name));
@@ -2315,23 +2337,24 @@ void Evaluator::instantiateFields(ObjectInstance& obj, const ClassDecl& cls,
     for (auto& f : cls.fields) {
         if (f->isStatic) continue;  // already initialized globally
         Value v = f->initializer ? eval(*f->initializer, instanceEnv) : Value::makeNull();
-        obj.fields[f->name] = v;
+        obj->fields[f->name] = v;
     }
     // Initialize auto-properties with initializers
     for (auto& prop : cls.properties) {
         if (prop->initializer) {
             Value v = eval(*prop->initializer, instanceEnv);
-            obj.fields[prop->name] = v;
+            obj->fields[prop->name] = v;
         } else if (prop->hasGet && prop->hasSet && !prop->getDecl && !prop->setDecl) {
             // Auto-property without initializer — default to null
-            obj.fields[prop->name] = Value::makeNull();
+            obj->fields[prop->name] = Value::makeNull();
         }
     }
 }
 
-void Evaluator::runConstructor(ObjectInstance& obj, const ClassDecl& cls,
+void Evaluator::runConstructor(std::shared_ptr<ObjectInstance> obj, const ClassDecl& cls,
                                 std::vector<Value> args,
                                 std::shared_ptr<Environment> env) {
+    if (!obj) return;
     if (!cls.constructors.empty()) {
         const ConstructorDecl* ctor = nullptr;
         for (auto& c : cls.constructors) {
@@ -2341,7 +2364,7 @@ void Evaluator::runConstructor(ObjectInstance& obj, const ClassDecl& cls,
         if (!ctor) return;
 
         auto ctorEnv = env->child();
-        Value thisVal = Value::makeObject(std::shared_ptr<ObjectInstance>(&obj, [](ObjectInstance*){}));
+        Value thisVal = Value::makeObject(obj);
         ctorEnv->declare("this",      thisVal);
         ctorEnv->declare("__this",    thisVal);
         ctorEnv->declare("__class__", Value::makeString(cls.name));
@@ -2354,12 +2377,13 @@ void Evaluator::runConstructor(ObjectInstance& obj, const ClassDecl& cls,
             catch (const ReturnSignal&) {}
         }
 
-        // Sync any changed fields back
+        // Sync fields only if 'this' was rebound to a distinct object
         if (ctorEnv->has("this")) {
             Value& t = ctorEnv->get("this");
-            if (t.isObject() && t.objVal)
+            if (t.isObject() && t.objVal && t.objVal != obj) {
                 for (auto& [k, v] : t.objVal->fields)
-                    obj.fields[k] = v;
+                    obj->fields[k] = v;
+            }
         }
         return;
     }
@@ -2367,7 +2391,7 @@ void Evaluator::runConstructor(ObjectInstance& obj, const ClassDecl& cls,
     for (auto& m : cls.methods) {
         if (m->name == "constructor" && m->body) {
             auto ctorEnv = env->child();
-            Value thisVal = Value::makeObject(std::shared_ptr<ObjectInstance>(&obj, [](ObjectInstance*){}));
+            Value thisVal = Value::makeObject(obj);
             ctorEnv->declare("this",      thisVal);
             ctorEnv->declare("__this",    thisVal);
             ctorEnv->declare("__class__", Value::makeString(cls.name));
@@ -2382,12 +2406,13 @@ void Evaluator::runConstructor(ObjectInstance& obj, const ClassDecl& cls,
             }
             try { eval(*m->body, ctorEnv); }
             catch (const ReturnSignal&) {}
-            // Sync fields
+            // Sync fields only if 'this' was rebound to a distinct object
             if (ctorEnv->has("this")) {
                 Value& t = ctorEnv->get("this");
-                if (t.isObject() && t.objVal)
+                if (t.isObject() && t.objVal && t.objVal != obj) {
                     for (auto& [k, v] : t.objVal->fields)
-                        obj.fields[k] = v;
+                        obj->fields[k] = v;
+                }
             }
             return;
         }
@@ -2412,6 +2437,22 @@ Value Evaluator::callMethod(Value& object, const std::string& method,
     if (object.isString()) return callStringMethod(object, method, std::move(args));
     // Array methods
     if (object.isArray())  return callArrayMethod(object, method, std::move(args));
+
+    // Primitive conversion methods
+    if (object.isInt()) {
+        if (method == "toDouble" || method == "toFloat") return Value::makeFloat(static_cast<double>(object.intVal));
+        if (method == "toInt" || method == "toLong") return object;
+        if (method == "toString" || method == "toStr") return Value::makeString(std::to_string(object.intVal));
+    }
+    if (object.isFloat()) {
+        if (method == "toInt" || method == "toLong") return Value::makeInt(static_cast<int64_t>(object.floatVal));
+        if (method == "toDouble" || method == "toFloat") return object;
+        if (method == "toString" || method == "toStr") return Value::makeString(std::to_string(object.floatVal));
+    }
+    if (object.isBool()) {
+        if (method == "toInt") return Value::makeInt(object.boolVal ? 1 : 0);
+        if (method == "toString" || method == "toStr") return Value::makeString(object.boolVal ? "true" : "false");
+    }
 
     // Object method
     if (object.isObject() && object.objVal) {
@@ -2588,14 +2629,23 @@ Value Evaluator::callBuiltinMethod(Value& object, const std::string& method,
 
 Value Evaluator::callStringMethod(Value& str, const std::string& method,
                                    std::vector<Value> args) {
-    if (method == "getMessage" || method == "toString") return str;
+    if (method == "getMessage" || method == "toString" || method == "toStr") return str;
     if (method == "toUpper")   return callStringMethod(str, "toUpperCase", args);
     if (method == "toLower")   return callStringMethod(str, "toLowerCase", args);
-    if (method == "length")    return Value::makeInt(static_cast<int64_t>(str.strVal.size()));
-    if (method == "charAt")    { int64_t i = args[0].intVal; return Value::makeChar(str.strVal[static_cast<size_t>(i)]); }
+    if (method == "length" || method == "size") return Value::makeInt(static_cast<int64_t>(str.strVal.size()));
+    if (method == "isEmpty")   return Value::makeBool(str.strVal.empty());
+    if (method == "charAt") {
+        int64_t i = args.empty() ? 0 : args[0].intVal;
+        if (i < 0 || static_cast<size_t>(i) >= str.strVal.size()) return Value::makeChar('\0');
+        return Value::makeChar(str.strVal[static_cast<size_t>(i)]);
+    }
     if (method == "substring") {
-        int64_t start = args[0].intVal;
+        int64_t start = args.empty() ? 0 : args[0].intVal;
         int64_t end   = args.size() > 1 ? args[1].intVal : static_cast<int64_t>(str.strVal.size());
+        if (start < 0) start = 0;
+        if (start > static_cast<int64_t>(str.strVal.size())) start = static_cast<int64_t>(str.strVal.size());
+        if (end < start) end = start;
+        if (end > static_cast<int64_t>(str.strVal.size())) end = static_cast<int64_t>(str.strVal.size());
         return Value::makeString(str.strVal.substr(static_cast<size_t>(start), static_cast<size_t>(end - start)));
     }
     if (method == "toUpperCase") {
@@ -2609,14 +2659,14 @@ Value Evaluator::callStringMethod(Value& str, const std::string& method,
         return Value::makeString(s);
     }
     if (method == "contains") {
-        return Value::makeBool(str.strVal.find(args[0].toString()) != std::string::npos);
+        return Value::makeBool(str.strVal.find(args.empty() ? "" : args[0].toString()) != std::string::npos);
     }
     if (method == "startsWith") {
-        std::string prefix = args[0].toString();
+        std::string prefix = args.empty() ? "" : args[0].toString();
         return Value::makeBool(str.strVal.substr(0, prefix.size()) == prefix);
     }
     if (method == "endsWith") {
-        std::string suffix = args[0].toString();
+        std::string suffix = args.empty() ? "" : args[0].toString();
         if (suffix.size() > str.strVal.size()) return Value::makeBool(false);
         return Value::makeBool(str.strVal.substr(str.strVal.size() - suffix.size()) == suffix);
     }
@@ -2628,8 +2678,9 @@ Value Evaluator::callStringMethod(Value& str, const std::string& method,
     }
     if (method == "replace") {
         std::string s = str.strVal;
-        std::string from = args[0].toString();
-        std::string to   = args[1].toString();
+        std::string from = args.size() > 0 ? args[0].toString() : "";
+        std::string to   = args.size() > 1 ? args[1].toString() : "";
+        if (from.empty()) return Value::makeString(s);
         size_t pos = 0;
         while ((pos = s.find(from, pos)) != std::string::npos) {
             s.replace(pos, from.size(), to);
@@ -2638,10 +2689,29 @@ Value Evaluator::callStringMethod(Value& str, const std::string& method,
         return Value::makeString(s);
     }
     if (method == "indexOf") {
-        size_t pos = str.strVal.find(args[0].toString());
+        std::string sub = args.empty() ? "" : args[0].toString();
+        size_t pos = str.strVal.find(sub);
         return Value::makeInt(pos == std::string::npos ? -1 : static_cast<int64_t>(pos));
     }
-    if (method == "toString") return str;
+    if (method == "toInt" || method == "toLong") {
+        try {
+            return Value::makeInt(std::stoll(str.strVal));
+        } catch (...) {
+            return Value::makeInt(0);
+        }
+    }
+    if (method == "toDouble" || method == "toFloat") {
+        try {
+            return Value::makeFloat(std::stod(str.strVal));
+        } catch (...) {
+            return Value::makeFloat(0.0);
+        }
+    }
+    if (method == "toBool") {
+        std::string s = str.strVal;
+        for (char& c : s) c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+        return Value::makeBool(s == "true" || s == "1");
+    }
     if (method == "split") {
         std::string delim = args.empty() ? " " : args[0].toString();
         auto arr = std::make_shared<ArrayInstance>();

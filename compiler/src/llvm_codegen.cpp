@@ -319,6 +319,10 @@ LLVMCodegenResult LLVMCodegen::generate(const Program& program) {
         for (auto& node : program.declarations)
             genProgramDecl(*node);
 
+        if (!hasMainWrapper_) {
+            return {false, "No entry point found. Program must define 'public static func void main()' in class Main or a top-level 'func void main()'.", ""};
+        }
+
         // Assemble
         std::ostringstream out;
         out << "; Ume Language — LLVM IR (Phase 3 backend)\n";
@@ -403,12 +407,16 @@ void LLVMCodegen::genClassDecl(const ClassDecl& cls) {
     // Emit @main wrapper if this is the Main class with a static main()
     if (cls.name == "Main" && !hasMainWrapper_) {
         for (auto& m : cls.methods) {
-            if (m->name == "main" && m->isStatic) {
-                funcs_ << "\ndefine i32 @main(i32 %argc, i8** %argv) {\nentry:\n";
-                funcs_ << "  call void @Main__main()\n";
-                funcs_ << "  ret i32 0\n}\n";
-                hasMainWrapper_ = true;
-                break;
+            if (m->name == "main") {
+                if (m->isStatic) {
+                    funcs_ << "\ndefine i32 @main(i32 %argc, i8** %argv) {\nentry:\n";
+                    funcs_ << "  call void @Main__main()\n";
+                    funcs_ << "  ret i32 0\n}\n";
+                    hasMainWrapper_ = true;
+                    break;
+                } else {
+                    throw std::runtime_error("Entry point 'main' in class 'Main' must be declared static ('public static func void main()').");
+                }
             }
         }
     }

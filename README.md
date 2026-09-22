@@ -20,26 +20,27 @@ Write expressive, high-productivity code — run at native machine speed.
 
 ## ✨ Key Highlights
 
-* **No Garbage Collector Pause** — Deterministic object lifetime via modern C++ smart pointers and destructors.
-* **Dual Execution Model** — Interpret instantly with `-run` for rapid development; transpile and compile with `-compile` / `build` for maximum native release speed.
-* **Full Object-Oriented Programming** — Classes, single inheritance (`extends`), interfaces (`implements`), abstract methods, operator overloading, and generic types (`<T>`).
-* **C#-Style Properties & Indexers** — Explicit `get`/`set` accessors, fat-arrow computed properties (`=>`), and indexers (`this[i]`).
-* **Attribute & Reflection System** — `[Serializable]` and `[JsonProperty("...")]` drive automated JSON serialization at runtime.
-* **Built-in Concurrency & Synchronization** — `Thread`, `Mutex`, `ConditionVariable`, `AtomicInt`, and asynchronous `Task<T>`.
-* **Rich Standard Library** — Collections (`List`, `Map`, `Set`, `Stack`, `Queue`), FileSystem, Networking (`HttpClient`), Audio (`miniaudio`), and 2D/3D Graphics (`OpenGL`/`GLFW`).
-* **Automated Asset Bundling Pipeline** — Seamlessly copy textures, shaders, audio, and configuration files into build outputs via `ume.toml`.
+- **No Garbage Collector Pause** — Deterministic object lifetime via modern C++ smart pointers and destructors.
+- **Dual Execution Model** — Interpret instantly with `-run` for rapid development; transpile and compile with `-compile` / `build` for maximum native release speed.
+- **Full Object-Oriented Programming** — Classes, single inheritance (`extends`), interfaces (`implements`), abstract methods, operator overloading, and generic types (`<T>`).
+- **C#-Style Properties & Indexers** — Explicit `get`/`set` accessors, fat-arrow computed properties (`=>`), and indexers (`this[i]`).
+- **Attribute & Reflection System** — `[Serializable]` and `[JsonProperty("...")]` drive automated JSON serialization at runtime.
+- **Built-in Concurrency & Synchronization** — `Thread`, `Mutex`, `ConditionVariable`, `AtomicInt`, and asynchronous `Task<T>`.
+- **Rich Standard Library** — Collections (`List`, `Map`, `Set`, `Stack`, `Queue`), FileSystem, Networking (`HttpClient`), Audio (`miniaudio`), and 2D/3D Graphics (`OpenGL`/`GLFW`).
+- **Automated Asset Bundling Pipeline** — Seamlessly copy textures, shaders, audio, and configuration files into build outputs via `ume.toml`.
 
 ---
 
 ## TLDR
-Is this project good? No.   
-Is the code good? No.   
+
+Is this project good? No.  
+Is the code good? No.  
 Is the code messy? Yes.  
-Do I understand what I have done? No, not really.   
+Do I understand what I have done? No, not really.  
 Is this language useable? Not even a bit.  
 Is this language usefull? Not even a bit.  
-Do I regret making this project? My heart say yes, but my brain say no. And the monsters under my bed say to shut up.   
-Maybe have fun using it? I guess have fun!  
+Do I regret making this project? My heart say yes, but my brain say no. And the monsters under my bed say to shut up.  
+Maybe have fun using it? I guess have fun!
 
 The minecraft demo it is made with AI (forgive me but I really didn't want to also make minecraft rn, maybe after one year) and u can run it using ume build (ume run for some reason does not work, I get an error but ANYWAYS)
 
@@ -49,14 +50,15 @@ The minecraft demo it is made with AI (forgive me but I really didn't want to al
 
 To build and compile Ume programs, you only need a standard C++ toolchain and CMake on Windows:
 
-| Prerequisite | Recommended Version | What it's used for |
-| :--- | :--- | :--- |
+| Prerequisite      | Recommended Version       | What it's used for                           |
+| :---------------- | :------------------------ | :------------------------------------------- |
 | **Visual Studio** | 2022+ (Community is fine) | MSVC C++20 Compiler (`cl.exe`) & Windows SDK |
-| **CMake** | 3.20+ | Build system configuration |
-| **Git** | Any | Repository cloning |
+| **CMake**         | 3.20+                     | Build system configuration                   |
+| **Git**           | Any                       | Repository cloning                           |
 
 > 💡 **Quick Setup for New Machines (PowerShell / CMD):**  
 > If you don't have Visual Studio C++ or CMake installed yet, you can install both in one command via Windows Package Manager:
+>
 > ```cmd
 > winget install Kitware.CMake
 > winget install Microsoft.VisualStudio.2022.Community --override "--add Microsoft.VisualStudio.Workload.NativeDesktop --passive"
@@ -69,18 +71,19 @@ To build and compile Ume programs, you only need a standard C++ toolchain and CM
 Clone the repository and run **`build.bat`**:
 
 ```bat
-git clone https://github.com/your-org/ume-language.git
+https://github.com/TheShadowtf/Ume-Language.git
 cd ume-language
 .\build.bat
 ```
 
 **What `build.bat` does automatically:**
+
 1. ✅ Automatically discovers `cmake` (in PATH or standard install paths).
 2. ✅ Auto-detects Visual Studio C++ toolchains using `vswhere` and initializes MSVC environment variables without requiring a Developer Command Prompt.
 3. ✅ Configures CMake and compiles the compiler (`ume.exe`), tree-walk interpreter runtime, and OpenGL/GLFW graphics subsystem in **Release mode**.
 4. ✅ Deploys all final binaries (`bin\release\ume.exe`, `glad.dll`, `glfw3.dll`), static libraries (`ume_compiler_lib.lib`, `ume_interpreter_lib.lib`, `ume_graphics_lib.lib`), and headers to `bin\release\`.
 
-*(Optional)* Run `.\add_to_path.bat` to add `bin\release` to your User PATH so you can invoke `ume` from anywhere.
+_(Optional)_ Run `.\add_to_path.bat` to add `bin\release` to your User PATH so you can invoke `ume` from anywhere.
 
 ---
 
@@ -382,33 +385,35 @@ Ume includes an automated benchmark and security validation suite in `benchmarks
 
 ### 📊 Performance Baseline
 
-| Benchmark Workload | Domain / Focus Area | Ume (Interpreter) | Native C++ (`/O2`) | Speedup Ratio | Correctness |
-| :--- | :--- | :---: | :---: | :---: | :---: |
-| **`fib_recursive`** | Call Stack Overhead ($N=28$) | 11,152.00 ms | 1.070 ms | **10,422.4x** | `MATCH [OK]` |
-| **`fib_iterative`** | Loop Arithmetic ($10^6$ ops) | 3,992.00 ms | 2.857 ms | **1,397.3x** | `MATCH [OK]` |
-| **`primes_trial_division`** | Integer Modulo & Branches | 891.00 ms | 0.456 ms | **1,953.9x** | `MATCH [OK]` |
-| **`primes_sieve_eratosthenes`**| Sieve Array Traversal | 532.00 ms | 0.098 ms | **5,428.6x** | `MATCH [OK]` |
-| **`mandelbrot_float_math`** | Floating-Point Math ($150 \times 150$) | 3,243.00 ms | 1.457 ms | **2,225.8x** | `MATCH [OK]` |
-| **`oop_instantiation_and_dispatch`**| Virtual OOP & Polymorphism | 1,418.00 ms | 1.990 ms | **712.6x** | `MATCH [OK]` |
-| **`string_concat_and_manipulation`**| String & Heap Operations | 206.00 ms | 1.523 ms | **135.3x** | `MATCH [OK]` |
-| **`collections_list_map_queue`** | Dynamic List, Map, Queue | 92.00 ms | 0.738 ms | **124.7x** | `MATCH [OK]` |
-| **`concurrency_atomics_and_mutex`** | Atomics & Mutex Locks | 338.00 ms | 0.926 ms | **365.0x** | `MATCH [OK]` |
+| Benchmark Workload                   | Domain / Focus Area                    | Ume (Interpreter) | Native C++ (`/O2`) | Speedup Ratio | Correctness  |
+| :----------------------------------- | :------------------------------------- | :---------------: | :----------------: | :-----------: | :----------: |
+| **`fib_recursive`**                  | Call Stack Overhead ($N=28$)           |   11,152.00 ms    |      1.070 ms      | **10,422.4x** | `MATCH [OK]` |
+| **`fib_iterative`**                  | Loop Arithmetic ($10^6$ ops)           |    3,992.00 ms    |      2.857 ms      | **1,397.3x**  | `MATCH [OK]` |
+| **`primes_trial_division`**          | Integer Modulo & Branches              |     891.00 ms     |      0.456 ms      | **1,953.9x**  | `MATCH [OK]` |
+| **`primes_sieve_eratosthenes`**      | Sieve Array Traversal                  |     532.00 ms     |      0.098 ms      | **5,428.6x**  | `MATCH [OK]` |
+| **`mandelbrot_float_math`**          | Floating-Point Math ($150 \times 150$) |    3,243.00 ms    |      1.457 ms      | **2,225.8x**  | `MATCH [OK]` |
+| **`oop_instantiation_and_dispatch`** | Virtual OOP & Polymorphism             |    1,418.00 ms    |      1.990 ms      |  **712.6x**   | `MATCH [OK]` |
+| **`string_concat_and_manipulation`** | String & Heap Operations               |     206.00 ms     |      1.523 ms      |  **135.3x**   | `MATCH [OK]` |
+| **`collections_list_map_queue`**     | Dynamic List, Map, Queue               |     92.00 ms      |      0.738 ms      |  **124.7x**   | `MATCH [OK]` |
+| **`concurrency_atomics_and_mutex`**  | Atomics & Mutex Locks                  |     338.00 ms     |      0.926 ms      |  **365.0x**   | `MATCH [OK]` |
 
 > **Execution Modes:**
+>
 > - In **Interpreter Mode (`ume -run`)**, Ume runs as an AST tree-walking interpreter (fast dev turnaround, Python/Ruby tier execution speed).
 > - In **Compiled Mode (`ume -compile` / `ume build`)**, Ume transpiles directly to C++17/20, achieving **true native C++ machine speed**.
 
 ### 🛡️ Security, Safety & Memory Audit
 
-| Security Dimension | Test Scenario | Ume Result | C++ Result | Safety Verification |
-| :--- | :--- | :---: | :---: | :---: |
-| **Memory Bounds Safety** | Negative indices (`list.get(-1)`), index overflow, out-of-bounds `set` | **PASSED** (4/4) | **PASSED** (4/4) | Traps boundary violations with `Index out of bounds` exception; prevents memory corruption. |
-| **Null Reference Safety** | Null method calls, null coalescing (`??`), null equality checks | **PASSED** (4/4) | **PASSED** (4/4) | Caught as clean runtime exception; prevents OS `0xC0000005` access violations. |
-| **Exception Stack Unwinding** | 20-frame deep recursive unwinding with custom exception & `finally` | **PASSED** (3/3) | **PASSED** (3/3) | All 21 `finally` blocks executed deterministically without resource leaks. |
-| **Arithmetic Safety** | Integer division by zero, modulo by zero, integer wrapping | **PASSED** (3/3) | **PASSED** (3/3) | Division by zero caught as exception; prevents SIGFPE aborts. |
-| **Memory Leak Stress** | 50,000 rapid object allocations/deallocations in a tight loop | **PASSED** | **PASSED** | Deterministic heap cleanup with zero unhandled leaks. |
+| Security Dimension            | Test Scenario                                                          |    Ume Result    |    C++ Result    |                                     Safety Verification                                     |
+| :---------------------------- | :--------------------------------------------------------------------- | :--------------: | :--------------: | :-----------------------------------------------------------------------------------------: |
+| **Memory Bounds Safety**      | Negative indices (`list.get(-1)`), index overflow, out-of-bounds `set` | **PASSED** (4/4) | **PASSED** (4/4) | Traps boundary violations with `Index out of bounds` exception; prevents memory corruption. |
+| **Null Reference Safety**     | Null method calls, null coalescing (`??`), null equality checks        | **PASSED** (4/4) | **PASSED** (4/4) |       Caught as clean runtime exception; prevents OS `0xC0000005` access violations.        |
+| **Exception Stack Unwinding** | 20-frame deep recursive unwinding with custom exception & `finally`    | **PASSED** (3/3) | **PASSED** (3/3) |         All 21 `finally` blocks executed deterministically without resource leaks.          |
+| **Arithmetic Safety**         | Integer division by zero, modulo by zero, integer wrapping             | **PASSED** (3/3) | **PASSED** (3/3) |                Division by zero caught as exception; prevents SIGFPE aborts.                |
+| **Memory Leak Stress**        | 50,000 rapid object allocations/deallocations in a tight loop          |    **PASSED**    |    **PASSED**    |                    Deterministic heap cleanup with zero unhandled leaks.                    |
 
 To run the automated benchmark runner:
+
 ```bat
 .\run_benchmarks.bat
 ```
@@ -437,34 +442,34 @@ Commands:
 
 Comprehensive documentation is available online at **[https://theshadowtf.github.io/Ume-Language/](https://theshadowtf.github.io/Ume-Language/)**:
 
-| Topic / Area | Documentation Guide | Description |
-| :--- | :--- | :--- |
-| **Getting Started** | [Getting Started](https://theshadowtf.github.io/Ume-Language/wiki/getting-started.html) | Installation, compiler build, Hello World, CLI reference |
-| **Projects & `ume.toml`** | [Projects & ume.toml](https://theshadowtf.github.io/Ume-Language/wiki/project-config.html) | `ume.toml` specification, build targets, asset copy pipeline (`assets = "..."`) |
-| **Modules & Imports** | [Modules & Imports](https://theshadowtf.github.io/Ume-Language/wiki/modules.html) | `package`, `namespace`, selective imports (`import pkg.Symbol`), `#include` |
-| **Primitive Types** | [Primitive Types](https://theshadowtf.github.io/Ume-Language/wiki/types.html) | `int`, `double`, `bool`, `char`, `string`, `any`, nullable `T?` |
-| **Variables & Scope** | [Variables & Scope](https://theshadowtf.github.io/Ume-Language/wiki/variables.html) | `var`, `const`, explicit types, scoping rules |
-| **Strings & Text** | [Strings & Interpolation](https://theshadowtf.github.io/Ume-Language/wiki/strings.html) | `$"Hello {name}"`, escape sequences, string manipulation |
-| **Expressions** | [Expressions & Operators](https://theshadowtf.github.io/Ume-Language/wiki/expressions.html) | Arithmetic, comparison, logical, ternary conditional operator |
-| **Functions** | [Functions](https://theshadowtf.github.io/Ume-Language/wiki/functions.html) | Parameters, return types, default values, overloading |
-| **Control Flow** | [Control Flow](https://theshadowtf.github.io/Ume-Language/wiki/control-flow.html) | `if`/`else`, `while`, `do-while`, `foreach`, `switch`/`case` |
-| **Classes & OOP** | [Classes & OOP](https://theshadowtf.github.io/Ume-Language/wiki/classes.html) | Constructors, inheritance (`extends`), `super`, `this`, `abstract`, `static` |
-| **Interfaces & Structs** | [Interfaces & Abstract](https://theshadowtf.github.io/Ume-Language/wiki/interfaces.html) | `interface`, `implements`, abstract classes and methods |
-| **Enums & Structs** | [Enums & Structs](https://theshadowtf.github.io/Ume-Language/wiki/enums.html) | Value-type `struct`, auto and explicit `enum` definitions |
-| **Generics** | [Generics](https://theshadowtf.github.io/Ume-Language/wiki/generics.html) | Generic classes (`Box<T>`), multi-parameter generics (`Pair<K,V>`) |
-| **Properties & Indexers**| [Properties & Indexers](https://theshadowtf.github.io/Ume-Language/wiki/properties.html) | `get`/`set` properties, fat-arrow `=>`, custom indexers `this[i]` |
-| **Attributes & JSON** | [Attributes & JSON](https://theshadowtf.github.io/Ume-Language/wiki/attributes.html) | `[Serializable]`, `[JsonProperty]`, `.toJsonString()` |
-| **Exceptions** | [Exceptions & Unwinding](https://theshadowtf.github.io/Ume-Language/wiki/exceptions.html) | `try`, `catch`, `finally`, `throw`, custom exceptions |
-| **Lambdas & Closures** | [Lambdas & Closures](https://theshadowtf.github.io/Ume-Language/wiki/lambdas.html) | Arrow functions `(a, b) -> { }`, closure environment capture |
-| **Operator Overload** | [Operator Overloading](https://theshadowtf.github.io/Ume-Language/wiki/operators.html) | Custom operator implementations (`+`, `-`, `==`, `[]`) |
-| **Unsafe Blocks** | [Unsafe Memory](https://theshadowtf.github.io/Ume-Language/wiki/unsafe.html) | `unsafe { }`, raw pointers `T*`, `alloc<T>()`, `free()` |
-| **Collections** | [Standard Collections](https://theshadowtf.github.io/Ume-Language/wiki/stdlib-collections.html) | `List<T>`, `Map<K,V>`, `Set<T>`, `Stack`, `Queue`, `.filter()`, `.map()` |
-| **I/O & FileSystem** | [I/O & FileSystem](https://theshadowtf.github.io/Ume-Language/wiki/stdlib-io.html) | `Console`, `File.write()`, `File.readAll()`, `FileSystem` helpers |
-| **Concurrency** | [Concurrency & Threading](https://theshadowtf.github.io/Ume-Language/wiki/stdlib-thread.html) | `Thread`, `Mutex`, `ConditionVariable`, `AtomicInt`, `Task<T>` |
-| **Networking** | [Networking & HTTP](https://theshadowtf.github.io/Ume-Language/wiki/stdlib-net.html) | `HttpClient`, `HttpResponse`, URL encoding and query parsing |
-| **Audio Engine** | [Audio Engine](https://theshadowtf.github.io/Ume-Language/wiki/stdlib-audio.html) | `AudioEngine`, `Sound` (playback, volume, looping) |
-| **Graphics & Window** | [Graphics & Windowing](https://theshadowtf.github.io/Ume-Language/wiki/stdlib-graphics.html) | OpenGL window, shaders, meshes, colors, input handling |
-| **Vectors & Math** | [Vectors & Matrices](https://theshadowtf.github.io/Ume-Language/wiki/stdlib-vector.html) | `Vector2`, `Vector3`, `Matrix4`, linear algebra operations |
+| Topic / Area              | Documentation Guide                                                                             | Description                                                                     |
+| :------------------------ | :---------------------------------------------------------------------------------------------- | :------------------------------------------------------------------------------ |
+| **Getting Started**       | [Getting Started](https://theshadowtf.github.io/Ume-Language/wiki/getting-started.html)         | Installation, compiler build, Hello World, CLI reference                        |
+| **Projects & `ume.toml`** | [Projects & ume.toml](https://theshadowtf.github.io/Ume-Language/wiki/project-config.html)      | `ume.toml` specification, build targets, asset copy pipeline (`assets = "..."`) |
+| **Modules & Imports**     | [Modules & Imports](https://theshadowtf.github.io/Ume-Language/wiki/modules.html)               | `package`, `namespace`, selective imports (`import pkg.Symbol`), `#include`     |
+| **Primitive Types**       | [Primitive Types](https://theshadowtf.github.io/Ume-Language/wiki/types.html)                   | `int`, `double`, `bool`, `char`, `string`, `any`, nullable `T?`                 |
+| **Variables & Scope**     | [Variables & Scope](https://theshadowtf.github.io/Ume-Language/wiki/variables.html)             | `var`, `const`, explicit types, scoping rules                                   |
+| **Strings & Text**        | [Strings & Interpolation](https://theshadowtf.github.io/Ume-Language/wiki/strings.html)         | `$"Hello {name}"`, escape sequences, string manipulation                        |
+| **Expressions**           | [Expressions & Operators](https://theshadowtf.github.io/Ume-Language/wiki/expressions.html)     | Arithmetic, comparison, logical, ternary conditional operator                   |
+| **Functions**             | [Functions](https://theshadowtf.github.io/Ume-Language/wiki/functions.html)                     | Parameters, return types, default values, overloading                           |
+| **Control Flow**          | [Control Flow](https://theshadowtf.github.io/Ume-Language/wiki/control-flow.html)               | `if`/`else`, `while`, `do-while`, `foreach`, `switch`/`case`                    |
+| **Classes & OOP**         | [Classes & OOP](https://theshadowtf.github.io/Ume-Language/wiki/classes.html)                   | Constructors, inheritance (`extends`), `super`, `this`, `abstract`, `static`    |
+| **Interfaces & Structs**  | [Interfaces & Abstract](https://theshadowtf.github.io/Ume-Language/wiki/interfaces.html)        | `interface`, `implements`, abstract classes and methods                         |
+| **Enums & Structs**       | [Enums & Structs](https://theshadowtf.github.io/Ume-Language/wiki/enums.html)                   | Value-type `struct`, auto and explicit `enum` definitions                       |
+| **Generics**              | [Generics](https://theshadowtf.github.io/Ume-Language/wiki/generics.html)                       | Generic classes (`Box<T>`), multi-parameter generics (`Pair<K,V>`)              |
+| **Properties & Indexers** | [Properties & Indexers](https://theshadowtf.github.io/Ume-Language/wiki/properties.html)        | `get`/`set` properties, fat-arrow `=>`, custom indexers `this[i]`               |
+| **Attributes & JSON**     | [Attributes & JSON](https://theshadowtf.github.io/Ume-Language/wiki/attributes.html)            | `[Serializable]`, `[JsonProperty]`, `.toJsonString()`                           |
+| **Exceptions**            | [Exceptions & Unwinding](https://theshadowtf.github.io/Ume-Language/wiki/exceptions.html)       | `try`, `catch`, `finally`, `throw`, custom exceptions                           |
+| **Lambdas & Closures**    | [Lambdas & Closures](https://theshadowtf.github.io/Ume-Language/wiki/lambdas.html)              | Arrow functions `(a, b) -> { }`, closure environment capture                    |
+| **Operator Overload**     | [Operator Overloading](https://theshadowtf.github.io/Ume-Language/wiki/operators.html)          | Custom operator implementations (`+`, `-`, `==`, `[]`)                          |
+| **Unsafe Blocks**         | [Unsafe Memory](https://theshadowtf.github.io/Ume-Language/wiki/unsafe.html)                    | `unsafe { }`, raw pointers `T*`, `alloc<T>()`, `free()`                         |
+| **Collections**           | [Standard Collections](https://theshadowtf.github.io/Ume-Language/wiki/stdlib-collections.html) | `List<T>`, `Map<K,V>`, `Set<T>`, `Stack`, `Queue`, `.filter()`, `.map()`        |
+| **I/O & FileSystem**      | [I/O & FileSystem](https://theshadowtf.github.io/Ume-Language/wiki/stdlib-io.html)              | `Console`, `File.write()`, `File.readAll()`, `FileSystem` helpers               |
+| **Concurrency**           | [Concurrency & Threading](https://theshadowtf.github.io/Ume-Language/wiki/stdlib-thread.html)   | `Thread`, `Mutex`, `ConditionVariable`, `AtomicInt`, `Task<T>`                  |
+| **Networking**            | [Networking & HTTP](https://theshadowtf.github.io/Ume-Language/wiki/stdlib-net.html)            | `HttpClient`, `HttpResponse`, URL encoding and query parsing                    |
+| **Audio Engine**          | [Audio Engine](https://theshadowtf.github.io/Ume-Language/wiki/stdlib-audio.html)               | `AudioEngine`, `Sound` (playback, volume, looping)                              |
+| **Graphics & Window**     | [Graphics & Windowing](https://theshadowtf.github.io/Ume-Language/wiki/stdlib-graphics.html)    | OpenGL window, shaders, meshes, colors, input handling                          |
+| **Vectors & Math**        | [Vectors & Matrices](https://theshadowtf.github.io/Ume-Language/wiki/stdlib-vector.html)        | `Vector2`, `Vector3`, `Matrix4`, linear algebra operations                      |
 
 ## 📄 License
 

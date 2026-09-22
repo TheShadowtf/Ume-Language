@@ -167,11 +167,13 @@ namespace MyApp.Models {
 
 import MyApp.Models.User;   // only User is brought in
 
-func void main() {
-    var u = new User();
-    u.id   = 1;
-    u.name = &quot;Alice&quot;;
-    Console.println(u.name);
+public class Main {
+    public static func void main() {
+        var u = new User();
+        u.id   = 1;
+        u.name = &quot;Alice&quot;;
+        Console.println(u.name);
+    }
 }</code></pre>
 
 <h3 id="import-wildcard">Wildcard import</h3>
@@ -180,18 +182,22 @@ func void main() {
 import std.thread.*;
 import std.math.*;
 
-func void main() {
-    var nums = new List&lt;int&gt;();
-    var m    = new Mutex();
-    var pi   = Math.PI;
+public class Main {
+    public static func void main() {
+        var nums = new List&lt;int&gt;();
+        var m    = new Mutex();
+        var pi   = Math.PI;
+    }
 }</code></pre>
 
 <h3 id="import-module">Whole-module import</h3>
 <p>If you write <code>import pkg;</code> without a trailing symbol or wildcard, the resolver loads the package file and injects its declarations, but they're referenced through the package path rather than dumped into your scope. This form is rarely used directly — selective and wildcard imports cover almost all real cases.</p>
 <pre><code class="language-ume">import MyApp.Models;
 
-func void main() {
-    var u = new MyApp.Models.User();
+public class Main {
+    public static func void main() {
+        var u = new MyApp.Models.User();
+    }
 }</code></pre>
 
 <h3 id="import-string">String-form import</h3>
@@ -216,9 +222,11 @@ func void main() {
 // Pull in something from the stdlib tree
 #include &lt;io.ume&gt;
 
-func void main() {
-    // config.ume&#39;s contents are now part of this file
-    Console.println(GREETING);
+public class Main {
+    public static func void main() {
+        // config.ume&#39;s contents are now part of this file
+        Console.println(GREETING);
+    }
 }</code></pre>
 
 <h3 id="include-guards">Include guards</h3>
@@ -300,11 +308,13 @@ const string APP_NAME = &quot;demo&quot;;</code></pre>
 #include &quot;config.ume&quot;            // textual include — MAX_RETRIES, APP_NAME now in scope
 import MyMath.add;               // selective import — only add(), not multiply()
 
-func void main() {
-    int sum = add(10, 20);       // works — add was imported
-    // int prod = multiply(10, 20);  // ERROR — multiply was not imported
+public class Main {
+    public static func void main() {
+        int sum = add(10, 20);       // works — add was imported
+        // int prod = multiply(10, 20);  // ERROR — multiply was not imported
 
-    Console.println($&quot;{APP_NAME}: sum = {sum}, retries = {MAX_RETRIES}&quot;);
+        Console.println($&quot;{APP_NAME}: sum = {sum}, retries = {MAX_RETRIES}&quot;);
+    }
 }</code></pre>
 
 <p><a class="next-link" href="types.html">Primitive Types →</a></p>

@@ -111,6 +111,9 @@ public:
         : value(std::move(v)), line(line), column(col), filename(std::move(filename)) {}
 
     const char* what() const noexcept override;
+
+private:
+    mutable std::string msgCache_;
 };
 
 class Evaluator {
@@ -188,9 +191,9 @@ private:
     Value callMethod(Value& object, const std::string& method,
                      std::vector<Value> args,
                      std::shared_ptr<Environment> env);
-    void  instantiateFields(ObjectInstance& obj, const ClassDecl& cls,
+    void  instantiateFields(std::shared_ptr<ObjectInstance> obj, const ClassDecl& cls,
                             std::shared_ptr<Environment> env);
-    void  runConstructor(ObjectInstance& obj, const ClassDecl& cls,
+    void  runConstructor(std::shared_ptr<ObjectInstance> obj, const ClassDecl& cls,
                          std::vector<Value> args,
                          std::shared_ptr<Environment> env);
 

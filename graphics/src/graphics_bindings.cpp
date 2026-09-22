@@ -10,6 +10,7 @@
 #endif
 #include <cmath>
 #include <fstream>
+#include <unordered_map>
 #define STB_TRUETYPE_IMPLEMENTATION
 #include "../include/stb_truetype.h"
 
@@ -222,6 +223,7 @@ Mesh* Mesh::CreateQuad() {
     mesh->vertex_count_ = 6;
 
     glBindVertexArray(0);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
     return mesh;
 }
 
@@ -246,6 +248,7 @@ Mesh* Mesh::CreateTriangle() {
     mesh->vertex_count_ = 3;
 
     glBindVertexArray(0);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
     return mesh;
 }
 
@@ -315,6 +318,7 @@ Mesh* Mesh::CreateCube() {
     mesh->vertex_count_ = 36;
 
     glBindVertexArray(0);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
     return mesh;
 }
 
@@ -339,6 +343,7 @@ Mesh* Mesh::Create(const float* vertices, size_t floatCount, const unsigned int*
 
     mesh->SetupVertexAttribs(mesh->stride_);
     glBindVertexArray(0);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
     return mesh;
 }
 
@@ -359,6 +364,7 @@ void Mesh::UpdateData(const float* vertices, size_t floatCount, const unsigned i
         vertex_count_ = (unsigned int)(floatCount / (stride_ > 0 ? stride_ : 6));
     }
     glBindVertexArray(0);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
 
 void Mesh::SetupVertexAttribs(int stride) {
@@ -403,6 +409,7 @@ void Mesh::Draw() const {
     } else {
         glDrawArrays(GL_TRIANGLES, 0, vertex_count_);
     }
+    glBindVertexArray(0);
 }
 
 static bool glfw_initialized = false;
@@ -443,6 +450,8 @@ bool Window::InitOpenGL() {
 
     glfwMakeContextCurrent((GLFWwindow*)native_window_);
     glfwSwapInterval(1);
+    glfwSetInputMode((GLFWwindow*)native_window_, GLFW_STICKY_KEYS, GLFW_TRUE);
+    glfwSetInputMode((GLFWwindow*)native_window_, GLFW_STICKY_MOUSE_BUTTONS, GLFW_TRUE);
 
     if (!gladLoadGLLoader((void*(*)(const char*))glfwGetProcAddress)) {
         fprintf(stderr, "Failed to load OpenGL functions\n");
@@ -564,84 +573,69 @@ void Window::DrawMesh(Mesh* mesh, Shader* shader) {
     mesh->Draw();
 }
 
-void Window::DrawLine(float x1, float y1, float x2, float y2, float r, float g, float b) {
-    if (!native_window_ || !default_shader_) return;
+static Shader* GetPrimitiveShader() {
+    static Shader* s_primitiveShader = nullptr;
+    if (!s_primitiveShader) {
+        const std::string vs = R"(
+#version 410 core
+layout (location = 0) in vec3 aPos;
+uniform vec2 uResolution;
+void main() {
+    vec2 ndcPos = (aPos.xy / uResolution) * 2.0 - 1.0;
+    ndcPos.y = -ndcPos.y;
+    gl_Position = vec4(ndcPos, 0.0, 1.0);
+}
+        )";
+        const std::string fs = R"(
+#version 410 core
+out vec4 FragColor;
+uniform vec4 uColor;
+void main() { FragColor = uColor; }
+        )";
+        s_primitiveShader = Shader::Create(vs, fs);
+    }
+    return s_primitiveShader;
+}
+
+void Window::DrawLine(float x1, float y1, float x2, float y2, float r, float g, float b, float a) {
+    if (!native_window_) return;
     
-    float dx = x2 - x1;
-    float dy = y2 - y1;
-    float length = std::sqrt(dx*dx + dy*dy);
-    float angle = std::atan2(dy, dx);
-    
-    unsigned int vao, vbo;
-    glGenVertexArrays(1, &vao);
-    glGenBuffers(1, &vbo);
+    static unsigned int s_lineVAO = 0;
+    static unsigned int s_lineVBO = 0;
+    if (s_lineVAO == 0) {
+        glGenVertexArrays(1, &s_lineVAO);
+        glGenBuffers(1, &s_lineVBO);
+        glBindVertexArray(s_lineVAO);
+        glBindBuffer(GL_ARRAY_BUFFER, s_lineVBO);
+        glBufferData(GL_ARRAY_BUFFER, 6 * sizeof(float), nullptr, GL_DYNAMIC_DRAW);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+        glEnableVertexAttribArray(0);
+        glBindVertexArray(0);
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
+    }
     
     float vertices[] = {
         x1, y1, 0.0f,
         x2, y2, 0.0f
     };
     
-    glBindVertexArray(vao);
-    glBindBuffer(GL_ARRAY_BUFFER, vbo);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
-    glEnableVertexAttribArray(0);
+    glBindBuffer(GL_ARRAY_BUFFER, s_lineVBO);
+    glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(vertices), vertices);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
     
-    static unsigned int lineShader = 0;
-    if (lineShader == 0) {
-        const std::string vs = R"(
-#version 410 core
-layout (location = 0) in vec3 aPos;
-uniform vec2 uResolution;
-void main() {
-    vec2 ndcPos = (aPos.xy / uResolution) * 2.0 - 1.0;
-    ndcPos.y = -ndcPos.y;
-    gl_Position = vec4(ndcPos, 0.0, 1.0);
-}
-        )";
-        const std::string fs = R"(
-#version 410 core
-out vec4 FragColor;
-uniform vec4 uColor;
-void main() { FragColor = uColor; }
-        )";
-        Shader* s = Shader::Create(vs, fs);
-        lineShader = s->GetID();
-        delete s;
-    }
+    Shader* shader = GetPrimitiveShader();
+    if (!shader) return;
     
-    static Shader* rawShader = nullptr;
-    if (!rawShader) {
-        const std::string vs = R"(
-#version 410 core
-layout (location = 0) in vec3 aPos;
-uniform vec2 uResolution;
-void main() {
-    vec2 ndcPos = (aPos.xy / uResolution) * 2.0 - 1.0;
-    ndcPos.y = -ndcPos.y;
-    gl_Position = vec4(ndcPos, 0.0, 1.0);
-}
-        )";
-        const std::string fs = R"(
-#version 410 core
-out vec4 FragColor;
-uniform vec4 uColor;
-void main() { FragColor = uColor; }
-        )";
-        rawShader = Shader::Create(vs, fs);
-    }
+    shader->Use();
+    shader->SetVec4("uColor", r, g, b, a);
+    shader->SetVec2("uResolution", (float)width_, (float)height_);
     
-    rawShader->Use();
-    rawShader->SetVec4("uColor", r, g, b, 1.0f);
-    rawShader->SetVec2("uResolution", (float)width_, (float)height_);
-    
+    glBindVertexArray(s_lineVAO);
     glDrawArrays(GL_LINES, 0, 2);
-    
-    glDeleteBuffers(1, &vbo);
-    glDeleteVertexArrays(1, &vao);
+    glBindVertexArray(0);
 }
 
-void Window::DrawRect(float x, float y, float width, float height, float r, float g, float b) {
+void Window::DrawRect(float x, float y, float width, float height, float r, float g, float b, float a) {
     if (!native_window_ || !default_shader_ || !default_quad_) return;
     
     default_shader_->Use();
@@ -657,64 +651,67 @@ void Window::DrawRect(float x, float y, float width, float height, float r, floa
     glUniform2f(locSize, width, height);
     
     int locColor = glGetUniformLocation(default_shader_->GetID(), "uColor");
-    glUniform4f(locColor, r, g, b, 1.0f);
+    glUniform4f(locColor, r, g, b, a);
     
     default_quad_->Draw();
 }
 
-void Window::DrawCircle(float x, float y, float radius, float r, float g, float b, int segments) {
-    if (!native_window_ || !default_shader_) return;
+void Window::DrawCircle(float x, float y, float radius, float r, float g, float b, float a, int segments) {
+    if (!native_window_ || segments < 3) return;
     
-    // Use the same rawShader from DrawLine
-    static Shader* rawShader = nullptr;
-    if (!rawShader) {
-        const std::string vs = R"(#version 410 core
-layout (location = 0) in vec3 aPos;
-uniform vec2 uResolution;
-void main() {
-    vec2 ndcPos = (aPos.xy / uResolution) * 2.0 - 1.0;
-    ndcPos.y = -ndcPos.y;
-    gl_Position = vec4(ndcPos, 0.0, 1.0);
-})";
-        const std::string fs = R"(#version 410 core
-out vec4 FragColor;
-uniform vec4 uColor;
-void main() { FragColor = uColor; })";
-        rawShader = Shader::Create(vs, fs);
+    static unsigned int s_circleVAO = 0;
+    static unsigned int s_circleVBO = 0;
+    static size_t s_circleVBOCapacity = 0;
+    
+    if (s_circleVAO == 0) {
+        glGenVertexArrays(1, &s_circleVAO);
+        glGenBuffers(1, &s_circleVBO);
+        glBindVertexArray(s_circleVAO);
+        glBindBuffer(GL_ARRAY_BUFFER, s_circleVBO);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+        glEnableVertexAttribArray(0);
+        glBindVertexArray(0);
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
     }
     
-    std::vector<float> vertices;
+    static std::vector<float> vertices;
+    vertices.clear();
+    vertices.reserve((segments + 2) * 3);
     vertices.push_back(x);
     vertices.push_back(y);
     vertices.push_back(0.0f);
     
     for (int i = 0; i <= segments; ++i) {
-        float angle = 2.0f * 3.14159265f * (float)i / (float)segments;
+        float angle = 2.0f * 3.14159265358979323846f * (float)i / (float)segments;
         vertices.push_back(x + std::cos(angle) * radius);
         vertices.push_back(y + std::sin(angle) * radius);
         vertices.push_back(0.0f);
     }
     
-    unsigned int vao, vbo;
-    glGenVertexArrays(1, &vao);
-    glGenBuffers(1, &vbo);
+    glBindBuffer(GL_ARRAY_BUFFER, s_circleVBO);
+    size_t neededBytes = vertices.size() * sizeof(float);
+    if (neededBytes > s_circleVBOCapacity) {
+        glBufferData(GL_ARRAY_BUFFER, neededBytes, vertices.data(), GL_DYNAMIC_DRAW);
+        s_circleVBOCapacity = neededBytes;
+    } else {
+        glBufferSubData(GL_ARRAY_BUFFER, 0, neededBytes, vertices.data());
+    }
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
     
-    glBindVertexArray(vao);
-    glBindBuffer(GL_ARRAY_BUFFER, vbo);
-    glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(float), vertices.data(), GL_STATIC_DRAW);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
-    glEnableVertexAttribArray(0);
+    Shader* shader = GetPrimitiveShader();
+    if (!shader) return;
     
-    rawShader->Use();
-    rawShader->SetVec4("uColor", r, g, b, 1.0f);
-    // Since rawShader uses SetVec2 but Shader class doesn't have SetVec2, we use glUniform2f
-    int locRes = glGetUniformLocation(rawShader->GetID(), "uResolution");
-    glUniform2f(locRes, (float)width_, (float)height_);
+    shader->Use();
+    shader->SetVec4("uColor", r, g, b, a);
+    shader->SetVec2("uResolution", (float)width_, (float)height_);
     
-    glDrawArrays(GL_TRIANGLE_FAN, 0, segments + 2);
-    
-    glDeleteBuffers(1, &vbo);
-    glDeleteVertexArrays(1, &vao);
+    glBindVertexArray(s_circleVAO);
+    glDrawArrays(GL_TRIANGLE_FAN, 0, (GLsizei)(segments + 2));
+    glBindVertexArray(0);
+}
+
+void Window::DrawCircle(float x, float y, float radius, float r, float g, float b, int segments) {
+    DrawCircle(x, y, radius, r, g, b, 1.0f, segments);
 }
 
 bool Window::IsKeyPressed(Key key) const {
@@ -795,6 +792,32 @@ bool Window::IsMouseButtonPressed(MouseButton button) const {
     return glfwGetMouseButton((GLFWwindow*)native_window_, glfwButton) == GLFW_PRESS;
 }
 
+void Window::GetContentScale(float& sx, float& sy) const {
+    if (!native_window_) { sx = sy = 1.0f; return; }
+    int winW = 0, winH = 0, fbW = 0, fbH = 0;
+    glfwGetWindowSize((GLFWwindow*)native_window_, &winW, &winH);
+    glfwGetFramebufferSize((GLFWwindow*)native_window_, &fbW, &fbH);
+    sx = (winW > 0 && fbW > 0) ? ((float)fbW / (float)winW) : 1.0f;
+    sy = (winH > 0 && fbH > 0) ? ((float)fbH / (float)winH) : 1.0f;
+}
+
+void Window::GetWindowSize(int& w, int& h) const {
+    if (!native_window_) { w = h = 0; return; }
+    glfwGetWindowSize((GLFWwindow*)native_window_, &w, &h);
+}
+
+int Window::GetWindowWidth() const {
+    int w = 0, h = 0;
+    GetWindowSize(w, h);
+    return w;
+}
+
+int Window::GetWindowHeight() const {
+    int w = 0, h = 0;
+    GetWindowSize(w, h);
+    return h;
+}
+
 void Window::GetMousePosition(float& x, float& y) const {
     if (!native_window_) {
         x = y = 0;
@@ -803,8 +826,10 @@ void Window::GetMousePosition(float& x, float& y) const {
     
     double dx, dy;
     glfwGetCursorPos((GLFWwindow*)native_window_, &dx, &dy);
-    x = (float)dx;
-    y = (float)dy;
+    float sx = 1.0f, sy = 1.0f;
+    GetContentScale(sx, sy);
+    x = (float)(dx * sx);
+    y = (float)(dy * sy);
 }
 
 static bool g_resetMousePosition = true;
@@ -830,8 +855,10 @@ void Window::GetMouseDelta(float& dx, float& dy) {
         dx = 0; dy = 0;
         return;
     }
-    dx = (float)(x - lastX);
-    dy = (float)(y - lastY);
+    float sx = 1.0f, sy = 1.0f;
+    GetContentScale(sx, sy);
+    dx = (float)((x - lastX) * sx);
+    dy = (float)((y - lastY) * sy);
     lastX = x;
     lastY = y;
 }
@@ -1059,11 +1086,11 @@ bool Font::GetCharacterQuad(char c, float& x, float& y, GlyphQuad& quad) const {
     return true;
 }
 
-Mesh* Font::CreateTextMesh(const std::string& text, float scale) const {
-    if (!cdata_ || text.empty()) return Mesh::CreateQuad();
+bool Font::BuildTextMesh(const std::string& text, float scale, std::vector<float>& outVerts, std::vector<unsigned int>& outInds) const {
+    if (!cdata_ || text.empty()) return false;
     const stbtt_bakedchar* chardata = static_cast<const stbtt_bakedchar*>(cdata_);
-    std::vector<float> verts;
-    std::vector<unsigned int> inds;
+    outVerts.clear();
+    outInds.clear();
 
     float xpos = 0.0f;
     float ypos = 0.0f;
@@ -1088,7 +1115,7 @@ Mesh* Font::CreateTextMesh(const std::string& text, float scale) const {
         float s0 = q.s0; float t0 = q.t0;
         float s1 = q.s1; float t1 = q.t1;
 
-        verts.insert(verts.end(), {
+        outVerts.insert(outVerts.end(), {
             x0, y0, 0.0f, s0, t0, 0.0f,
             x1, y0, 0.0f, s1, t0, 0.0f,
             x1, y1, 0.0f, s1, t1, 0.0f,
@@ -1096,11 +1123,19 @@ Mesh* Font::CreateTextMesh(const std::string& text, float scale) const {
         });
 
         unsigned int base = quadCount * 4;
-        inds.insert(inds.end(), { base, base + 1, base + 2, base + 2, base + 3, base });
+        outInds.insert(outInds.end(), { base, base + 1, base + 2, base + 2, base + 3, base });
         quadCount++;
     }
 
-    if (verts.empty()) return Mesh::CreateQuad();
+    return !outVerts.empty();
+}
+
+Mesh* Font::CreateTextMesh(const std::string& text, float scale) const {
+    std::vector<float> verts;
+    std::vector<unsigned int> inds;
+    if (!BuildTextMesh(text, scale, verts, inds)) {
+        return Mesh::CreateQuad();
+    }
     return Mesh::Create(verts.data(), verts.size(), inds.data(), inds.size(), 6);
 }
 
@@ -1142,8 +1177,19 @@ void main() {
         g_text_shader = Shader::Create(vs, fs);
     }
 
-    Mesh* mesh = font->CreateTextMesh(text, scale);
-    if (!mesh) return;
+    static Mesh* s_reusableTextMesh = nullptr;
+    static std::vector<float> s_textVerts;
+    static std::vector<unsigned int> s_textInds;
+
+    if (!font->BuildTextMesh(text, scale, s_textVerts, s_textInds)) return;
+
+    if (!s_reusableTextMesh) {
+        s_reusableTextMesh = Mesh::Create(s_textVerts.data(), s_textVerts.size(), s_textInds.data(), s_textInds.size(), 6);
+    } else {
+        s_reusableTextMesh->UpdateData(s_textVerts.data(), s_textVerts.size(), s_textInds.data(), s_textInds.size());
+    }
+
+    if (!s_reusableTextMesh) return;
 
     g_text_shader->Use();
     g_text_shader->SetVec2("uScreenSize", (float)width_, (float)height_);
@@ -1159,17 +1205,21 @@ void main() {
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glDisable(GL_CULL_FACE);
 
-    mesh->Draw();
-    delete mesh;
+    s_reusableTextMesh->Draw();
 }
 
 void Window::DrawTextDefault(const std::string& text, float x, float y, float r, float g, float b, float a, float fontSize) {
-    static Font* defaultFont = nullptr;
-    if (!defaultFont || std::abs(defaultFont->GetPixelHeight() - fontSize) > 0.1f) {
-        if (defaultFont) delete defaultFont;
-        defaultFont = Font::CreateDefault(fontSize);
+    static std::unordered_map<int, Font*> s_fontCache;
+    int key = static_cast<int>(std::round(fontSize * 10.0f));
+    auto it = s_fontCache.find(key);
+    Font* font = nullptr;
+    if (it == s_fontCache.end()) {
+        font = Font::CreateDefault(fontSize);
+        s_fontCache[key] = font;
+    } else {
+        font = it->second;
     }
-    DrawText(defaultFont, text, x, y, r, g, b, a, 1.0f);
+    DrawText(font, text, x, y, r, g, b, a, 1.0f);
 }
 
 }

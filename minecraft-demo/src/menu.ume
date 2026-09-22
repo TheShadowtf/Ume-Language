@@ -4,19 +4,20 @@
 
 // ── Dirt-tile background (Minecraft main menu style) ────────────────────────
 public func void drawDirtBackground(Window win, Shader hudSh, Mesh quad, float sw, float sh) {
-    float tileSize = 48.0;
-    int cols = cast<int>(sw / tileSize) + 2;
-    int rows = cast<int>(sh / tileSize) + 2;
+    // Solid base dirt background
+    drawRect2D(win, hudSh, quad, 0.0, 0.0, sw, sh, 0.22 * 0.85, 0.22 * 0.52, 0.22 * 0.28, 1.0, sw, sh);
+
+    // Alternate checkered tiles
+    float tileSize = 64.0;
+    int cols = cast<int>(sw / tileSize) + 1;
+    int rows = cast<int>(sh / tileSize) + 1;
     for (int row = 0; row < rows; row++) {
         for (int col = 0; col < cols; col++) {
-            float tx = cast<float>(col) * tileSize;
-            float ty = cast<float>(row) * tileSize;
-            bool alt = ((col + row) % 2 == 0);
-            float br = alt ? 0.28 : 0.22;
-            drawRect2D(win, hudSh, quad, tx, ty, tileSize, tileSize, br * 0.85, br * 0.52, br * 0.28, 1.0, sw, sh);
-            // Inner darker border
-            drawRect2D(win, hudSh, quad, tx, ty, tileSize, 2, 0.10, 0.06, 0.03, 1.0, sw, sh);
-            drawRect2D(win, hudSh, quad, tx, ty, 2, tileSize, 0.10, 0.06, 0.03, 1.0, sw, sh);
+            if ((col + row) % 2 == 0) {
+                float tx = cast<float>(col) * tileSize;
+                float ty = cast<float>(row) * tileSize;
+                drawRect2D(win, hudSh, quad, tx, ty, tileSize, tileSize, 0.28 * 0.85, 0.28 * 0.52, 0.28 * 0.28, 1.0, sw, sh);
+            }
         }
     }
     // Vignette

@@ -133,9 +133,9 @@ import std.matrix.*; // Optional: for 3D camera & matrix math</code></pre>
     <tr><td><code>clearRGB</code></td><td><code>public func void clearRGB(float r, float g, float b)</code></td><td>Clear framebuffer with explicit RGB floats [0.0 - 1.0].</td></tr>
     <tr><td><code>swapBuffers</code></td><td><code>public func void swapBuffers()</code></td><td>Present the rendered frame (double buffering).</td></tr>
     <tr><td><code>pollEvents</code></td><td><code>public func void pollEvents()</code></td><td>Poll OS input and window events.</td></tr>
-    <tr><td><code>drawLine</code></td><td><code>public func void drawLine(float x1, float y1, float x2, float y2, Color color)</code></td><td>Draw a 2D line.</td></tr>
-    <tr><td><code>drawRect</code></td><td><code>public func void drawRect(float x, float y, float width, float height, Color color)</code></td><td>Draw a 2D rectangle.</td></tr>
-    <tr><td><code>drawCircle</code></td><td><code>public func void drawCircle(float x, float y, float radius, Color color)</code></td><td>Draw a 2D circle.</td></tr>
+    <tr><td><code>drawLine</code></td><td><code>public func void drawLine(float x1, float y1, float x2, float y2, Color color)</code></td><td>Draw a 2D line (supports alpha transparency blending).</td></tr>
+    <tr><td><code>drawRect</code></td><td><code>public func void drawRect(float x, float y, float width, float height, Color color)</code></td><td>Draw a 2D rectangle (supports alpha transparency blending).</td></tr>
+    <tr><td><code>drawCircle</code></td><td><code>public func void drawCircle(float x, float y, float radius, Color color, int segments = 32)</code></td><td>Draw a 2D circle with optional segment count and alpha blending.</td></tr>
     <tr><td><code>drawMesh</code></td><td><code>public func void drawMesh(Mesh mesh, Shader shader)</code></td><td>Render a 3D mesh using a GLSL shader.</td></tr>
     <tr><td><code>drawText</code></td><td><code>public func void drawText(Font font, string text, float x, float y, Color color, float scale = 1.0)</code></td><td>Draw text using a loaded <code>Font</code> instance and <code>Color</code>.</td></tr>
     <tr><td><code>drawTextRGB</code></td><td><code>public func void drawTextRGB(Font font, string text, float x, float y, float r, float g, float b, float scale = 1.0)</code></td><td>Draw text using a loaded <code>Font</code> instance and RGB floats.</td></tr>
@@ -143,14 +143,16 @@ import std.matrix.*; // Optional: for 3D camera & matrix math</code></pre>
     <tr><td><code>drawTextDefaultRGB</code></td><td><code>public func void drawTextDefaultRGB(string text, float x, float y, float r = 1.0, float g = 1.0, float b = 1.0, float fontSize = 18.0)</code></td><td>Draw text using the built-in default font and RGB floats.</td></tr>
     <tr><td><code>isKeyPressed</code></td><td><code>public func bool isKeyPressed(Key keyCode)</code></td><td>True while a keyboard key is held.</td></tr>
     <tr><td><code>isMouseButtonPressed</code></td><td><code>public func bool isMouseButtonPressed(MouseButton button)</code></td><td>True while a mouse button is held.</td></tr>
-    <tr><td><code>getMousePosition</code></td><td><code>public func float[] getMousePosition()</code></td><td>Returns <code>[x, y]</code> cursor coordinates in pixels.</td></tr>
-    <tr><td><code>getMouseDelta</code></td><td><code>public func float[] getMouseDelta()</code></td><td>Returns <code>[dx, dy]</code> mouse displacement since last frame.</td></tr>
+    <tr><td><code>getMousePosition</code></td><td><code>public func float[] getMousePosition()</code></td><td>Returns <code>[x, y]</code> cursor coordinates in pixels (automatically scaled to physical framebuffer pixels).</td></tr>
+    <tr><td><code>getMouseDelta</code></td><td><code>public func float[] getMouseDelta()</code></td><td>Returns <code>[dx, dy]</code> mouse displacement since last frame (automatically scaled).</td></tr>
+    <tr><td><code>getContentScale</code></td><td><code>public func float[] getContentScale()</code></td><td>Returns <code>[scaleX, scaleY]</code> content scale ratio between framebuffer pixels and virtual window points.</td></tr>
+    <tr><td><code>getWindowWidth</code> / <code>getWindowHeight</code></td><td><code>public func int getWindowWidth() / getWindowHeight()</code></td><td>Get virtual window dimensions in screen units (desktop points), distinct from physical framebuffer dimensions.</td></tr>
     <tr><td><code>setCursorGrabbed</code></td><td><code>public func void setCursorGrabbed(bool grabbed)</code></td><td>Lock/hide mouse cursor (useful for 3D FPS camera controls).</td></tr>
     <tr><td><code>enableDepthTest</code></td><td><code>public func void enableDepthTest(bool enabled)</code></td><td>Enable/disable OpenGL depth testing (<code>GL_DEPTH_TEST</code>).</td></tr>
     <tr><td><code>enableCullFace</code></td><td><code>public func void enableCullFace(bool enabled)</code></td><td>Enable/disable OpenGL face culling (<code>GL_CULL_FACE</code>).</td></tr>
     <tr><td><code>setFullscreen</code></td><td><code>public func void setFullscreen(bool fullscreen)</code></td><td>Toggle borderless monitor fullscreen mode.</td></tr>
     <tr><td><code>setMaximized</code></td><td><code>public func void setMaximized(bool maximized)</code></td><td>Maximize or restore window.</td></tr>
-    <tr><td><code>getWidth</code> / <code>getHeight</code></td><td><code>public func int getWidth() / getHeight()</code></td><td>Get current window dimensions in pixels.</td></tr>
+    <tr><td><code>getWidth</code> / <code>getHeight</code></td><td><code>public func int getWidth() / getHeight()</code></td><td>Get current window dimensions in physical framebuffer pixels.</td></tr>
     <tr><td><code>getAspectRatio</code></td><td><code>public func float getAspectRatio()</code></td><td>Get aspect ratio (<code>width / height</code>).</td></tr>
   </tbody>
 </table>
@@ -236,6 +238,40 @@ import std.matrix.*; // Optional: for 3D camera & matrix math</code></pre>
     <tr><td><code>Mouse</code></td><td><code>static func float[] getPosition(any window)</code></td><td>Get cursor <code>[x, y]</code> via raw handle.</td></tr>
   </tbody>
 </table>
+
+<h2 id="high-dpi">High-DPI &amp; Content Scale</h2>
+<p>On High-DPI displays (Windows with 125%/150%/200% display scaling, or macOS Retina displays), GLFW distinguishes between <strong>virtual window coordinates</strong> (used for desktop window sizing and positioning) and <strong>physical framebuffer pixels</strong> (used by OpenGL <code>glViewport</code> and rasterization).</p>
+<p>Mouse coordinates (<code>getMousePosition()</code>) and cursor deltas (<code>getMouseDelta()</code>) automatically scale to physical framebuffer pixel coordinates, matching <code>window.getWidth()</code> and <code>window.getHeight()</code>.</p>
+<table>
+  <thead><tr><th>Method</th><th>Signature</th><th>Description</th></tr></thead>
+  <tbody>
+    <tr><td><code>getContentScale</code></td><td><code>public func float[] getContentScale()</code></td><td>Returns a 2-element array <code>[scaleX, scaleY]</code> indicating the content scale ratio between framebuffer pixels and virtual window points.</td></tr>
+    <tr><td><code>getWindowWidth</code></td><td><code>public func int getWindowWidth()</code></td><td>Returns the virtual window width in screen units (desktop points), distinct from <code>window.getWidth()</code> which returns the physical framebuffer width in pixels.</td></tr>
+    <tr><td><code>getWindowHeight</code></td><td><code>public func int getWindowHeight()</code></td><td>Returns the virtual window height in screen units (desktop points), distinct from <code>window.getHeight()</code> which returns the physical framebuffer height in pixels.</td></tr>
+  </tbody>
+</table>
+<pre><code class="language-ume">float[] scale = window.getContentScale();
+float scaleX = scale[0];
+float scaleY = scale[1];
+
+int logicalW = window.getWindowWidth();
+int pixelW = window.getWidth();
+</code></pre>
+
+<h2 id="alpha-blending">Alpha Channel Support for 2D Primitives</h2>
+<p><code>drawLine</code>, <code>drawRect</code>, and <code>drawCircle</code> respect the <code>Color.alpha</code> channel component and render with OpenGL alpha transparency blending (<code>GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA</code>).</p>
+<ul>
+  <li><strong><code>drawLine(float x1, float y1, float x2, float y2, Color color)</code>:</strong> Draws a line between points. If <code>color.alpha &lt; 1.0</code>, renders with OpenGL alpha blending.</li>
+  <li><strong><code>drawRect(float x, float y, float width, float height, Color color)</code>:</strong> Draws a filled rectangle, passing <code>color.alpha</code> directly to the fragment shader.</li>
+  <li><strong><code>drawCircle(float x, float y, float radius, Color color, int segments = 32)</code>:</strong> Draws a filled circle with customizable segment tessellation and alpha transparency.</li>
+</ul>
+
+<h2 id="optimizations">Engine Architecture &amp; Performance Optimizations</h2>
+<ul>
+  <li><strong>GPU Allocation Churn Eliminated:</strong> <code>DrawLine</code>, <code>DrawCircle</code>, and <code>DrawText</code> stream vertex data into persistent dynamic GPU buffers (<code>glBufferSubData</code> via <code>Mesh::UpdateData</code>), avoiding per-frame GPU buffer allocation/destruction overhead.</li>
+  <li><strong>Shader Leak Fixed:</strong> Unified 2D primitive rendering under a shared singleton shader (<code>GetPrimitiveShader()</code>) rather than per-draw shader allocations.</li>
+  <li><strong>VBO &amp; VAO State Cleanliness:</strong> OpenGL state is preserved cleanly: unbound buffer state (<code>glBindBuffer(GL_ARRAY_BUFFER, 0)</code>) and vertex array state (<code>glBindVertexArray(0)</code>) prevent unintended mutation between draw calls.</li>
+</ul>
 
 <h2 id="examples">Code Examples</h2>
 
@@ -380,6 +416,40 @@ public class Main {
             shader.setVec3(&quot;lightPos&quot;, 5.0, 5.0, 5.0);
 
             win.drawMesh(cube, shader);
+
+            win.swapBuffers();
+        }
+    }
+}</code></pre>
+
+<h3>4. High-DPI Scaling &amp; Alpha Transparency Blending</h3>
+<pre><code class="language-ume">import std.graphics.*;
+
+public class Main {
+    public static func void main() {
+        Window win = new Window(800, 600, &quot;High-DPI &amp; Alpha Blending&quot;);
+
+        // Query content scale for high-DPI monitors
+        float[] scale = win.getContentScale();
+        float scaleX = scale[0];
+        float scaleY = scale[1];
+
+        // Virtual window desktop units vs physical pixel dimensions
+        int logicalW = win.getWindowWidth();
+        int pixelW = win.getWidth();
+
+        while (win.isOpen()) {
+            win.pollEvents();
+            win.clearRGB(0.1, 0.1, 0.15);
+
+            // Draw a semi-transparent black overlay
+            win.drawRect(0.0, 0.0, 800.0, 600.0, new Color(0.0, 0.0, 0.0, 0.5));
+
+            // Draw a glowing red transparent circle with custom segment count
+            win.drawCircle(400.0, 300.0, 50.0, new Color(1.0, 0.2, 0.2, 0.8), 64);
+
+            // Draw a semi-transparent blue accent line
+            win.drawLine(100.0, 100.0, 700.0, 500.0, new Color(0.2, 0.6, 1.0, 0.6));
 
             win.swapBuffers();
         }

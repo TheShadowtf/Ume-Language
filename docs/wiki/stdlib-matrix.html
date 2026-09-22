@@ -127,7 +127,7 @@
   <tbody>
     <tr><td><code>m</code></td><td><code>public float[] m</code> — 16-element float array storing matrix data in column-major order.</td></tr>
     <tr><td>constructor</td><td><code>public Matrix4x4()</code> / <code>public Matrix4x4(float[] values)</code></td></tr>
-    <tr><td><code>get</code> / <code>set</code></td><td><code>public float get(int col, int row)</code> / <code>public void set(int col, int row, float val)</code></td></tr>
+    <tr><td><code>get</code> / <code>set</code></td><td><code>public func float get(int col, int row)</code> / <code>public func void set(int col, int row, float val)</code></td></tr>
     <tr><td>Operators</td><td><code>operator *</code> (matrix multiply), <code>operator +</code> (matrix add), <code>operator ==</code></td></tr>
     <tr><td><code>transposed</code></td><td><code>public func Matrix4x4 transposed()</code></td></tr>
     <tr><td><code>toArray</code></td><td><code>public func float[] toArray()</code> — Returns the internal 16-element float array (useful for <code>Shader.setMat4</code>).</td></tr>
@@ -162,7 +162,7 @@ shader.setMat4(&quot;mvp&quot;, mvp.toArray());</code></pre>
   <thead><tr><th>Method / Member</th><th>Signature / Description</th></tr></thead>
   <tbody>
     <tr><td>constructor</td><td><code>public Matrix3x3()</code> / <code>public Matrix3x3(float[] values)</code></td></tr>
-    <tr><td><code>get</code> / <code>set</code></td><td><code>public float get(int col, int row)</code> / <code>public void set(int col, int row, float val)</code></td></tr>
+    <tr><td><code>get</code> / <code>set</code></td><td><code>public func float get(int col, int row)</code> / <code>public func void set(int col, int row, float val)</code></td></tr>
     <tr><td>Operators</td><td><code>operator *</code>, <code>operator ==</code></td></tr>
     <tr><td><code>transposed</code> / <code>determinant</code></td><td><code>public func Matrix3x3 transposed()</code> / <code>public func float determinant()</code></td></tr>
     <tr><td>Static Factories</td><td><code>identity()</code>, <code>translation(tx, ty)</code>, <code>scale(sx, sy)</code>, <code>rotationZ(angle)</code></td></tr>

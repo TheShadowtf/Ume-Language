@@ -244,7 +244,9 @@ func void main() {
 
         // ── Fixed-step update ──
         accumulator += frameTime;
-        while (accumulator >= timeStep) {
+        int maxSteps = 3;
+        int physStep = 0;
+        while (accumulator >= timeStep && physStep < maxSteps) {
             if (tabTimer > 0) tabTimer--;
             if (flyTimer > 0) flyTimer--;
             if (breakTimer > 0) breakTimer--;
@@ -515,12 +517,14 @@ func void main() {
             }
 
             accumulator -= timeStep;
+            physStep++;
         }
+        if (accumulator >= timeStep) accumulator = 0.0;
 
         // ── Chunk streaming ──
         if (gameState != 0) {
             world.loadNearestMissing(pcx, pcz, renderR);
-            world.rebuildDirtyChunks(3);
+            world.rebuildDirtyChunks(1);
         }
 
         // ── Sky color ──────────────────────────────────────────────────────────

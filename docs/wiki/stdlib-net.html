@@ -148,24 +148,26 @@
 <pre><code class="language-ume">import std.net.*;
 import std.collections.*;
 
-func void main() {
-    var client = new HttpClient();
-    client.setTimeout(5000);
+public class Main {
+    public static func void main() {
+        var client = new HttpClient();
+        client.setTimeout(5000);
 
-    // Simple GET
-    HttpResponse resp = client.get(&quot;https://httpbin.org/get&quot;);
-    Console.println(&quot;Status: &quot; + resp.statusCode);
-    Console.println(&quot;Body: &quot; + resp.body);
+        // Simple GET
+        HttpResponse resp = client.get(&quot;https://httpbin.org/get&quot;);
+        Console.println(&quot;Status: &quot; + resp.statusCode);
+        Console.println(&quot;Body: &quot; + resp.body);
 
-    // GET with custom headers
-    Map&lt;string, string&gt; headers = new Map&lt;string, string&gt;();
-    headers.put(&quot;Authorization&quot;, &quot;Bearer mytoken&quot;);
-    HttpResponse authResp = client.get(&quot;https://api.example.com/me&quot;, headers);
+        // GET with custom headers
+        Map&lt;string, string&gt; headers = new Map&lt;string, string&gt;();
+        headers.put(&quot;Authorization&quot;, &quot;Bearer mytoken&quot;);
+        HttpResponse authResp = client.get(&quot;https://api.example.com/me&quot;, headers);
 
-    // POST JSON
-    string json = &quot;{\&quot;name\&quot;:\&quot;Alice\&quot;,\&quot;age\&quot;:30}&quot;;
-    HttpResponse postResp = client.postJson(&quot;https://api.example.com/users&quot;, json);
-    Console.println(&quot;Created: &quot; + postResp.statusCode);
+        // POST JSON
+        string json = &quot;{\&quot;name\&quot;:\&quot;Alice\&quot;,\&quot;age\&quot;:30}&quot;;
+        HttpResponse postResp = client.postJson(&quot;https://api.example.com/users&quot;, json);
+        Console.println(&quot;Created: &quot; + postResp.statusCode);
+    }
 }</code></pre>
 
 <h2 id="tcpsocket"><code>TcpSocket</code></h2>
@@ -183,21 +185,23 @@ func void main() {
 </table>
 <pre><code class="language-ume">import std.net.*;
 
-func void main() {
-    var sock = new TcpSocket();
-    sock.connect(&quot;example.com&quot;, 80);
+public class Main {
+    public static func void main() {
+        var sock = new TcpSocket();
+        sock.connect(&quot;example.com&quot;, 80);
 
-    sock.send(&quot;GET / HTTP/1.1\r\nHost: example.com\r\nConnection: close\r\n\r\n&quot;);
+        sock.send(&quot;GET / HTTP/1.1\r\nHost: example.com\r\nConnection: close\r\n\r\n&quot;);
 
-    string response = &quot;&quot;;
-    while (sock.isConnected()) {
-        string chunk = sock.receive(4096);
-        if (chunk.length() == 0) break;
-        response = response + chunk;
+        string response = &quot;&quot;;
+        while (sock.isConnected()) {
+            string chunk = sock.receive(4096);
+            if (chunk.length() == 0) break;
+            response = response + chunk;
+        }
+
+        Console.println(response);
+        sock.close();
     }
-
-    Console.println(response);
-    sock.close();
 }</code></pre>
 
 <h2 id="tcplistener"><code>TcpListener</code></h2>
@@ -214,22 +218,24 @@ func void main() {
 <pre><code class="language-ume">import std.net.*;
 import std.thread.*;
 
-func void main() {
-    var server = new TcpListener(8080);
-    server.start();
-    Console.println(&quot;Listening on :8080&quot;);
+public class Main {
+    public static func void main() {
+        var server = new TcpListener(8080);
+        server.start();
+        Console.println(&quot;Listening on :8080&quot;);
 
-    while (true) {
-        TcpSocket client = server.accept();
-        Console.println(&quot;Client connected&quot;);
+        while (true) {
+            TcpSocket client = server.accept();
+            Console.println(&quot;Client connected&quot;);
 
-        // Handle in a worker thread
-        var handler = () -&gt; {
-            string req = client.receive(4096);
-            client.send(&quot;HTTP/1.1 200 OK\r\nContent-Length: 12\r\n\r\nHello, client&quot;);
-            client.close();
-        };
-        new Thread(handler).start();
+            // Handle in a worker thread
+            var handler = () -&gt; {
+                string req = client.receive(4096);
+                client.send(&quot;HTTP/1.1 200 OK\r\nContent-Length: 12\r\n\r\nHello, client&quot;);
+                client.close();
+            };
+            new Thread(handler).start();
+        }
     }
 }</code></pre>
 

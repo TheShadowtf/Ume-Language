@@ -22,30 +22,30 @@ class Color {
     float blue;
     float alpha;
     Color(float r, float g, float b, float a = 1.0) {
-        this.red = r
-        this.green = g
-        this.blue = b
-        this.alpha = a
+        this.red = r;
+        this.green = g;
+        this.blue = b;
+        this.alpha = a;
     }
     
     static func Color White() {
-        return new Color(1.0, 1.0, 1.0, 1.0)
+        return new Color(1.0, 1.0, 1.0, 1.0);
     }
     
     static func Color Black() {
-        return new Color(0.0, 0.0, 0.0, 1.0)
+        return new Color(0.0, 0.0, 0.0, 1.0);
     }
     
     static func Color Red() {
-        return new Color(1.0, 0.0, 0.0, 1.0)
+        return new Color(1.0, 0.0, 0.0, 1.0);
     }
     
     static func Color Green() {
-        return new Color(0.0, 1.0, 0.0, 1.0)
+        return new Color(0.0, 1.0, 0.0, 1.0);
     }
     
     static func Color Blue() {
-        return new Color(0.0, 0.0, 1.0, 1.0)
+        return new Color(0.0, 0.0, 1.0, 1.0);
     }
 }
 
@@ -193,15 +193,15 @@ class Window {
     }
     
     func void drawLine(float x1, float y1, float x2, float y2, Color color) {
-        Graphics.windowDrawLine(this.native_window, x1, y1, x2, y2, color.red, color.green, color.blue);
+        Graphics.windowDrawLine(this.native_window, x1, y1, x2, y2, color.red, color.green, color.blue, color.alpha);
     }
     
     func void drawRect(float x, float y, float width, float height, Color color) {
-        Graphics.windowDrawRect(this.native_window, x, y, width, height, color.red, color.green, color.blue);
+        Graphics.windowDrawRect(this.native_window, x, y, width, height, color.red, color.green, color.blue, color.alpha);
     }
     
-    func void drawCircle(float x, float y, float radius, Color color) {
-        Graphics.windowDrawCircle(this.native_window, x, y, radius, color.red, color.green, color.blue, 32);
+    func void drawCircle(float x, float y, float radius, Color color, int segments = 32) {
+        Graphics.windowDrawCircle(this.native_window, x, y, radius, color.red, color.green, color.blue, color.alpha, segments);
     }
     
     func bool isKeyPressed(Key keyCode) {
@@ -251,6 +251,18 @@ class Window {
     func float getAspectRatio() {
         return Graphics.windowGetAspectRatio(this.native_window);
     }
+
+    func float[] getContentScale() {
+        return Graphics.windowGetContentScale(this.native_window);
+    }
+
+    func int getWindowWidth() {
+        return Graphics.windowGetWindowWidth(this.native_window);
+    }
+
+    func int getWindowHeight() {
+        return Graphics.windowGetWindowHeight(this.native_window);
+    }
     func void drawMesh(Mesh mesh, Shader shader) {
         Graphics.windowDrawMesh(this.native_window, mesh.native_mesh, shader.native_shader);
     }
@@ -274,27 +286,27 @@ class Window {
 
 class Keyboard {
     static func bool isKeyPressed(any window, Key keyCode) {
-        return Graphics.windowIsKeyPressed(window, keyCode)
+        return Graphics.windowIsKeyPressed(window, keyCode);
     }
 }
 
 class Mouse {
     static func bool isButtonPressed(any window, MouseButton buttonCode) {
-        return Graphics.windowIsMouseButtonPressed(window, buttonCode)
+        return Graphics.windowIsMouseButtonPressed(window, buttonCode);
     }
     
     static func float[] getPosition(any window) {
-        return Graphics.windowGetMousePosition(window)
+        return Graphics.windowGetMousePosition(window);
     }
 }
 
 // Re-export input constants for convenience
 func any getKeys() {
-    return Graphics.Keys
+    return Graphics.Keys;
 }
 
 func any getMouseButtons() {
-    return Graphics.MouseButtons
+    return Graphics.MouseButtons;
 }
 
 

@@ -367,13 +367,19 @@ ASTNodePtr Parser::parseTopLevel() {
 
     // Gather attributes and modifiers
     std::vector<Attribute> attrs = parseAttributes();
-    AccessModifier access   = parseAccessModifier();
+    AccessModifier access   = AccessModifier::Default;
     bool isStatic   = false, isAbstract = false, isFinal = false, isOverride = false;
 
     // Modifier loop
     bool scanning = true;
     while (scanning) {
         switch (current().type) {
+        case TokenType::KW_PUBLIC:
+        case TokenType::KW_PRIVATE:
+        case TokenType::KW_PROTECTED:
+        case TokenType::KW_INTERNAL:
+            access = parseAccessModifier();
+            break;
         case TokenType::KW_STATIC:   isStatic   = true; advance(); break;
         case TokenType::KW_ABSTRACT: isAbstract = true; advance(); break;
         case TokenType::KW_FINAL:    isFinal    = true; advance(); break;
@@ -499,7 +505,7 @@ ASTNodePtr Parser::parseImportDecl() {
         }
     }
     bool wild = path.size() >= 2 && path.substr(path.size() - 2) == ".*";
-    if (check(TokenType::SEMICOLON)) advance();
+    expect(TokenType::SEMICOLON, "Expected ';' after import declaration");
     auto node = std::make_unique<ImportDecl>(path, wild);
     node->line = l; node->column = c;
     return node;
@@ -535,7 +541,7 @@ ASTNodePtr Parser::parseFuncDecl(AccessModifier access, bool isStatic,
     decl->params = parseParamList();
 
     if (isAbstract || check(TokenType::SEMICOLON)) {
-        match(TokenType::SEMICOLON);
+        expect(TokenType::SEMICOLON, "Expected ';' after function declaration");
     } else {
         decl->body = parseBlock();
     }
@@ -592,13 +598,19 @@ ASTNodePtr Parser::parseClassDecl(AccessModifier access) {
             continue;
         }
         std::vector<Attribute> attrs = parseAttributes();
-        AccessModifier mAccess = parseAccessModifier();
+        AccessModifier mAccess = AccessModifier::Default;
 
         bool mStatic = false, mAbstract = false, mFinal = false,
              mOverride = false, mConst = false;
         bool scan = true;
         while (scan) {
             switch (current().type) {
+            case TokenType::KW_PUBLIC:
+            case TokenType::KW_PRIVATE:
+            case TokenType::KW_PROTECTED:
+            case TokenType::KW_INTERNAL:
+                mAccess = parseAccessModifier();
+                break;
             case TokenType::KW_STATIC:   mStatic   = true; advance(); break;
             case TokenType::KW_ABSTRACT: mAbstract = true; advance(); break;
             case TokenType::KW_FINAL:    mFinal    = true; advance(); break;
@@ -659,23 +671,13 @@ ASTNodePtr Parser::parseClassDecl(AccessModifier access) {
                     decl->properties.push_back(parseProperty(mAccess, mStatic, type, name));
                     decl->properties.back()->attributes = std::move(attrs);
                 } else if (check(TokenType::LPAREN)) {
-                    // Method declaration without 'func' keyword (e.g. public string getPhrase())
-                    auto fn = std::make_unique<FuncDecl>();
-                    fn->access     = mAccess;
-                    fn->isStatic   = mStatic;
-                    fn->isAbstract = mAbstract;
-                    fn->isOverride = mOverride;
-                    fn->isFinal    = mFinal;
-                    fn->returnType = type;
-                    fn->name       = name;
-                    fn->params     = parseParamList();
-                    if (mAbstract || check(TokenType::SEMICOLON)) {
-                        match(TokenType::SEMICOLON);
-                    } else {
-                        fn->body   = parseBlock();
-                    }
-                    fn->attributes = std::move(attrs);
-                    decl->methods.push_back(std::move(fn));
+                    std::string modStr;
+                    if (mAccess == AccessModifier::Public) modStr += "public ";
+                    else if (mAccess == AccessModifier::Private) modStr += "private ";
+                    else if (mAccess == AccessModifier::Protected) modStr += "protected ";
+                    else if (mAccess == AccessModifier::Internal) modStr += "internal ";
+                    if (mStatic) modStr += "static ";
+                    throw error("Functions must be declared with 'func' keyword (e.g. '" + modStr + "func " + type.name + " " + name + "(...)')");
                 } else {
                     bool firstField = true;
                     while (true) {
@@ -837,6 +839,9 @@ std::unique_ptr<FieldDecl> Parser::parseField(AccessModifier access, bool isStat
     fd->isConst  = isConst;
     fd->type     = parseTypeAnnotation();
     fd->name     = expect(TokenType::IDENTIFIER, "Expected field name").value;
+    if (check(TokenType::LPAREN)) {
+        throw error("Functions must be declared with 'func' keyword (e.g. 'func " + fd->type.name + " " + fd->name + "(...)')");
+    }
     if (match(TokenType::ASSIGN))
         fd->initializer = parseExpression();
     expect(TokenType::SEMICOLON, "Expected ';' after field declaration");
@@ -979,11 +984,11 @@ ASTNodePtr Parser::parseStatement() {
     case TokenType::KW_UNSAFE:  return parseUnsafeBlock();
     case TokenType::KW_BREAK: {
         auto n = std::make_unique<BreakStmt>(); n->line = current().line;
-        advance(); match(TokenType::SEMICOLON); return n;
+        advance(); expect(TokenType::SEMICOLON, "Expected ';' after 'break'"); return n;
     }
     case TokenType::KW_CONTINUE: {
         auto n = std::make_unique<ContinueStmt>(); n->line = current().line;
-        advance(); match(TokenType::SEMICOLON); return n;
+        advance(); expect(TokenType::SEMICOLON, "Expected ';' after 'continue'"); return n;
     }
     case TokenType::KW_CONST: return parseVarDecl(true);
     // Nested class / struct / enum
@@ -1006,7 +1011,7 @@ ASTNodePtr Parser::parseStatement() {
         }
         {
             auto expr = parseExpression();
-            match(TokenType::SEMICOLON);
+            expect(TokenType::SEMICOLON, "Expected ';' after expression");
             auto stmt = std::make_unique<ExprStmt>(std::move(expr));
             return stmt;
         }
@@ -1025,6 +1030,9 @@ ASTNodePtr Parser::parseVarDecl(bool isConst) {
     auto block = std::make_unique<BlockStmt>();
     while (true) {
         std::string name = expect(TokenType::IDENTIFIER, "Expected variable name").value;
+        if (check(TokenType::LPAREN)) {
+            throw error("Functions must be declared with 'func' keyword (e.g. 'func " + ta.name + " " + name + "(...)')");
+        }
         ASTNodePtr init;
         if (match(TokenType::ASSIGN))
             init = parseExpression();
@@ -1045,9 +1053,9 @@ ASTNodePtr Parser::parseReturnStmt() {
     int l = current().line, c = current().column;
     advance(); // 'return'
     ASTNodePtr val;
-    if (!check(TokenType::SEMICOLON) && !check(TokenType::RBRACE))
+    if (!check(TokenType::SEMICOLON))
         val = parseExpression();
-    match(TokenType::SEMICOLON);
+    expect(TokenType::SEMICOLON, "Expected ';' after return statement");
     auto node = std::make_unique<ReturnStmt>(std::move(val));
     node->line = l; node->column = c;
     return node;
@@ -1146,9 +1154,9 @@ ASTNodePtr Parser::parseForStmt() {
         else if (isTypeStart()) {
             size_t saved = pos_;
             try { init = parseVarDecl(false); }
-            catch (...) { pos_ = saved; auto e = parseExpression(); match(TokenType::SEMICOLON); init = std::make_unique<ExprStmt>(std::move(e)); }
+            catch (...) { pos_ = saved; auto e = parseExpression(); expect(TokenType::SEMICOLON, "Expected ';' in for"); init = std::make_unique<ExprStmt>(std::move(e)); }
         } else {
-            auto e = parseExpression(); match(TokenType::SEMICOLON);
+            auto e = parseExpression(); expect(TokenType::SEMICOLON, "Expected ';' in for");
             init = std::make_unique<ExprStmt>(std::move(e));
         }
     } else { advance(); } // empty init ;
@@ -1237,7 +1245,7 @@ ASTNodePtr Parser::parseThrowStmt() {
     int l = current().line, c = current().column;
     advance(); // 'throw'
     auto val  = parseExpression();
-    match(TokenType::SEMICOLON);
+    expect(TokenType::SEMICOLON, "Expected ';' after throw statement");
     auto node  = std::make_unique<ThrowStmt>(std::move(val));
     node->line = l; node->column = c;
     return node;

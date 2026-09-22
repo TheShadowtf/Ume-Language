@@ -188,24 +188,26 @@ if (f.exists()) {
 <h2 id="example">A small interactive program</h2>
 <pre><code class="language-ume">import std.io.*;
 
-func void main() {
-    Console.println(&quot;=== Note Taker ===&quot;);
+public class Main {
+    public static func void main() {
+        Console.println(&quot;=== Note Taker ===&quot;);
 
-    // Read existing notes if any
-    File f = new File(&quot;notes.txt&quot;);
-    if (f.exists()) {
-        Console.println(&quot;Current notes:&quot;);
-        List&lt;string&gt; lines = f.readLines();
-        foreach (string line in lines) {
-            Console.println(&quot;  - &quot; + line);
+        // Read existing notes if any
+        File f = new File(&quot;notes.txt&quot;);
+        if (f.exists()) {
+            Console.println(&quot;Current notes:&quot;);
+            List&lt;string&gt; lines = f.readLines();
+            foreach (string line in lines) {
+                Console.println(&quot;  - &quot; + line);
+            }
         }
-    }
 
-    // Append a new note
-    string note = Console.readLine(&quot;New note: &quot;);
-    if (note.length() &gt; 0) {
-        f.append(note + &quot;\n&quot;);
-        Console.println(&quot;Saved.&quot;);
+        // Append a new note
+        string note = Console.readLine(&quot;New note: &quot;);
+        if (note.length() &gt; 0) {
+            f.append(note + &quot;\n&quot;);
+            Console.println(&quot;Saved.&quot;);
+        }
     }
 }</code></pre>
 

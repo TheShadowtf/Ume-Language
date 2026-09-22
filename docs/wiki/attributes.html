@@ -146,21 +146,23 @@ public class Product {
     public double price;
 }
 
-func void main() {
-    var p = new Product();
-    p.id    = 101;
-    p.name  = &quot;Widget&quot;;
-    p.price = 19.99;
+public class Main {
+    public static func void main() {
+        var p = new Product();
+        p.id    = 101;
+        p.name  = &quot;Widget&quot;;
+        p.price = 19.99;
 
-    // Serialize to JSON
-    string json = p.toJsonString();
-    Console.println(json);
-    // {&quot;product_id&quot;:101,&quot;display_name&quot;:&quot;Widget&quot;,&quot;price_usd&quot;:19.99}
+        // Serialize to JSON
+        string json = p.toJsonString();
+        Console.println(json);
+        // {&quot;product_id&quot;:101,&quot;display_name&quot;:&quot;Widget&quot;,&quot;price_usd&quot;:19.99}
 
-    // Deserialize back
-    var p2 = Product.fromJsonString(json);
-    Console.println(p2.name);    // Widget
-    Console.println(p2.price);   // 19.99
+        // Deserialize back
+        var p2 = Product.fromJsonString(json);
+        Console.println(p2.name);    // Widget
+        Console.println(p2.price);   // 19.99
+    }
 }</code></pre>
 
 <h2 id="jsonproperty"><code>[JsonProperty("key")]</code></h2>

@@ -148,19 +148,21 @@
 <h2 id="example">Playing background music</h2>
 <pre><code class="language-ume">import std.audio.*;
 
-func void main() {
-    var engine = new AudioEngine();
-    engine.setVolume(0.8);
+public class Main {
+    public static func void main() {
+        var engine = new AudioEngine();
+        engine.setVolume(0.8);
 
-    var music = new Sound(engine, &quot;background.mp3&quot;);
-    music.setLooping(true);
-    music.setVolume(0.7);
-    music.play();
+        var music = new Sound(engine, &quot;background.mp3&quot;);
+        music.setLooping(true);
+        music.setVolume(0.7);
+        music.play();
 
-    // ... your game loop runs here ...
+        // ... your game loop runs here ...
 
-    // When done:
-    music.stop();
+        // When done:
+        music.stop();
+    }
 }</code></pre>
 
 <h2 id="sfx">Sound effects</h2>

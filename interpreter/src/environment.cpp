@@ -29,27 +29,34 @@ void Environment::assign(const std::string& name, Value value) {
     throw std::runtime_error("Undefined variable: " + name);
 }
 
-Value& Environment::get(const std::string& name) {
+Value* Environment::lookup(const std::string& name) {
     std::lock_guard<std::recursive_mutex> lock(mtx_);
     auto it = vars_.find(name);
-    if (it != vars_.end()) return it->second;
-    if (parent_) return parent_->get(name);
+    if (it != vars_.end()) return &it->second;
+    if (parent_) return parent_->lookup(name);
+    return nullptr;
+}
+
+const Value* Environment::lookup(const std::string& name) const {
+    std::lock_guard<std::recursive_mutex> lock(mtx_);
+    auto it = vars_.find(name);
+    if (it != vars_.end()) return &it->second;
+    if (parent_) return parent_->lookup(name);
+    return nullptr;
+}
+
+Value& Environment::get(const std::string& name) {
+    if (Value* v = lookup(name)) return *v;
     throw std::runtime_error("Undefined variable: " + name);
 }
 
 const Value& Environment::get(const std::string& name) const {
-    std::lock_guard<std::recursive_mutex> lock(mtx_);
-    auto it = vars_.find(name);
-    if (it != vars_.end()) return it->second;
-    if (parent_) return parent_->get(name);
+    if (const Value* v = lookup(name)) return *v;
     throw std::runtime_error("Undefined variable: " + name);
 }
 
 bool Environment::has(const std::string& name) const {
-    std::lock_guard<std::recursive_mutex> lock(mtx_);
-    if (vars_.count(name)) return true;
-    if (parent_) return parent_->has(name);
-    return false;
+    return lookup(name) != nullptr;
 }
 
 std::shared_ptr<Environment> Environment::child() {

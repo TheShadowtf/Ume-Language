@@ -139,9 +139,11 @@ cd ume-language
 .\build.bat</code></pre>
 
 <h2 id="hello">Hello, World</h2>
-<p>Create a file called <code>hello.ume</code>. Ume programs start from a static <code>main</code> function — it can live in a free function or inside a class. The simplest form is a free function:</p>
-<pre><code class="language-ume">func void main() {
-    Console.println(&quot;Hello, World!&quot;);
+<p>Create a file called <code>hello.ume</code>. Ume programs declare their entry point with <code>public static func void main()</code> inside class <code>Main</code>:</p>
+<pre><code class="language-ume">public class Main {
+    public static func void main() {
+        Console.println(&quot;Hello, World!&quot;);
+    }
 }</code></pre>
 
 <p>Run it two ways. During development you'll usually interpret directly with <code>-run</code> — it skips native code generation and starts immediately, which makes iteration fast. When you want a shippable binary, use <code>-compile</code> to transpile to C++17 and invoke the host C++ compiler:</p>
@@ -184,10 +186,12 @@ ume.exe -compile hello.ume -o hello
 import std.thread.*;
 import std.math.*;
 
-func void main() {
-    var nums = new List&lt;int&gt;();
-    nums.add(42);
-    Console.println(nums.size());
+public class Main {
+    public static func void main() {
+        var nums = new List&lt;int&gt;();
+        nums.add(42);
+        Console.println(nums.size());
+    }
 }</code></pre>
 <p>The details — package declarations, namespace blocks, selective symbol imports, wildcards, include guards, and when to use each mechanism — are covered in depth on the <a href="modules.html">Modules &amp; Imports</a> page.</p>
 

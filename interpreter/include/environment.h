@@ -33,6 +33,10 @@ public:
     // Check existence without throwing
     bool has(const std::string& name) const;
 
+    // Single-pass lookup returning pointer (nullptr if not found)
+    Value* lookup(const std::string& name);
+    const Value* lookup(const std::string& name) const;
+
     // Create a child scope
     std::shared_ptr<Environment> child();
 

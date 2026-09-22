@@ -401,11 +401,11 @@ struct _ume_vec {
 
 // ── Exceptions ───────────────────────────────────────────────
 struct Exception : std::exception {
-    String message_;
+    String message;
     Exception() = default;
-    explicit Exception(const String& msg) : message_(msg) {}
-    const char* what() const noexcept override { return message_.c_str(); }
-    virtual String getMessage() const { return message_; }
+    explicit Exception(const String& msg) : message(msg) {}
+    const char* what() const noexcept override { return message.c_str(); }
+    virtual String getMessage() const { return message; }
 };
 struct DivisionByZeroException : Exception {
     explicit DivisionByZeroException(const String& m="Division by zero") : Exception(m) {}
@@ -1043,13 +1043,17 @@ void CodeGenerator::genProgram(const Program& prog) {
         if (auto* cls = dynamic_cast<const ClassDecl*>(node.get())) {
             if (cls->name == "Main") {
                 for (auto& m : cls->methods) {
-                    if (m->name == "main" && m->isStatic) {
-                        emitLine("\nint main(int argc, char** argv) {");
-                        emitLine("    Main::main();");
-                        emitLine("    return 0;");
-                        emitLine("}");
-                        emittedMain = true;
-                        break;
+                    if (m->name == "main") {
+                        if (m->isStatic) {
+                            emitLine("\nint main(int argc, char** argv) {");
+                            emitLine("    Main::main();");
+                            emitLine("    return 0;");
+                            emitLine("}");
+                            emittedMain = true;
+                            break;
+                        } else {
+                            throw std::runtime_error("Entry point 'main' in class 'Main' must be declared static ('public static func void main()').");
+                        }
                     }
                 }
             }
@@ -1068,6 +1072,9 @@ void CodeGenerator::genProgram(const Program& prog) {
                 }
             }
         }
+    }
+    if (!emittedMain) {
+        throw std::runtime_error("No entry point found. Program must define 'public static func void main()' in class Main or a top-level 'func void main()'.");
     }
 }
 
@@ -1766,7 +1773,7 @@ std::string CodeGenerator::genMemberAccess(const MemberAccessExpr& expr) {
 
     static const std::unordered_set<std::string> staticBuiltins = {
         "Console", "Math", "System", "String", "FileSystem",
-        "Graphics"
+        "Graphics", "Thread", "Task"
     };
     bool isStatic = staticBuiltins.count(obj) > 0 || classNames_.count(obj) > 0 || enumNames_.count(obj) > 0;
     // __super (MSVC keyword for base class) uses :: for member access

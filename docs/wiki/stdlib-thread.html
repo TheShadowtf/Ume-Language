@@ -136,22 +136,24 @@
 </table>
 <pre><code class="language-ume">import std.thread.*;
 
-func void main() {
-    var worker = () -&gt; {
-        for (int i = 0; i &lt; 5; i++) {
-            Console.println(&quot;worker: &quot; + i);
-            Thread.sleep(100);
-        }
-    };
+public class Main {
+    public static func void main() {
+        var worker = () -&gt; {
+            for (int i = 0; i &lt; 5; i++) {
+                Console.println(&quot;worker: &quot; + i);
+                Thread.sleep(100);
+            }
+        };
 
-    var t = new Thread(worker);
-    t.start();
+        var t = new Thread(worker);
+        t.start();
 
-    // Do other work in parallel
-    Console.println(&quot;main: started worker&quot;);
+        // Do other work in parallel
+        Console.println(&quot;main: started worker&quot;);
 
-    t.join();   // wait for worker to finish
-    Console.println(&quot;main: done&quot;);
+        t.join();   // wait for worker to finish
+        Console.println(&quot;main: done&quot;);
+    }
 }</code></pre>
 
 <h2 id="mutex"><code>Mutex</code></h2>
