@@ -1,0 +1,47 @@
+// ═══════════════════════════════════════════════════════════════════════════
+// BlockDef.ume — Block metadata definition
+// ═══════════════════════════════════════════════════════════════════════════
+
+// (BlockIds is included by Block.ume before this file)
+
+public class BlockDef {
+    public int    id;
+    public string name;
+
+    // Atlas tile coords (col, row) per face
+    public int topCol;   public int topRow;
+    public int botCol;   public int botRow;
+    public int sideCol;  public int sideRow;
+
+    // HUD / fallback color
+    public float hudR; public float hudG; public float hudB;
+
+    // Gameplay
+    public int    flags;
+    public int    hardness;       // ticks to break (0=instant, -1=unbreakable)
+    public int    lightLevel;     // 0..15 emitted (0 = none)
+
+    public BlockDef(int id, string name) {
+        this.id = id; this.name = name;
+        topCol = 4; topRow = 2; botCol = 4; botRow = 2; sideCol = 4; sideRow = 2;
+        hudR = 0.5; hudG = 0.5; hudB = 0.5;
+        flags = BLOCK_FLAG_SOLID;
+        hardness = 6;
+        lightLevel = 0;
+    }
+
+    public func BlockDef setTop(int col, int row)    { topCol = col; topRow = row; return this; }
+    public func BlockDef setBottom(int col, int row) { botCol = col; botRow = row; return this; }
+    public func BlockDef setSide(int col, int row)   { sideCol = col; sideRow = row; return this; }
+    public func BlockDef setAll(int col, int row)    { topCol = col; topRow = row; botCol = col; botRow = row; sideCol = col; sideRow = row; return this; }
+    public func BlockDef setHud(float r, float g, float b) { hudR = r; hudG = g; hudB = b; return this; }
+    public func BlockDef setFlags(int f)             { flags = f; return this; }
+    public func BlockDef setHardness(int h)          { hardness = h; return this; }
+    public func BlockDef setLight(int l)             { lightLevel = l; return this; }
+
+    public func bool isSolid()        { return (flags & BLOCK_FLAG_SOLID) != 0; }
+    public func bool isTransparent()  { return (flags & BLOCK_FLAG_TRANSPARENT) != 0; }
+    public func bool isCross()        { return (flags & BLOCK_FLAG_CROSS) != 0; }
+    public func bool isLiquid()       { return (flags & BLOCK_FLAG_LIQUID) != 0; }
+    public func bool isUnbreakable()  { return (flags & BLOCK_FLAG_UNBREAKABLE) != 0; }
+}

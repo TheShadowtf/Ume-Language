@@ -1,0 +1,222 @@
+// ═══════════════════════════════════════════════════════════════════════════
+// MobFallbacks.ume — Procedural fallback box builders for entity models
+// ═══════════════════════════════════════════════════════════════════════════
+
+// (MobPart is included by Model.ume before this file)
+
+public func MobModel buildPigFallback() {
+    MobModel m = new MobModel(8);
+    float pinkR = 0.90; float pinkG = 0x70/255.0; float pinkB = 0x75/255.0;
+    float darkR = 0xE0/255.0; float darkG = 0x88/255.0; float darkB = 0x88/255.0;
+
+    Mesh body = makeBox8(0.35, 0.45, 0.45, pinkR, pinkG, pinkB);
+    m.addPart(new MobPart("body", body, 0.0, 0.20, 0.0, ANIM_BODY_BOB, 0.0));
+
+    Mesh head = makeBox8(0.20, 0.35, 0.20, pinkR, pinkG, pinkB);
+    m.addPart(new MobPart("head", head, 0.0, 0.30, -0.45, ANIM_HEAD, 0.0));
+
+    Mesh snout = makeBox8(0.10, 0.12, 0.05, darkR, darkG, darkB);
+    m.addPart(new MobPart("snout", snout, 0.0, 0.36, -0.62, ANIM_NONE, 0.0));
+
+    float legW = 0.08; float legH = 0.20;
+    Mesh leg = makeBox8(legW, legH, legW, pinkR*0.85, pinkG*0.85, pinkB*0.85);
+    m.addPart(new MobPart("legFL", leg, -0.22, 0.05, -0.30, ANIM_LEG, legH));
+    m.addPart(new MobPart("legFR", leg,  0.22, 0.05, -0.30, ANIM_LEG_INV, legH));
+    m.addPart(new MobPart("legBL", leg, -0.22, 0.05,  0.30, ANIM_LEG_INV, legH));
+    m.addPart(new MobPart("legBR", leg,  0.22, 0.05,  0.30, ANIM_LEG, legH));
+
+    return m;
+}
+
+public func MobModel buildCowFallback() {
+    MobModel m = new MobModel(8);
+    float brownR = 0.40; float brownG = 0.27; float brownB = 0.15;
+    float whiteR = 0.92; float whiteG = 0.90; float whiteB = 0.85;
+
+    Mesh body = makeBox8(0.40, 0.55, 0.55, brownR, brownG, brownB);
+    m.addPart(new MobPart("body", body, 0.0, 0.25, 0.0, ANIM_BODY_BOB, 0.0));
+
+    Mesh head = makeBox8(0.22, 0.38, 0.22, whiteR, whiteG, whiteB);
+    m.addPart(new MobPart("head", head, 0.0, 0.45, -0.55, ANIM_HEAD, 0.0));
+
+    Mesh horn = makeBox8(0.04, 0.08, 0.04, 0.95, 0.92, 0.85);
+    m.addPart(new MobPart("hornL", horn, -0.18, 0.80, -0.50, ANIM_NONE, 0.0));
+    m.addPart(new MobPart("hornR", horn,  0.18, 0.80, -0.50, ANIM_NONE, 0.0));
+
+    float legW = 0.10; float legH = 0.30;
+    Mesh leg = makeBox8(legW, legH, legW, brownR*0.8, brownG*0.8, brownB*0.8);
+    m.addPart(new MobPart("legFL", leg, -0.28, 0.05, -0.35, ANIM_LEG, legH));
+    m.addPart(new MobPart("legFR", leg,  0.28, 0.05, -0.35, ANIM_LEG_INV, legH));
+    m.addPart(new MobPart("legBL", leg, -0.28, 0.05,  0.35, ANIM_LEG_INV, legH));
+    m.addPart(new MobPart("legBR", leg,  0.28, 0.05,  0.35, ANIM_LEG, legH));
+
+    return m;
+}
+
+public func MobModel buildChickenFallback() {
+    MobModel m = new MobModel(8);
+    float whiteR = 0.95; float whiteG = 0.95; float whiteB = 0.92;
+    float redR = 0.90; float redG = 0.15; float redB = 0.15;
+    float yellowR = 0.90; float yellowG = 0.75; float yellowB = 0.15;
+
+    Mesh body = makeBox8(0.18, 0.22, 0.22, whiteR, whiteG, whiteB);
+    m.addPart(new MobPart("body", body, 0.0, 0.18, 0.0, ANIM_BODY_BOB, 0.0));
+
+    Mesh head = makeBox8(0.10, 0.14, 0.10, whiteR, whiteG, whiteB);
+    m.addPart(new MobPart("head", head, 0.0, 0.40, -0.18, ANIM_HEAD, 0.0));
+
+    Mesh comb = makeBox8(0.06, 0.04, 0.08, redR, redG, redB);
+    m.addPart(new MobPart("comb", comb, 0.0, 0.54, -0.18, ANIM_NONE, 0.0));
+
+    Mesh beak = makeBox8(0.05, 0.04, 0.04, yellowR, yellowG, yellowB);
+    m.addPart(new MobPart("beak", beak, 0.0, 0.44, -0.27, ANIM_NONE, 0.0));
+
+    Mesh wing = makeBox8(0.04, 0.16, 0.18, whiteR*0.92, whiteG*0.92, whiteB*0.92);
+    m.addPart(new MobPart("wingL", wing, -0.20, 0.22, 0.0, ANIM_WING, 0.16));
+    m.addPart(new MobPart("wingR", wing,  0.20, 0.22, 0.0, ANIM_WING_INV, 0.16));
+
+    Mesh leg = makeBox8(0.03, 0.18, 0.03, yellowR, yellowG, yellowB);
+    m.addPart(new MobPart("legFL", leg, -0.06, 0.02, -0.05, ANIM_LEG, 0.18));
+    m.addPart(new MobPart("legFR", leg,  0.06, 0.02, -0.05, ANIM_LEG_INV, 0.18));
+
+    return m;
+}
+
+public func MobModel buildSheepFallback() {
+    MobModel m = new MobModel(8);
+    float woolR = 0.92; float woolG = 0.92; float woolB = 0.92;
+    float faceR = 0.30; float faceG = 0.25; float faceB = 0.22;
+
+    Mesh body = makeBox8(0.40, 0.50, 0.50, woolR, woolG, woolB);
+    m.addPart(new MobPart("body", body, 0.0, 0.22, 0.0, ANIM_BODY_BOB, 0.0));
+
+    Mesh head = makeBox8(0.18, 0.25, 0.18, faceR, faceG, faceB);
+    m.addPart(new MobPart("head", head, 0.0, 0.40, -0.45, ANIM_HEAD, 0.0));
+
+    Mesh leg = makeBox8(0.08, 0.22, 0.08, faceR*0.9, faceG*0.9, faceB*0.9);
+    m.addPart(new MobPart("legFL", leg, -0.26, 0.05, -0.30, ANIM_LEG, 0.22));
+    m.addPart(new MobPart("legFR", leg,  0.26, 0.05, -0.30, ANIM_LEG_INV, 0.22));
+    m.addPart(new MobPart("legBL", leg, -0.26, 0.05,  0.30, ANIM_LEG_INV, 0.22));
+    m.addPart(new MobPart("legBR", leg,  0.26, 0.05,  0.30, ANIM_LEG, 0.22));
+
+    return m;
+}
+
+public func MobModel buildZombieFallback() {
+    MobModel m = new MobModel(8);
+    float skinR = 0.45; float skinG = 0.65; float skinB = 0.40;
+    float shirtR = 0.20; float shirtG = 0.30; float shirtB = 0.55;
+    float pantsR = 0.25; float pantsG = 0.22; float pantsB = 0.20;
+
+    Mesh body = makeBox8(0.22, 0.50, 0.12, shirtR, shirtG, shirtB);
+    m.addPart(new MobPart("body", body, 0.0, 0.55, 0.0, ANIM_BODY_BOB, 0.0));
+
+    Mesh head = makeBox8(0.18, 0.18, 0.18, skinR, skinG, skinB);
+    m.addPart(new MobPart("head", head, 0.0, 1.05, 0.0, ANIM_HEAD, 0.0));
+
+    Mesh arm = makeBox8(0.07, 0.40, 0.07, skinR, skinG, skinB);
+    m.addPart(new MobPart("armL", arm, -0.27, 0.95, -0.15, ANIM_LEG, 0.40));
+    m.addPart(new MobPart("armR", arm,  0.27, 0.95, -0.15, ANIM_LEG_INV, 0.40));
+
+    Mesh leg = makeBox8(0.09, 0.50, 0.09, pantsR, pantsG, pantsB);
+    m.addPart(new MobPart("legL", leg, -0.12, 0.05, 0.0, ANIM_LEG, 0.50));
+    m.addPart(new MobPart("legR", leg,  0.12, 0.05, 0.0, ANIM_LEG_INV, 0.50));
+
+    return m;
+}
+
+public func MobModel buildSkeletonFallback() {
+    MobModel m = new MobModel(8);
+    float boneR = 0.85; float boneG = 0.85; float boneB = 0.80;
+
+    Mesh body = makeBox8(0.16, 0.50, 0.10, boneR, boneG, boneB);
+    m.addPart(new MobPart("body", body, 0.0, 0.55, 0.0, ANIM_BODY_BOB, 0.0));
+
+    Mesh head = makeBox8(0.18, 0.18, 0.18, boneR*1.05, boneG*1.05, boneB*1.05);
+    m.addPart(new MobPart("head", head, 0.0, 1.05, 0.0, ANIM_HEAD, 0.0));
+
+    Mesh arm = makeBox8(0.06, 0.42, 0.06, boneR, boneG, boneB);
+    m.addPart(new MobPart("armL", arm, -0.22, 0.92, -0.10, ANIM_NONE, 0.0));
+    m.addPart(new MobPart("armR", arm,  0.22, 0.92, 0.0, ANIM_LEG_INV, 0.42));
+
+    Mesh leg = makeBox8(0.07, 0.50, 0.07, boneR*0.92, boneG*0.92, boneB*0.92);
+    m.addPart(new MobPart("legL", leg, -0.10, 0.05, 0.0, ANIM_LEG, 0.50));
+    m.addPart(new MobPart("legR", leg,  0.10, 0.05, 0.0, ANIM_LEG_INV, 0.50));
+
+    return m;
+}
+
+public func MobModel buildSpiderFallback() {
+    MobModel m = new MobModel(12);
+    float blackR = 0.18; float blackG = 0.15; float blackB = 0.20;
+    float redR = 0.65; float redG = 0.10; float redB = 0.10;
+
+    Mesh body = makeBox8(0.30, 0.25, 0.40, blackR, blackG, blackB);
+    m.addPart(new MobPart("body", body, 0.0, 0.18, 0.10, ANIM_BODY_BOB, 0.0));
+
+    Mesh head = makeBox8(0.22, 0.20, 0.22, blackR*1.1, blackG*1.1, blackB*1.1);
+    m.addPart(new MobPart("head", head, 0.0, 0.20, -0.20, ANIM_HEAD, 0.0));
+
+    Mesh leg = makeBox8(0.05, 0.30, 0.05, blackR, blackG, blackB);
+    m.addPart(new MobPart("legL1", leg, -0.28, 0.20, -0.18, ANIM_LEG,       0.30));
+    m.addPart(new MobPart("legL2", leg, -0.28, 0.20, -0.06, ANIM_LEG_2,     0.30));
+    m.addPart(new MobPart("legL3", leg, -0.28, 0.20,  0.06, ANIM_LEG_INV_2, 0.30));
+    m.addPart(new MobPart("legL4", leg, -0.28, 0.20,  0.18, ANIM_LEG_INV,   0.30));
+
+    m.addPart(new MobPart("legR1", leg,  0.28, 0.20, -0.18, ANIM_LEG_INV,   0.30));
+    m.addPart(new MobPart("legR2", leg,  0.28, 0.20, -0.06, ANIM_LEG_INV_2, 0.30));
+    m.addPart(new MobPart("legR3", leg,  0.28, 0.20,  0.06, ANIM_LEG_2,     0.30));
+    m.addPart(new MobPart("legR4", leg,  0.28, 0.20,  0.18, ANIM_LEG,       0.30));
+
+    Mesh eye = makeBox8(0.03, 0.03, 0.02, redR, redG, redB);
+    m.addPart(new MobPart("eyeL", eye, -0.06, 0.32, -0.30, ANIM_NONE, 0.0));
+    m.addPart(new MobPart("eyeR", eye,  0.06, 0.32, -0.30, ANIM_NONE, 0.0));
+
+    return m;
+}
+
+public func MobModel buildCreeperFallback() {
+    MobModel m = new MobModel(8);
+    float creeperR = 0.55; float creeperG = 0.75; float creeperB = 0.30;
+    float darkR = 0.30; float darkG = 0.50; float darkB = 0.15;
+
+    Mesh body = makeBox8(0.20, 0.55, 0.12, creeperR, creeperG, creeperB);
+    m.addPart(new MobPart("body", body, 0.0, 0.50, 0.0, ANIM_BODY_BOB, 0.0));
+
+    Mesh head = makeBox8(0.22, 0.22, 0.22, creeperR*1.05, creeperG*1.05, creeperB*1.05);
+    m.addPart(new MobPart("head", head, 0.0, 1.05, 0.0, ANIM_HEAD, 0.0));
+
+    Mesh face = makeBox8(0.18, 0.10, 0.02, darkR, darkG, darkB);
+    m.addPart(new MobPart("face", face, 0.0, 1.10, -0.115, ANIM_NONE, 0.0));
+
+    Mesh leg = makeBox8(0.10, 0.18, 0.10, darkR, darkG, darkB);
+    m.addPart(new MobPart("legFL", leg, -0.15, 0.05, -0.05, ANIM_LEG,      0.18));
+    m.addPart(new MobPart("legFR", leg,  0.15, 0.05, -0.05, ANIM_LEG_INV,  0.18));
+    m.addPart(new MobPart("legBL", leg, -0.15, 0.05,  0.05, ANIM_LEG_INV,  0.18));
+    m.addPart(new MobPart("legBR", leg,  0.15, 0.05,  0.05, ANIM_LEG,      0.18));
+
+    return m;
+}
+
+public func MobModel buildPlayerFallback() {
+    MobModel m = new MobModel(8);
+    float skinR = 0.85; float skinG = 0.70; float skinB = 0.55;
+    float shirtR = 0.20; float shirtG = 0.45; float shirtB = 0.75;
+    float pantsR = 0.30; float pantsG = 0.25; float pantsB = 0.20;
+
+    Mesh body = makeBox8(0.22, 0.55, 0.12, shirtR, shirtG, shirtB);
+    m.addPart(new MobPart("body", body, 0.0, 0.55, 0.0, ANIM_NONE, 0.0));
+
+    Mesh head = makeBox8(0.20, 0.20, 0.20, skinR, skinG, skinB);
+    m.addPart(new MobPart("head", head, 0.0, 1.10, 0.0, ANIM_NONE, 0.0));
+
+    Mesh arm = makeBox8(0.07, 0.50, 0.07, shirtR, shirtG, shirtB);
+    m.addPart(new MobPart("armL", arm, -0.27, 0.55, 0.0, ANIM_NONE, 0.0));
+    m.addPart(new MobPart("armR", arm,  0.27, 0.55, 0.0, ANIM_NONE, 0.0));
+
+    Mesh leg = makeBox8(0.09, 0.55, 0.09, pantsR, pantsG, pantsB);
+    m.addPart(new MobPart("legL", leg, -0.12, 0.0, 0.0, ANIM_NONE, 0.0));
+    m.addPart(new MobPart("legR", leg,  0.12, 0.0, 0.0, ANIM_NONE, 0.0));
+
+    return m;
+}

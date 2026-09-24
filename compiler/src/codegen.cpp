@@ -920,6 +920,14 @@ void CodeGenerator::genProgram(const Program& prog) {
             }
         } else if (auto* str = dynamic_cast<const StructDecl*>(node.get())) {
             emitLine("struct " + str->name + ";");
+        } else if (auto* enm = dynamic_cast<const EnumDecl*>(node.get())) {
+            bool isRich = !enm->constructors.empty() || !enm->fields.empty() || !enm->methods.empty();
+            for (auto& ev : enm->values) if (!ev.args.empty()) { isRich = true; break; }
+            if (isRich) {
+                emitLine("struct " + enm->name + ";");
+            } else {
+                emitLine("enum class " + enm->name + ";");
+            }
         } else if (auto* ifc = dynamic_cast<const InterfaceDecl*>(node.get())) {
             emitLine("struct " + ifc->name + ";");
         }
@@ -937,17 +945,20 @@ void CodeGenerator::genProgram(const Program& prog) {
         }
     }
     emitLine();
-    // Reorder declarations (Enums/Structs first, then Classes in topological dependency order)
+    // Reorder declarations (Enums/Structs/Interfaces first, then Globals, then Classes in topological dependency order)
     std::vector<const ASTNode*> enumsAndStructs;
-    std::vector<const ASTNode*> globalVars; // NEW: Globals must come before classes!
+    std::vector<const ASTNode*> interfaces;
+    std::vector<const ASTNode*> globalVars; // Globals must come before classes!
     std::vector<const ASTNode*> classes;
     std::vector<const ASTNode*> others;
 
     for (auto& decl : prog.declarations) {
         if (dynamic_cast<const EnumDecl*>(decl.get()) || dynamic_cast<const StructDecl*>(decl.get())) {
             enumsAndStructs.push_back(decl.get());
+        } else if (dynamic_cast<const InterfaceDecl*>(decl.get())) {
+            interfaces.push_back(decl.get());
         } else if (dynamic_cast<const VarDeclStmt*>(decl.get())) {
-            globalVars.push_back(decl.get()); // Put global variables here
+            globalVars.push_back(decl.get());
         } else if (dynamic_cast<const ClassDecl*>(decl.get())) {
             classes.push_back(decl.get());
         } else {
@@ -1025,9 +1036,10 @@ void CodeGenerator::genProgram(const Program& prog) {
 
     std::vector<const ASTNode*> orderedDecls;
     for (auto& d : enumsAndStructs) orderedDecls.push_back(d);
-    for (auto& d : globalVars) orderedDecls.push_back(d);   // Emit globals BEFORE classes!
-    for (auto& d : sortedClasses) orderedDecls.push_back(d);
-    for (auto& d : others) orderedDecls.push_back(d);
+    for (auto& d : interfaces)      orderedDecls.push_back(d);
+    for (auto& d : globalVars)      orderedDecls.push_back(d);   // Emit globals BEFORE classes!
+    for (auto& d : sortedClasses)   orderedDecls.push_back(d);
+    for (auto& d : others)          orderedDecls.push_back(d);
 
     for (auto* node : orderedDecls) {
         if (auto* cls = dynamic_cast<const ClassDecl*>(node)) {
@@ -1405,11 +1417,18 @@ void CodeGenerator::genInterfaceDecl(const InterfaceDecl& iface) {
         emitLine("template<" + genTypeParamList(iface.typeParams) + ">");
     emitLine("struct " + iface.name + " {");
     indent();
+    for (auto& c : iface.constants) {
+        emitIndent();
+        emit("static constexpr " + mapType(c->type) + " " + c->name);
+        if (c->initializer) {
+            emit(" = " + genExpr(*c->initializer));
+        }
+        emitLine(";");
+    }
     for (auto& m : iface.methods) {
         emitIndent();
-        if (!m->body) emit("virtual ");
-        emit(mapType(m->returnType) + " " + m->name + "(" + genParamList(m->params) + ")");
-        if (!m->body) { emit(" = 0"); emitLine(";"); }
+        emit("virtual " + mapType(m->returnType) + " " + m->name + "(" + genParamList(m->params) + ")");
+        if (!m->body) { emit(" = 0;"); emitLine(); }
         else          { emit(" "); genNode(*m->body); emitLine(); }
     }
     for (auto& p : iface.properties) {
@@ -1426,17 +1445,122 @@ void CodeGenerator::genInterfaceDecl(const InterfaceDecl& iface) {
 }
 
 void CodeGenerator::genEnumDecl(const EnumDecl& enm) {
-    emitLine("enum class " + enm.name + " {");
-    indent();
-    for (size_t i = 0; i < enm.values.size(); i++) {
-        emitIndent();
-        emit(enm.values[i].name);
-        if (enm.values[i].value) emit(" = " + genExpr(*enm.values[i].value));
-        emit(i + 1 < enm.values.size() ? "," : "");
-        emitLine();
+    bool isRich = !enm.constructors.empty() || !enm.fields.empty() || !enm.methods.empty();
+    for (auto& ev : enm.values) {
+        if (!ev.args.empty()) { isRich = true; break; }
     }
+
+    if (!isRich) {
+        emitLine("enum class " + enm.name + " {");
+        indent();
+        for (size_t i = 0; i < enm.values.size(); i++) {
+            emitIndent();
+            emit(enm.values[i].name);
+            if (enm.values[i].value) emit(" = " + genExpr(*enm.values[i].value));
+            emit(i + 1 < enm.values.size() ? "," : "");
+            emitLine();
+        }
+        dedent();
+        emitLine("};");
+        emitLine();
+        return;
+    }
+
+    // Rich Java-style enum generated as struct
+    emitLine("struct " + enm.name + " {");
+    indent();
+
+    // Fields
+    for (auto& f : enm.fields) {
+        std::string line = mapType(f->type) + " " + f->name;
+        if (f->initializer) line += " = " + genExpr(*f->initializer);
+        emitLine(line + ";");
+    }
+    emitLine("::_ume_rt::UmeString _name;");
+    emitLine("::_ume_rt::Int _ordinal = 0;");
+    emitLine();
+
+    // Default constructor
+    emitLine(enm.name + "() : _ordinal(0) {}");
+
+    // Custom constructors
+    for (auto& ctor : enm.constructors) {
+        std::string line = enm.name + "(" + genParamList(ctor->params) + ")";
+        emitLine(line);
+        if (ctor->body) {
+            if (auto* blk = dynamic_cast<const BlockStmt*>(ctor->body.get())) {
+                genBlock(*blk);
+            } else {
+                genNode(*ctor->body);
+            }
+        }
+    }
+
+    // Standard enum helper methods
+    emitLine("::_ume_rt::UmeString name() const { return _name; }");
+    emitLine("::_ume_rt::Int ordinal() const { return _ordinal; }");
+    emitLine("::_ume_rt::UmeString toString() const { return _name; }");
+    emitLine("bool operator==(const " + enm.name + "& o) const { return _ordinal == o._ordinal; }");
+    emitLine("bool operator!=(const " + enm.name + "& o) const { return _ordinal != o._ordinal; }");
+    emitLine("const " + enm.name + "* operator->() const { return this; }");
+    emitLine(enm.name + "* operator->() { return this; }");
+    emitLine();
+
+    // Methods
+    for (auto& m : enm.methods) {
+        genFuncDecl(*m, enm.name);
+    }
+
+    // Static declarations for each enum constant
+    for (auto& ev : enm.values) {
+        emitLine("static const " + enm.name + " " + ev.name + ";");
+    }
+
+    // static values() method
+    emitLine("static std::vector<" + enm.name + "> values() {");
+    indent();
+    std::string valList;
+    for (size_t i = 0; i < enm.values.size(); i++) {
+        if (i > 0) valList += ", ";
+        valList += enm.name + "::" + enm.values[i].name;
+    }
+    emitLine("return { " + valList + " };");
+    dedent();
+    emitLine("}");
+
+    // static valueOf(name) method
+    emitLine("static " + enm.name + " valueOf(const ::_ume_rt::UmeString& s) {");
+    indent();
+    for (auto& ev : enm.values) {
+        emitLine("if (s == \"" + ev.name + "\") return " + enm.name + "::" + ev.name + ";");
+    }
+    emitLine("return " + enm.name + "();");
+    dedent();
+    emitLine("}");
+
     dedent();
     emitLine("};");
+    emitLine();
+
+    // Out-of-class static definitions for each enum constant
+    for (size_t i = 0; i < enm.values.size(); i++) {
+        auto& ev = enm.values[i];
+        emitIndent();
+        emit("const " + enm.name + " " + enm.name + "::" + ev.name + " = []() {");
+        emitLine();
+        indent();
+        std::string argStr;
+        for (size_t a = 0; a < ev.args.size(); a++) {
+            if (a > 0) argStr += ", ";
+            argStr += genExpr(*ev.args[a]);
+        }
+        emitLine(enm.name + " _inst(" + argStr + ");");
+        emitLine("_inst._name = \"" + ev.name + "\";");
+        emitLine("_inst._ordinal = " + std::to_string(i) + ";");
+        emitLine("return _inst;");
+        dedent();
+        emitLine("}();");
+    }
     emitLine();
 }
 

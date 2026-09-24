@@ -1,0 +1,40 @@
+// ═══════════════════════════════════════════════════════════════════════════
+// BlockIds.ume — Block IDs, render flags, and atlas constants
+// ═══════════════════════════════════════════════════════════════════════════
+
+// Atlas constants
+public int ATLAS_COLS = 5;
+public int ATLAS_ROWS = 3;
+
+// Block IDs (integers for save compatibility)
+public int BLOCK_AIR         = 0;
+public int BLOCK_GRASS       = 1;
+public int BLOCK_DIRT        = 2;
+public int BLOCK_STONE       = 3;
+public int BLOCK_LOG         = 4;
+public int BLOCK_LEAVES      = 5;
+public int BLOCK_SAND        = 6;
+public int BLOCK_GRAVEL      = 7;
+public int BLOCK_WATER       = 8;
+public int BLOCK_COBBLE      = 9;
+public int BLOCK_PLANKS      = 10;
+public int BLOCK_SNOW        = 11;
+public int BLOCK_BEDROCK     = 12;
+public int BLOCK_GLASS       = 13;
+public int BLOCK_COAL_ORE    = 14;
+public int BLOCK_IRON_ORE    = 15;
+public int BLOCK_DIAMOND_ORE = 16;
+public int BLOCK_SNOW_BLOCK  = 17;
+public int BLOCK_FLOWER      = 18;
+public int BLOCK_BRICK       = 19;
+public int BLOCK_GOLD_ORE    = 20;
+public int BLOCK_CRAFTING    = 21;
+
+public int BLOCK_MAX_ID      = 22;
+
+// Render / behavior flags
+public int BLOCK_FLAG_SOLID       = 1;   // collides with entities
+public int BLOCK_FLAG_TRANSPARENT = 2;   // neighbor faces are not culled
+public int BLOCK_FLAG_CROSS       = 4;   // X-shaped sprite (flowers)
+public int BLOCK_FLAG_LIQUID      = 8;   // water-like (no collision)
+public int BLOCK_FLAG_UNBREAKABLE = 16;  // bedrock

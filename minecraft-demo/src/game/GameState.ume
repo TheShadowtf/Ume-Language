@@ -1,0 +1,159 @@
+// ═══════════════════════════════════════════════════════════════════════════
+// GameState.ume — All mutable gameplay state
+// ═══════════════════════════════════════════════════════════════════════════
+//
+// Holds every gameplay flag/value that was previously a local variable in
+// main(). Passed by reference into Player and WorldRenderer functions.
+//
+// Screen states:
+//   0 = Main Menu  |  1 = Playing  |  2 = Settings  |  3 = Inventory  |  4 = Dead
+//   5 = Select World  |  6 = Create World
+
+public class GameState {
+    // ── Screen state ───────────────────────────────────────────────────────────
+    public int    gameState;        // current screen (0-6)
+    public int    selectedSlot;     // legacy slot (0-2)
+    public string selectedWorldId;  // selected world file key (e.g. "world_1")
+    public bool   grabbed;          // mouse is captured
+
+    // ── Player vitals ──────────────────────────────────────────────────────────
+    public int    health;
+    public int    maxHealth;
+    public int    hunger;
+    public int    maxHunger;
+    public double hurtTimer;
+    public double regenTimer;
+    public double hungerTimer;
+    public double starveTimer;
+    public bool   dead;
+    public bool   flying;
+
+    // ── Player transform ───────────────────────────────────────────────────────
+    public double px;               // feet position
+    public double py;
+    public double pz;
+    public double vx;               // velocity (ground plane)
+    public double vy;               // vertical velocity
+    public double vz;
+    public bool   onGround;
+
+    // ── World time ─────────────────────────────────────────────────────────────
+    public double worldTime;        // 0.0–1.0, 0.25 = noon
+    public double dayLengthSec;     // real seconds per Minecraft day
+    public bool   isNight;
+
+    // ── Rendering settings ─────────────────────────────────────────────────────
+    public int    renderR;          // chunk render radius
+    public float  mouseSens;        // radians per pixel
+
+    // ── HUD ────────────────────────────────────────────────────────────────────
+    public bool   showDebug;
+    public int    currentFPS;
+    public int    hotbarSel;
+    public double heldItemTimer;    // held-item name popup countdown
+
+    // ── Chunk tracking ─────────────────────────────────────────────────────────
+    public int    pcx;
+    public int    pcz;
+    public int    lastPCX;
+    public int    lastPCZ;
+    public int    frame;
+
+    // ── Debounce timers ────────────────────────────────────────────────────────
+    public int tabTimer;
+    public int flyTimer;
+    public int breakTimer;
+    public int placeTimer;
+    public int invTimer;
+    public int setTimer;
+    public int dbgTimer;
+    public int saveTimer;
+    public int loadTimer;
+    public int respawnTimer;
+    public int attackTimer;
+    // Hotbar digit debounce (1–9)
+    public int d1; public int d2; public int d3;
+    public int d4; public int d5; public int d6;
+    public int d7; public int d8; public int d9;
+
+    // ── Frame timing ───────────────────────────────────────────────────────────
+    public double lastTime;
+    public double accumulator;
+    public double fpsTimer;
+    public int    fpsCount;
+
+    public GameState() {
+        // Screen
+        gameState       = 0;
+        selectedSlot    = 0;
+        selectedWorldId = "";
+        grabbed         = false;
+
+        // Vitals
+        health = 20;  maxHealth = 20;
+        hunger = 20;  maxHunger = 20;
+        hurtTimer = 0.0;  regenTimer = 0.0;
+        hungerTimer = 0.0; starveTimer = 0.0;
+        dead   = false;
+        flying = false;
+
+        // Transform — py/lastTime set by Main after creation
+        px = 0.5;  py = 0.0;  pz = 0.5;
+        vx = 0.0;  vy = 0.0;  vz = 0.0;
+        onGround = false;
+
+        // Time
+        worldTime    = 0.25;
+        dayLengthSec = 1200.0;
+        isNight      = false;
+
+        // Rendering
+        renderR   = 8;
+        mouseSens = 0.0022;
+
+        // HUD
+        showDebug     = false;
+        currentFPS    = 0;
+        hotbarSel     = 0;
+        heldItemTimer = 0.0;
+
+        // Chunk tracking
+        pcx = 0;  pcz = 0;
+        lastPCX = 9999;  lastPCZ = 9999;
+        frame = 0;
+
+        // Debounce timers
+        tabTimer=0; flyTimer=0; breakTimer=0; placeTimer=0;
+        invTimer=0; setTimer=0; dbgTimer=0; saveTimer=0;
+        loadTimer=0; respawnTimer=0; attackTimer=0;
+        d1=0; d2=0; d3=0; d4=0; d5=0; d6=0; d7=0; d8=0; d9=0;
+
+        // Frame timing — lastTime set by Main after creation
+        lastTime    = 0.0;
+        accumulator = 0.0;
+        fpsTimer    = 0.0;
+        fpsCount    = 0;
+    }
+
+    // Decrement every debounce timer once per fixed physics step
+    public func void tickTimers(double timeStep) {
+        if (tabTimer     > 0) tabTimer--;
+        if (flyTimer     > 0) flyTimer--;
+        if (breakTimer   > 0) breakTimer--;
+        if (placeTimer   > 0) placeTimer--;
+        if (invTimer     > 0) invTimer--;
+        if (setTimer     > 0) setTimer--;
+        if (dbgTimer     > 0) dbgTimer--;
+        if (saveTimer    > 0) saveTimer--;
+        if (loadTimer    > 0) loadTimer--;
+        if (respawnTimer > 0) respawnTimer--;
+        if (attackTimer  > 0) attackTimer--;
+        if (hurtTimer    > 0) hurtTimer   -= timeStep;
+        if (regenTimer   > 0) regenTimer  -= timeStep;
+        if (hungerTimer  > 0) hungerTimer -= timeStep;
+        if (starveTimer  > 0) starveTimer -= timeStep;
+        if (d1>0)d1--; if (d2>0)d2--; if (d3>0)d3--;
+        if (d4>0)d4--; if (d5>0)d5--; if (d6>0)d6--;
+        if (d7>0)d7--; if (d8>0)d8--; if (d9>0)d9--;
+    }
+}

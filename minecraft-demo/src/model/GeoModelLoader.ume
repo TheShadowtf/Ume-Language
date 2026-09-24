@@ -1,0 +1,255 @@
+// ═══════════════════════════════════════════════════════════════════════════
+// GeoModelLoader.ume — Bedrock JSON Geometry model parser & builder
+// ═══════════════════════════════════════════════════════════════════════════
+
+// (Json and MobPart are included before this file)
+
+public func MobModel loadModelFromJson(string path, float defR, float defG, float defB) {
+    string resolved = resolveAssetPath(path);
+    if (!FileSystem.exists(resolved)) {
+        Console.println("[Model] Warning: Model file not found: " + resolved);
+        return null;
+    }
+
+    string content = FileSystem.readText(resolved);
+    if (content.length() <= 0) return null;
+
+    JsonValue root = JsonParser.parseJson(content);
+    if (root == null) {
+        Console.println("[Model] Error: Failed to parse JSON: " + resolved);
+        return null;
+    }
+
+    // Locate geometry definition
+    JsonValue geo = null;
+    List<JsonValue> geoList = root.getArray("minecraft:geometry");
+    if (geoList != null && geoList.size() > 0) {
+        geo = geoList.get(0);
+    } else {
+        // Bedrock legacy direct format
+        for (int i = 0; i < root.objKeys.size(); i++) {
+            string k = root.objKeys.get(i);
+            if (k.startsWith("geometry.")) {
+                geo = root.objVals.get(i);
+                break;
+            }
+        }
+    }
+    if (geo == null) geo = root;
+
+    // Read texture dimensions
+    float texW = 64.0;
+    float texH = 32.0;
+    JsonValue desc = geo.get("description");
+    if (desc != null) {
+        texW = cast<float>(desc.getDouble("texture_width", 64.0));
+        texH = cast<float>(desc.getDouble("texture_height", 32.0));
+    } else {
+        texW = cast<float>(geo.getDouble("texturewidth", 64.0));
+        texH = cast<float>(geo.getDouble("textureheight", 32.0));
+    }
+    if (texW <= 0.0) texW = 64.0;
+    if (texH <= 0.0) texH = 32.0;
+
+    List<JsonValue> bones = geo.getArray("bones");
+    if (bones == null || bones.size() == 0) return null;
+
+    MobModel model = new MobModel(bones.size() + 4);
+
+    float[] shade = new float[6];
+    shade[0] = 1.00; // +Y
+    shade[1] = 0.50; // -Y
+    shade[2] = 0.80; // +X
+    shade[3] = 0.70; // -X
+    shade[4] = 0.85; // +Z
+    shade[5] = 0.65; // -Z
+
+    for (int bi = 0; bi < bones.size(); bi++) {
+        JsonValue bone = bones.get(bi);
+        string name = bone.getString("name", "bone_" + bi);
+
+        // Bone pivot (default [0,0,0])
+        float pX = 0.0; float pY = 0.0; float pZ = 0.0;
+        List<JsonValue> pivotArr = bone.getArray("pivot");
+        if (pivotArr != null && pivotArr.size() >= 3) {
+            pX = cast<float>(pivotArr.get(0).numVal);
+            pY = cast<float>(pivotArr.get(1).numVal);
+            pZ = cast<float>(pivotArr.get(2).numVal);
+        }
+
+        List<JsonValue> cubes = bone.getArray("cubes");
+        if (cubes == null || cubes.size() == 0) continue;
+
+        int numCubes = cubes.size();
+        int totalFloats = numCubes * 6 * 4 * 8; // 192 floats per cube
+        int totalIndices = numCubes * 36;
+        float[] verts = new float[totalFloats];
+        int[]   inds  = new int[totalIndices];
+
+        for (int ci = 0; ci < numCubes; ci++) {
+            JsonValue cube = cubes.get(ci);
+
+            // Origin [ox, oy, oz]
+            float ox = 0.0; float oy = 0.0; float oz = 0.0;
+            List<JsonValue> oArr = cube.getArray("origin");
+            if (oArr != null && oArr.size() >= 3) {
+                ox = cast<float>(oArr.get(0).numVal);
+                oy = cast<float>(oArr.get(1).numVal);
+                oz = cast<float>(oArr.get(2).numVal);
+            }
+
+            // Size [sx, sy, sz]
+            float sx = 1.0; float sy = 1.0; float sz = 1.0;
+            List<JsonValue> sArr = cube.getArray("size");
+            if (sArr != null && sArr.size() >= 3) {
+                sx = cast<float>(sArr.get(0).numVal);
+                sy = cast<float>(sArr.get(1).numVal);
+                sz = cast<float>(sArr.get(2).numVal);
+            }
+
+            // UV [u, v]
+            float u0 = 0.0; float v0 = 0.0;
+            List<JsonValue> uvArr = cube.getArray("uv");
+            if (uvArr != null && uvArr.size() >= 2) {
+                u0 = cast<float>(uvArr.get(0).numVal);
+                v0 = cast<float>(uvArr.get(1).numVal);
+            }
+
+            // Color [r, g, b] (support both 0..1 and 0..255)
+            float cr = defR; float cg = defG; float cb = defB;
+            List<JsonValue> colArr = cube.getArray("color");
+            if (colArr == null) colArr = bone.getArray("color");
+            if (colArr != null && colArr.size() >= 3) {
+                cr = cast<float>(colArr.get(0).numVal);
+                cg = cast<float>(colArr.get(1).numVal);
+                cb = cast<float>(colArr.get(2).numVal);
+                if (cr > 1.0 || cg > 1.0 || cb > 1.0) {
+                    cr = cr / 255.0; cg = cg / 255.0; cb = cb / 255.0;
+                }
+            }
+
+            // Cube coordinates relative to bone pivot (16 units = 1.0 world block)
+            float x0 = (ox - pX) / 16.0;
+            float x1 = (ox + sx - pX) / 16.0;
+            float y0 = (oy - pY) / 16.0;
+            float y1 = (oy + sy - pY) / 16.0;
+            float z0 = (oz - pZ) / 16.0;
+            float z1 = (oz + sz - pZ) / 16.0;
+
+            // Normalized UV coordinates for the 6 faces
+            float topU0 = (u0 + sz) / texW;          float topV0 = v0 / texH;
+            float topU1 = (u0 + sz + sx) / texW;     float topV1 = (v0 + sz) / texH;
+
+            float botU0 = (u0 + sz + sx) / texW;     float botV0 = v0 / texH;
+            float botU1 = (u0 + sz + sx * 2.0) / texW; float botV1 = (v0 + sz) / texH;
+
+            float rU0 = u0 / texW;                   float rV0 = (v0 + sz) / texH;
+            float rU1 = (u0 + sz) / texW;            float rV1 = (v0 + sz + sy) / texH;
+
+            float fU0 = (u0 + sz) / texW;            float fV0 = (v0 + sz) / texH;
+            float fU1 = (u0 + sz + sx) / texW;       float fV1 = (v0 + sz + sy) / texH;
+
+            float lU0 = (u0 + sz + sx) / texW;       float lV0 = (v0 + sz) / texH;
+            float lU1 = (u0 + sz * 2.0 + sx) / texW; float lV1 = (v0 + sz + sy) / texH;
+
+            float bU0 = (u0 + sz * 2.0 + sx) / texW; float bV0 = (v0 + sz) / texH;
+            float bU1 = (u0 + (sz + sx) * 2.0) / texW; float bV1 = (v0 + sz + sy) / texH;
+
+            int cubeVOffset = ci * 192;
+            int cubeIOffset = ci * 36;
+            int baseV = ci * 24;
+
+            // Face 0: Top (+Y)
+            float s = shade[0]; int off = cubeVOffset + 0;
+            verts[off+0 ]=x0; verts[off+1 ]=y1; verts[off+2 ]=z0; verts[off+3 ]=cr*s; verts[off+4 ]=cg*s; verts[off+5 ]=cb*s; verts[off+6 ]=topU0; verts[off+7 ]=topV0;
+            verts[off+8 ]=x1; verts[off+9 ]=y1; verts[off+10]=z0; verts[off+11]=cr*s; verts[off+12]=cg*s; verts[off+13]=cb*s; verts[off+14]=topU1; verts[off+15]=topV0;
+            verts[off+16]=x1; verts[off+17]=y1; verts[off+18]=z1; verts[off+19]=cr*s; verts[off+20]=cg*s; verts[off+21]=cb*s; verts[off+22]=topU1; verts[off+23]=topV1;
+            verts[off+24]=x0; verts[off+25]=y1; verts[off+26]=z1; verts[off+27]=cr*s; verts[off+28]=cg*s; verts[off+29]=cb*s; verts[off+30]=topU0; verts[off+31]=topV1;
+
+            // Face 1: Bottom (-Y)
+            s = shade[1]; off = cubeVOffset + 32;
+            verts[off+0 ]=x0; verts[off+1 ]=y0; verts[off+2 ]=z1; verts[off+3 ]=cr*s; verts[off+4 ]=cg*s; verts[off+5 ]=cb*s; verts[off+6 ]=botU0; verts[off+7 ]=botV0;
+            verts[off+8 ]=x1; verts[off+9 ]=y0; verts[off+10]=z1; verts[off+11]=cr*s; verts[off+12]=cg*s; verts[off+13]=cb*s; verts[off+14]=botU1; verts[off+15]=botV0;
+            verts[off+16]=x1; verts[off+17]=y0; verts[off+18]=z0; verts[off+19]=cr*s; verts[off+20]=cg*s; verts[off+21]=cb*s; verts[off+22]=botU1; verts[off+23]=botV1;
+            verts[off+24]=x0; verts[off+25]=y0; verts[off+26]=z0; verts[off+27]=cr*s; verts[off+28]=cg*s; verts[off+29]=cb*s; verts[off+30]=botU0; verts[off+31]=botV1;
+
+            // Face 2: +X
+            s = shade[2]; off = cubeVOffset + 64;
+            verts[off+0 ]=x1; verts[off+1 ]=y0; verts[off+2 ]=z0; verts[off+3 ]=cr*s; verts[off+4 ]=cg*s; verts[off+5 ]=cb*s; verts[off+6 ]=rU0;   verts[off+7 ]=rV1;
+            verts[off+8 ]=x1; verts[off+9 ]=y0; verts[off+10]=z1; verts[off+11]=cr*s; verts[off+12]=cg*s; verts[off+13]=cb*s; verts[off+14]=rU1;   verts[off+15]=rV1;
+            verts[off+16]=x1; verts[off+17]=y1; verts[off+18]=z1; verts[off+19]=cr*s; verts[off+20]=cg*s; verts[off+21]=cb*s; verts[off+22]=rU1;   verts[off+23]=rV0;
+            verts[off+24]=x1; verts[off+25]=y1; verts[off+26]=z0; verts[off+27]=cr*s; verts[off+28]=cg*s; verts[off+29]=cb*s; verts[off+30]=rU0;   verts[off+31]=rV0;
+
+            // Face 3: -X
+            s = shade[3]; off = cubeVOffset + 96;
+            verts[off+0 ]=x0; verts[off+1 ]=y0; verts[off+2 ]=z1; verts[off+3 ]=cr*s; verts[off+4 ]=cg*s; verts[off+5 ]=cb*s; verts[off+6 ]=lU0;   verts[off+7 ]=lV1;
+            verts[off+8 ]=x0; verts[off+9 ]=y0; verts[off+10]=z0; verts[off+11]=cr*s; verts[off+12]=cg*s; verts[off+13]=cb*s; verts[off+14]=lU1;   verts[off+15]=lV1;
+            verts[off+16]=x0; verts[off+17]=y1; verts[off+18]=z0; verts[off+19]=cr*s; verts[off+20]=cg*s; verts[off+21]=cb*s; verts[off+22]=lU1;   verts[off+23]=lV0;
+            verts[off+24]=x0; verts[off+25]=y1; verts[off+26]=z1; verts[off+27]=cr*s; verts[off+28]=cg*s; verts[off+29]=cb*s; verts[off+30]=lU0;   verts[off+31]=lV0;
+
+            // Face 4: +Z (Back)
+            s = shade[4]; off = cubeVOffset + 128;
+            verts[off+0 ]=x0; verts[off+1 ]=y0; verts[off+2 ]=z1; verts[off+3 ]=cr*s; verts[off+4 ]=cg*s; verts[off+5 ]=cb*s; verts[off+6 ]=bU0;   verts[off+7 ]=bV1;
+            verts[off+8 ]=x1; verts[off+9 ]=y0; verts[off+10]=z1; verts[off+11]=cr*s; verts[off+12]=cg*s; verts[off+13]=cb*s; verts[off+14]=bU1;   verts[off+15]=bV1;
+            verts[off+16]=x1; verts[off+17]=y1; verts[off+18]=z1; verts[off+19]=cr*s; verts[off+20]=cg*s; verts[off+21]=cb*s; verts[off+22]=bU1;   verts[off+23]=bV0;
+            verts[off+24]=x0; verts[off+25]=y1; verts[off+26]=z1; verts[off+27]=cr*s; verts[off+28]=cg*s; verts[off+29]=cb*s; verts[off+30]=bU0;   verts[off+31]=bV0;
+
+            // Face 5: -Z (Front)
+            s = shade[5]; off = cubeVOffset + 160;
+            verts[off+0 ]=x1; verts[off+1 ]=y0; verts[off+2 ]=z0; verts[off+3 ]=cr*s; verts[off+4 ]=cg*s; verts[off+5 ]=cb*s; verts[off+6 ]=fU0;   verts[off+7 ]=fV1;
+            verts[off+8 ]=x0; verts[off+9 ]=y0; verts[off+10]=z0; verts[off+11]=cr*s; verts[off+12]=cg*s; verts[off+13]=cb*s; verts[off+14]=fU1;   verts[off+15]=fV1;
+            verts[off+16]=x0; verts[off+17]=y1; verts[off+18]=z0; verts[off+19]=cr*s; verts[off+20]=cg*s; verts[off+21]=cb*s; verts[off+22]=fU1;   verts[off+23]=fV0;
+            verts[off+24]=x1; verts[off+25]=y1; verts[off+26]=z0; verts[off+27]=cr*s; verts[off+28]=cg*s; verts[off+29]=cb*s; verts[off+30]=fU0;   verts[off+31]=fV0;
+
+            for (int f = 0; f < 6; f++) {
+                int v = baseV + f * 4;
+                int idx = cubeIOffset + f * 6;
+                inds[idx+0] = v + 0; inds[idx+1] = v + 1; inds[idx+2] = v + 2;
+                inds[idx+3] = v + 2; inds[idx+4] = v + 3; inds[idx+5] = v + 0;
+            }
+        }
+
+        Mesh boneMesh = Mesh.Create(verts, inds, 8);
+
+        // Assign animation role from bone name
+        int anim = ANIM_NONE;
+        if (name == "head") {
+            anim = ANIM_HEAD;
+        } else if (name == "wingL" || name == "leftWing") {
+            anim = ANIM_WING;
+        } else if (name == "wingR" || name == "rightWing") {
+            anim = ANIM_WING_INV;
+        } else if (name == "body" || name == "torso") {
+            anim = ANIM_BODY_BOB;
+        } else if (name == "legL1") {
+            anim = ANIM_LEG;
+        } else if (name == "legL2") {
+            anim = ANIM_LEG_2;
+        } else if (name == "legL3") {
+            anim = ANIM_LEG_INV_2;
+        } else if (name == "legL4") {
+            anim = ANIM_LEG_INV;
+        } else if (name == "legR1") {
+            anim = ANIM_LEG_INV;
+        } else if (name == "legR2") {
+            anim = ANIM_LEG_INV_2;
+        } else if (name == "legR3") {
+            anim = ANIM_LEG_2;
+        } else if (name == "legR4") {
+            anim = ANIM_LEG;
+        } else if (name == "legFL" || name == "legBR" || name == "legL" || name == "leftLeg" || name == "armR" || name == "rightArm") {
+            anim = ANIM_LEG;
+        } else if (name == "legFR" || name == "legBL" || name == "legR" || name == "rightLeg" || name == "armL" || name == "leftArm") {
+            anim = ANIM_LEG_INV;
+        }
+
+        float ox = pX / 16.0;
+        float oy = pY / 16.0;
+        float oz = pZ / 16.0;
+
+        model.addPart(new MobPart(name, boneMesh, ox, oy, oz, anim, 0.0));
+    }
+
+    Console.println("[Model] Successfully loaded: " + resolved + " (" + model.partCount + " parts)");
+    return model;
+}

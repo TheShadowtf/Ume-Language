@@ -1,0 +1,69 @@
+// ═══════════════════════════════════════════════════════════════════════════
+// IGoal.ume — Modular AI Goal & GoalSelector system
+// ═══════════════════════════════════════════════════════════════════════════
+
+import std.collections.*;
+
+public interface IGoal {
+    public func bool canUse();
+    public func bool canContinueToUse();
+    public func void start();
+    public func void stop();
+    public func void tick();
+}
+
+public class PrioritizedGoal {
+    public int   priority;
+    public IGoal goal;
+    public bool  isRunning;
+
+    public PrioritizedGoal(int p, IGoal g) {
+        priority = p;
+        goal = g;
+        isRunning = false;
+    }
+}
+
+public class GoalSelector {
+    public List<PrioritizedGoal> goals;
+
+    public GoalSelector() {
+        goals = new List<PrioritizedGoal>();
+    }
+
+    public func void addGoal(int priority, IGoal goal) {
+        PrioritizedGoal pg = new PrioritizedGoal(priority, goal);
+        // Rebuild list with new goal inserted at priority-sorted position
+        List<PrioritizedGoal> newGoals = new List<PrioritizedGoal>();
+        bool inserted = false;
+        for (int i = 0; i < goals.size(); i++) {
+            if (!inserted && priority < goals.get(i).priority) {
+                newGoals.add(pg);
+                inserted = true;
+            }
+            newGoals.add(goals.get(i));
+        }
+        if (!inserted) newGoals.add(pg);
+        goals = newGoals;
+    }
+
+    public func void tick() {
+        for (int i = 0; i < goals.size(); i++) {
+            PrioritizedGoal pg = goals.get(i);
+            if (pg.isRunning) {
+                if (!pg.goal.canContinueToUse()) {
+                    pg.goal.stop();
+                    pg.isRunning = false;
+                } else {
+                    pg.goal.tick();
+                }
+            } else {
+                if (pg.goal.canUse()) {
+                    pg.goal.start();
+                    pg.isRunning = true;
+                    pg.goal.tick();
+                }
+            }
+        }
+    }
+}

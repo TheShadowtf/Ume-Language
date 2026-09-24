@@ -1,0 +1,1284 @@
+// ═══════════════════════════════════════════════════════════════════════════
+// World.ume — Central voxel world manager, chunk streaming, physics & rendering
+// ═══════════════════════════════════════════════════════════════════════════
+
+import std.random.*;
+import std.math.*;
+import std.thread.*;
+import std.collections.*;
+import noise.*;
+
+// (All world sub-files and dependencies are included by Main.ume before this file)
+
+public class World {
+    public Chunk[] chunks;
+    public int[]   cgx;
+    public int[]   cgz;
+    public int     count;
+    public int     cap;
+    public int[]   hashTable;
+    public Mutex mutex;
+    public Thread genThread;
+    public bool   running;
+    public Random rng2;
+    public float[] meshVerts;
+    public int[]   meshInds;
+    public float[] waterVerts;
+    public int[]   waterInds;
+    public Mob[]   mobs;
+    public int     mobCount;
+    public int     mobCap;
+    public int[]   pendingDrops;
+    public int     pendingDropCount;
+    public int     seed;
+    public Noise   worldNoise;
+    public Map<string, string> savedChunkData;
+    public List<string>        savedChunkKeys;
+    public int     currentSlot;
+
+    public string  currentWorldId;
+
+    public World(int capacity) {
+        if (capacity < 6000) capacity = 6000;
+        cap = capacity; 
+        count = 0;
+        chunks = new Chunk[capacity]; 
+        cgx = new int[capacity]; 
+        cgz = new int[capacity];
+        hashTable = new int[16384];
+        for (int i = 0; i < 16384; i++) hashTable[i] = -1;
+        mutex = new Mutex();
+        running = true;
+
+        seed = 1337;
+        worldNoise = new Noise(seed);
+        savedChunkData = new Map<string, string>();
+        savedChunkKeys = new List<string>();
+        currentSlot = 0;
+        currentWorldId = "world_1";
+
+        // Scaled up buffers so taller chunks don't overflow vertex arrays:
+        meshVerts  = new float[1920000];
+        meshInds   = new int[360000];
+        waterVerts = new float[240000];
+        waterInds  = new int[45000];
+
+        rng2 = new Random(System.currentTimeMillis());
+        genThread = new Thread(() -> { this.runGenThread(); });
+        genThread.start();
+        mobs = new Mob[40];
+        mobCount = 0;
+        mobCap = 40;
+        pendingDrops = new int[64];
+        pendingDropCount = 0;
+    }
+
+    public func void initWorld(int worldSeed, string worldId) {
+        mutex.lock();
+        this.seed = worldSeed;
+        this.currentWorldId = worldId;
+        this.worldNoise = new Noise(worldSeed);
+        for (int i = 0; i < count; i++) {
+            chunks[i] = null;
+        }
+        count = 0;
+        for (int i = 0; i < 16384; i++) hashTable[i] = -1;
+        for (int i = 0; i < mobCount; i++) {
+            mobs[i] = null;
+        }
+        mobCount = 0;
+        pendingDropCount = 0;
+        savedChunkData = new Map<string, string>();
+        savedChunkKeys = new List<string>();
+        mutex.unlock();
+    }
+
+    public func void initWorld(int worldSeed, int slot) {
+        this.currentSlot = slot;
+        initWorld(worldSeed, "world_" + (slot + 1));
+    }
+
+    public func void saveChunkToCache(int cx, int cz, string rle) {
+        string key = cx + "," + cz;
+        if (savedChunkData == null) savedChunkData = new Map<string, string>();
+        if (savedChunkKeys == null) savedChunkKeys = new List<string>();
+        if (!savedChunkData.containsKey(key)) {
+            savedChunkKeys.add(key);
+        }
+        savedChunkData.put(key, rle);
+    }
+
+    public func bool hasSavedChunk(int cx, int cz) {
+        string key = cx + "," + cz;
+        return (savedChunkData != null && savedChunkData.containsKey(key));
+    }
+
+    public func string getSavedChunk(int cx, int cz) {
+        string key = cx + "," + cz;
+        if (savedChunkData != null && savedChunkData.containsKey(key)) {
+            return savedChunkData.get(key);
+        }
+        return "";
+    }
+
+    public func void loadWorldChunksById(string worldId) {
+        mutex.lock();
+        savedChunkData = new Map<string, string>();
+        savedChunkKeys = new List<string>();
+
+        string chunkFile = "saves/" + worldId + "_chunks.dat";
+        if (!FileSystem.exists(chunkFile)) {
+            chunkFile = worldId + "_chunks.dat";
+        }
+        if (FileSystem.exists(chunkFile)) {
+            string content = FileSystem.readText(chunkFile);
+            if (content.length() > 0) {
+                string[] lines = content.split("\n");
+                for (int i = 0; i < lines.length(); i++) {
+                    string line = lines[i].trim();
+                    if (line.startsWith("CHUNK:")) {
+                        string rest = line.substring(6, line.length());
+                        int colonIdx = rest.indexOf(":");
+                        if (colonIdx > 0) {
+                            string key = rest.substring(0, colonIdx).trim();
+                            string rle = rest.substring(colonIdx + 1, rest.length()).trim();
+                            if (!savedChunkData.containsKey(key)) {
+                                savedChunkKeys.add(key);
+                            }
+                            savedChunkData.put(key, rle);
+                        }
+                    }
+                }
+            }
+        }
+        mutex.unlock();
+    }
+
+    public func void saveWorldChunksById(string worldId) {
+        mutex.lock();
+        if (savedChunkData == null) savedChunkData = new Map<string, string>();
+        if (savedChunkKeys == null) savedChunkKeys = new List<string>();
+
+        // Flush all loaded chunks that are modified or not yet in saved data
+        for (int i = 0; i < count; i++) {
+            Chunk c = chunks[i];
+            if (c != null && c.generated) {
+                string key = c.chunkX + "," + c.chunkZ;
+                if (c.modified || !savedChunkData.containsKey(key)) {
+                    string rle = encodeChunkRLE(c.blocks);
+                    if (!savedChunkData.containsKey(key)) {
+                        savedChunkKeys.add(key);
+                    }
+                    savedChunkData.put(key, rle);
+                    c.modified = false;
+                }
+            }
+        }
+
+        string chunkFile = "saves/" + worldId + "_chunks.dat";
+        string data = "VERSION:1\n";
+        data = data + "SEED:" + seed + "\n";
+        int total = savedChunkKeys.size();
+        data = data + "COUNT:" + total + "\n";
+        for (int i = 0; i < total; i++) {
+            string key = savedChunkKeys.get(i);
+            if (savedChunkData.containsKey(key)) {
+                data = data + "CHUNK:" + key + ":" + savedChunkData.get(key) + "\n";
+            }
+        }
+        mutex.unlock();
+
+        FileSystem.writeText(chunkFile, data);
+    }
+
+    public func void loadWorldChunks(int slot) {
+        loadWorldChunksById("world_" + (slot + 1));
+    }
+
+    public func void saveWorldChunks(int slot) {
+        saveWorldChunksById("world_" + (slot + 1));
+    }
+
+    public func void ensureCapacity(int minCap) {
+        if (minCap <= cap) return;
+        int newCap = cap * 2;
+        if (newCap < minCap) newCap = minCap;
+        Chunk[] newChunks = new Chunk[newCap];
+        int[] newCgx = new int[newCap];
+        int[] newCgz = new int[newCap];
+        for (int i = 0; i < count; i++) {
+            newChunks[i] = chunks[i];
+            newCgx[i] = cgx[i];
+            newCgz[i] = cgz[i];
+        }
+        chunks = newChunks;
+        cgx = newCgx;
+        cgz = newCgz;
+        cap = newCap;
+    }
+
+    public func void hashInsert(int cx, int cz, int idx) {
+        int h = ((cx * 73856093) ^ (cz * 19349663)) & 16383;
+        while (hashTable[h] != -1) {
+            if (hashTable[h] == idx) return;
+            h = (h + 1) & 16383;
+        }
+        hashTable[h] = idx;
+    }
+
+    public func void rebuildHashTable() {
+        for (int i = 0; i < 16384; i++) hashTable[i] = -1;
+        for (int i = 0; i < count; i++) {
+            int h = ((cgx[i] * 73856093) ^ (cgz[i] * 19349663)) & 16383;
+            while (hashTable[h] != -1) {
+                h = (h + 1) & 16383;
+            }
+            hashTable[h] = i;
+        }
+    }
+    
+    public func int findChunk(int cx, int cz) { 
+        int h = ((cx * 73856093) ^ (cz * 19349663)) & 16383;
+        while (hashTable[h] != -1) {
+            int idx = hashTable[h];
+            if (idx >= 0 && idx < count && cgx[idx] == cx && cgz[idx] == cz) return idx;
+            h = (h + 1) & 16383;
+        }
+        return -1; 
+    }
+
+    private func int floorDiv(int a, int b) { 
+        int q = a / b; 
+        if ((a ^ b) < 0 && q * b != a) q--; 
+        return q; 
+    }
+
+    public func int getWorldBlock(int wx, int wy, int wz) {
+        if (wy < 0 || wy >= CHUNK_HEIGHT) return 0;
+        int cx = floorDiv(wx, 16); 
+        int cz = floorDiv(wz, 16);
+        int i = findChunk(cx, cz);
+        if (i < 0 || !chunks[i].generated) return 0;
+        int lx = wx - cx*16; 
+        int lz = wz - cz*16;
+        int b = chunks[i].blocks[lx + lz*16 + wy*CHUNK_LAYER];
+        return (b < 0 ? 0 : b);
+    }
+
+    public func void setWorldBlock(int wx, int wy, int wz, int type) {
+        if (wy < 0 || wy >= CHUNK_HEIGHT) return;
+        int cx = floorDiv(wx, 16); 
+        int cz = floorDiv(wz, 16);
+        int i = findChunk(cx, cz);
+        if (i < 0 || !chunks[i].generated) return;
+        int lx = wx - cx*16; 
+        int lz = wz - cz*16;
+        chunks[i].blocks[lx + lz*16 + wy*CHUNK_LAYER] = type;
+        chunks[i].dirty = true;
+        chunks[i].modified = true;
+        if (lx <= 2)  markDirty(cx-1, cz);
+        if (lx >= 13) markDirty(cx+1, cz);
+        if (lz <= 2)  markDirty(cx, cz-1);
+        if (lz >= 13) markDirty(cx, cz+1);
+    }
+
+    private func void markDirty(int cx, int cz) {
+        int i = findChunk(cx, cz);
+        if (i >= 0 && chunks[i].generated) chunks[i].dirty = true;
+    }
+
+    public func double getSpawnY(double sx, double sz) {
+        int wx = cast<int>(Math.floor(sx));
+        int wz = cast<int>(Math.floor(sz));
+        int cx = floorDiv(wx, 16);
+        int cz = floorDiv(wz, 16);
+        int i = findChunk(cx, cz);
+        if (i >= 0 && chunks[i].generated) {
+            int lx = wx - cx * 16;
+            int lz = wz - cz * 16;
+            for (int y = CHUNK_HEIGHT - 3; y >= 1; y--) {
+                int bBottom = chunks[i].blocks[lx + lz * 16 + y * CHUNK_LAYER];
+                int bMid    = chunks[i].blocks[lx + lz * 16 + (y + 1) * CHUNK_LAYER];
+                int bTop    = chunks[i].blocks[lx + lz * 16 + (y + 2) * CHUNK_LAYER];
+                if (bBottom > 0 && Blocks.isSolid(bBottom) && !Blocks.isSolid(bMid) && !Blocks.isSolid(bTop)) {
+                    return cast<double>(y + 1);
+                }
+            }
+        }
+        return cast<double>(worldSurfaceAt(wx, wz, worldNoise) + 1);
+    }
+
+    public func bool isPlayerStuck(double px, double py, double pz) {
+        int bx = cast<int>(Math.floor(px));
+        int by1 = cast<int>(Math.floor(py));
+        int by2 = cast<int>(Math.floor(py + 1.0));
+        int bz = cast<int>(Math.floor(pz));
+        return Blocks.isSolid(getWorldBlock(bx, by1, bz)) || Blocks.isSolid(getWorldBlock(bx, by2, bz));
+    }
+
+    public func void loadChunkImmediate(int cx, int cz) {
+        if (findChunk(cx, cz) >= 0) return;
+        ensureCapacity(count + 1);
+        Chunk c = new Chunk(cx, cz, seed, worldNoise);
+        mutex.lock();
+        int idx = count;
+        chunks[idx] = c; 
+        cgx[idx] = cx; 
+        cgz[idx] = cz;
+        count++;
+        mutex.unlock();
+        hashInsert(cx, cz, idx);
+
+        string key = cx + "," + cz;
+        mutex.lock();
+        bool hasSaved = (savedChunkData != null && savedChunkData.containsKey(key));
+        string rle = hasSaved ? savedChunkData.get(key) : "";
+        mutex.unlock();
+
+        if (hasSaved && rle.length() > 0) {
+            decodeChunkRLE(c.blocks, rle);
+        } else {
+            c.generate(); 
+        }
+        c.generated = true; 
+        c.dirty = true;
+        markDirty(cx - 1, cz);
+        markDirty(cx + 1, cz);
+        markDirty(cx, cz - 1);
+        markDirty(cx, cz + 1);
+        spawnMobsForChunk(cx, cz);
+    }
+
+    public func void loadChunkAsync(int cx, int cz) {
+        if (findChunk(cx, cz) >= 0) return;
+        ensureCapacity(count + 1);
+        Chunk c = new Chunk(cx, cz, seed, worldNoise);
+        mutex.lock();
+        int idx = count;
+        chunks[idx] = c; 
+        cgx[idx] = cx; 
+        cgz[idx] = cz;
+        c.generating = true;
+        count++; 
+        mutex.unlock();
+        hashInsert(cx, cz, idx);
+    }
+
+    public func void loadNearestMissing(int pcx, int pcz, int renderR) {
+        int generatingCount = 0;
+        for (int i = 0; i < count; i++) {
+            if (chunks[i].generating) generatingCount++;
+        }
+        if (generatingCount >= 16) return;
+
+        int queued = 0;
+        int maxQueue = 4;
+
+        for (int r = 0; r <= renderR && queued < maxQueue; r++) {
+            int minX = pcx - r;
+            int maxX = pcx + r;
+            int minZ = pcz - r;
+            int maxZ = pcz + r;
+
+            for (int x = minX; x <= maxX && queued < maxQueue; x++) {
+                if (findChunk(x, minZ) < 0) {
+                    loadChunkAsync(x, minZ);
+                    queued++;
+                    if (queued >= maxQueue) return;
+                }
+                if (minZ != maxZ && findChunk(x, maxZ) < 0) {
+                    loadChunkAsync(x, maxZ);
+                    queued++;
+                    if (queued >= maxQueue) return;
+                }
+            }
+
+            for (int z = minZ + 1; z <= maxZ - 1 && queued < maxQueue; z++) {
+                if (findChunk(minX, z) < 0) {
+                    loadChunkAsync(minX, z);
+                    queued++;
+                    if (queued >= maxQueue) return;
+                }
+                if (minX != maxX && findChunk(maxX, z) < 0) {
+                    loadChunkAsync(maxX, z);
+                    queued++;
+                    if (queued >= maxQueue) return;
+                }
+            }
+        }
+    }
+
+    public func void spawnMobsForChunk(int cx, int cz) {
+        if (mobCount >= mobCap) return;
+        var rng = new Random(cx * 31 + cz * 17 + 999);
+        int numMobs = rng.nextInt(3);
+        for (int m = 0; m < numMobs && mobCount < mobCap; m++) {
+            int mx = cx * 16 + rng.nextInt(14) + 1;
+            int mz = cz * 16 + rng.nextInt(14) + 1;
+            double my = getSpawnY(cast<double>(mx), cast<double>(mz));
+            int r = rng.nextInt(4);
+            int type = (r == 0) ? MOB_PIG : (r == 1) ? MOB_COW : (r == 2) ? MOB_SHEEP : MOB_CHICKEN;
+            mobs[mobCount] = Entities.create(type, cast<double>(mx), my, cast<double>(mz));
+            mobCount++;
+        }
+    }
+
+    public func void spawnHostileMob(int cx, int cz, bool isNight) {
+        if (mobCount >= mobCap || !isNight) return;
+        var rng = new Random(cx * 13 + cz * 41 + cast<int>(System.currentTimeMillis() % 1000000));
+        int mx = cx * 16 + rng.nextInt(14) + 1;
+        int mz = cz * 16 + rng.nextInt(14) + 1;
+        double my = getSpawnY(cast<double>(mx), cast<double>(mz));
+        int r = rng.nextInt(4);
+        int type = (r == 0) ? MOB_ZOMBIE : (r == 1) ? MOB_SKELETON : (r == 2) ? MOB_SPIDER : MOB_CREEPER;
+        mobs[mobCount] = Entities.create(type, cast<double>(mx), my, cast<double>(mz));
+        mobCount++;
+    }
+
+    public func bool isDirectionClear(double sx, double sy, double sz, double angle, double dist, bool isChicken) {
+        double dirX = Math.sin(angle);
+        double dirZ = -Math.cos(angle);
+        int currY = cast<int>(Math.floor(sy + 0.05));
+
+        double d = 1.0;
+        while (d <= dist) {
+            int bx = cast<int>(Math.floor(sx + dirX * d));
+            int bz = cast<int>(Math.floor(sz + dirZ * d));
+
+            int b0 = getWorldBlock(bx, currY, bz);
+            int b1 = getWorldBlock(bx, currY + 1, bz);
+            int b2 = getWorldBlock(bx, currY + 2, bz);
+
+            // If b0 is solid:
+            if (b0 != 0 && Blocks.isSolid(b0)) {
+                // If b1 is also solid, this is a 2-block wall! Impassable.
+                if (b1 != 0 && Blocks.isSolid(b1)) {
+                    return false;
+                }
+                // If b2 is solid, mob would hit its head trying to jump up
+                if (b2 != 0 && Blocks.isSolid(b2)) {
+                    return false;
+                }
+                // Single 1-block step up: climbable!
+                currY += 1;
+            } else {
+                // b0 is air. Check if mob's head has clearance (b1)
+                if (b1 != 0 && Blocks.isSolid(b1)) {
+                    return false; // Low ceiling/overhang obstacle
+                }
+
+                // Check floor below
+                int bDown1 = getWorldBlock(bx, currY - 1, bz);
+                if (bDown1 != 0 && Blocks.isSolid(bDown1)) {
+                    // Flat ground, walkable at currY
+                } else {
+                    // Step down 1 block?
+                    int bDown2 = getWorldBlock(bx, currY - 2, bz);
+                    if (bDown2 != 0 && Blocks.isSolid(bDown2)) {
+                        currY -= 1; // 1-block step down: walkable!
+                    } else {
+                        // Drop >= 3 blocks
+                        if (!isChicken) {
+                            return false; // Dangerous drop/cliff
+                        }
+                        currY -= 2;
+                    }
+                }
+            }
+
+            d += 1.0;
+        }
+        return true;
+    }
+
+    public func double findClearWanderAngle(Mob m) {
+        bool isChicken = (m.mobType == MOB_CHICKEN);
+        double currentAngle = cast<double>(m.facingYaw);
+
+        // 1. Try 8 candidate directions in radius 4.0 blocks
+        double baseOffset = (m.rng.nextDouble() - 0.5) * 6.2831853;
+        for (int i = 0; i < 8; i++) {
+            double testAngle = baseOffset + cast<double>(i) * 0.78539816;
+            if (isDirectionClear(m.x, m.y, m.z, testAngle, 4.0, isChicken)) {
+                return testAngle;
+            }
+        }
+        // 2. If 4.0 blocks is tight, try 2.0 blocks
+        for (int i = 0; i < 8; i++) {
+            double testAngle = baseOffset + cast<double>(i) * 0.78539816;
+            if (isDirectionClear(m.x, m.y, m.z, testAngle, 2.0, isChicken)) {
+                return testAngle;
+            }
+        }
+        // 3. Fallback: turn around 180 degrees
+        return currentAngle + 3.14159265;
+    }
+
+    public func void updateMobs(double dt, double px, double py, double pz, bool isNight) {
+        for (int i = 0; i < mobCount; i++) {
+            Mob m = mobs[i];
+            if (m.alive) {
+                // If mob is idle and needs a suggested wander heading, pick a clear one
+                if (m.wanderTimer <= 0.0 && !m.hasSuggestedAngle) {
+                    m.suggestedAngle = findClearWanderAngle(m);
+                    m.hasSuggestedAngle = true;
+                }
+
+                // Update AI & facing/animation
+                m.update(dt, px, py, pz, isNight, m.onGround ? 1 : 0);
+
+                // 0. Vision / Obstacle Lookahead (AI "sees" blocks & cliffs ahead)
+                double halfW = m.width * 0.5;
+                double speed = Math.sqrt(m.vx * m.vx + m.vz * m.vz);
+                double fwdX = 0.0;
+                double fwdZ = 0.0;
+                if (speed > 0.003) {
+                    fwdX = m.vx / speed;
+                    fwdZ = m.vz / speed;
+                } else {
+                    fwdX = Math.sin(m.targetYaw);
+                    fwdZ = -Math.cos(m.targetYaw);
+                }
+
+                double checkDist = halfW + 0.65;
+                int lookBX = cast<int>(Math.floor(m.x + fwdX * checkDist));
+                int lookBZ = cast<int>(Math.floor(m.z + fwdZ * checkDist));
+                int footY = cast<int>(Math.floor(m.y));
+
+                int bAhead0 = getWorldBlock(lookBX, footY, lookBZ);
+                int bAhead1 = getWorldBlock(lookBX, footY + 1, lookBZ);
+                int bAhead2 = getWorldBlock(lookBX, footY + 2, lookBZ);
+
+                // Is there a wall >= 2 blocks tall in front that cannot be jumped over?
+                bool wallAhead = ((bAhead0 != 0 && Blocks.isSolid(bAhead0)) &&
+                                  ((bAhead1 != 0 && Blocks.isSolid(bAhead1)) || (bAhead2 != 0 && Blocks.isSolid(bAhead2))))
+                                 || (bAhead1 != 0 && Blocks.isSolid(bAhead1));
+
+                // Is there a high drop / cliff ahead? (for non-chicken mobs)
+                bool cliffAhead = false;
+                if (m.mobType != MOB_CHICKEN) {
+                    int bFloor1 = getWorldBlock(lookBX, footY - 1, lookBZ);
+                    int bFloor2 = getWorldBlock(lookBX, footY - 2, lookBZ);
+                    int bFloor3 = getWorldBlock(lookBX, footY - 3, lookBZ);
+                    if ((bAhead0 == 0 || !Blocks.isSolid(bAhead0)) &&
+                        (bFloor1 == 0 || !Blocks.isSolid(bFloor1)) &&
+                        (bFloor2 == 0 || !Blocks.isSolid(bFloor2)) &&
+                        (bFloor3 == 0 || !Blocks.isSolid(bFloor3))) {
+                        cliffAhead = true;
+                    }
+                }
+
+                if ((wallAhead || cliffAhead) && speed > 0.003) {
+                    m.isBlockedAhead = true;
+                    m.wanderTimer = 0.0;
+                    m.vx = 0.0;
+                    m.vz = 0.0;
+                    m.wanderDirX = 0.0;
+                    m.wanderDirZ = 0.0;
+                    m.suggestedAngle = findClearWanderAngle(m);
+                    m.hasSuggestedAngle = true;
+                }
+
+                // 1. Move X with accurate hitbox bounds
+                if (m.vx != 0.0) {
+                    double newX = m.x + m.vx;
+                    double leadEdge = (m.vx > 0.0) ? (newX + halfW) : (newX - halfW);
+                    int leadBX = cast<int>(Math.floor(leadEdge));
+                    int minBZ = cast<int>(Math.floor(m.z - halfW * 0.7));
+                    int maxBZ = cast<int>(Math.floor(m.z + halfW * 0.7));
+                    int headY = cast<int>(Math.floor(m.y + m.height - 0.05));
+
+                    bool blockedX = false;
+                    bool canStepX = true;
+
+                    for (int bz = minBZ; bz <= maxBZ; bz++) {
+                        for (int by = footY; by <= headY; by++) {
+                            int b = getWorldBlock(leadBX, by, bz);
+                            if (b != 0 && Blocks.isSolid(b)) {
+                                blockedX = true;
+                                if (by > footY) {
+                                    canStepX = false;
+                                }
+                            }
+                        }
+                        if (blockedX) {
+                            int bStep1 = getWorldBlock(leadBX, footY + 1, bz);
+                            int bStep2 = getWorldBlock(leadBX, footY + 2, bz);
+                            if (Blocks.isSolid(bStep1) || Blocks.isSolid(bStep2)) {
+                                canStepX = false;
+                            }
+                        }
+                    }
+
+                    if (blockedX) {
+                        if (canStepX && m.onGround) {
+                            m.vy = 0.17;
+                            m.onGround = false;
+                        }
+                        if (canStepX && m.y >= cast<double>(footY) + 0.88) {
+                            m.x = newX;
+                        } else {
+                            m.vx = 0.0;
+                            if (!canStepX) {
+                                m.wanderDirX = 0.0;
+                                m.wanderTimer = 0.0;
+                                m.isBlockedAhead = true;
+                                m.suggestedAngle = findClearWanderAngle(m);
+                                m.hasSuggestedAngle = true;
+                            }
+                        }
+                    } else {
+                        m.x = newX;
+                    }
+                }
+
+                // 2. Move Z with accurate hitbox bounds
+                if (m.vz != 0.0) {
+                    double newZ = m.z + m.vz;
+                    double leadEdge = (m.vz > 0.0) ? (newZ + halfW) : (newZ - halfW);
+                    int leadBZ = cast<int>(Math.floor(leadEdge));
+                    int minBX = cast<int>(Math.floor(m.x - halfW * 0.7));
+                    int maxBX = cast<int>(Math.floor(m.x + halfW * 0.7));
+                    int headY = cast<int>(Math.floor(m.y + m.height - 0.05));
+
+                    bool blockedZ = false;
+                    bool canStepZ = true;
+
+                    for (int bx = minBX; bx <= maxBX; bx++) {
+                        for (int by = footY; by <= headY; by++) {
+                            int b = getWorldBlock(bx, by, leadBZ);
+                            if (b != 0 && Blocks.isSolid(b)) {
+                                blockedZ = true;
+                                if (by > footY) {
+                                    canStepZ = false;
+                                }
+                            }
+                        }
+                        if (blockedZ) {
+                            int bStep1 = getWorldBlock(bx, footY + 1, leadBZ);
+                            int bStep2 = getWorldBlock(bx, footY + 2, leadBZ);
+                            if (Blocks.isSolid(bStep1) || Blocks.isSolid(bStep2)) {
+                                canStepZ = false;
+                            }
+                        }
+                    }
+
+                    if (blockedZ) {
+                        if (canStepZ && m.onGround) {
+                            m.vy = 0.17;
+                            m.onGround = false;
+                        }
+                        if (canStepZ && m.y >= cast<double>(footY) + 0.88) {
+                            m.z = newZ;
+                        } else {
+                            m.vz = 0.0;
+                            if (!canStepZ) {
+                                m.wanderDirZ = 0.0;
+                                m.wanderTimer = 0.0;
+                                m.isBlockedAhead = true;
+                                m.suggestedAngle = findClearWanderAngle(m);
+                                m.hasSuggestedAngle = true;
+                            }
+                        }
+                    } else {
+                        m.z = newZ;
+                    }
+                }
+
+                // Vertical movement & gravity
+                m.vy -= 0.0089;
+                if (m.mobType == MOB_CHICKEN && m.vy < -0.05) {
+                    m.vy = -0.05; // chicken fluttering slow-fall
+                } else if (m.vy < -0.4) {
+                    m.vy = -0.4;
+                }
+                m.y += m.vy;
+                m.onGround = false;
+
+                // Ground collision (only when descending / resting: vy <= 0.0)
+                if (m.vy <= 0.0) {
+                    int checkY = cast<int>(Math.floor(m.y));
+                    int minBX = cast<int>(Math.floor(m.x - halfW * 0.7));
+                    int maxBX = cast<int>(Math.floor(m.x + halfW * 0.7));
+                    int minBZ = cast<int>(Math.floor(m.z - halfW * 0.7));
+                    int maxBZ = cast<int>(Math.floor(m.z + halfW * 0.7));
+
+                    bool landed = false;
+                    for (int bx = minBX; bx <= maxBX && !landed; bx++) {
+                        for (int bz = minBZ; bz <= maxBZ && !landed; bz++) {
+                            int b = getWorldBlock(bx, checkY, bz);
+                            if (b != 0 && Blocks.isSolid(b)) {
+                                m.y = cast<double>(checkY) + 1.0 + 0.001;
+                                m.vy = 0.0;
+                                m.onGround = true;
+                                landed = true;
+                            }
+                        }
+                    }
+                }
+
+                // Despawn if fallen below world
+                if (m.y < 1.0) m.alive = false;
+
+                if (m.exploded) {
+                    explode(cast<int>(Math.floor(m.x)),
+                            cast<int>(Math.floor(m.y)),
+                            cast<int>(Math.floor(m.z)), 3);
+                    m.exploded = false;
+                }
+
+                double dx2 = m.x - px; 
+                double dz2 = m.z - pz;
+                if (dx2*dx2 + dz2*dz2 > 1600.0) m.alive = false;
+
+                if (!m.alive) {
+                    MobDef def = Mobs.get(m.mobType);
+                    if (def != null && def.dropBlockId != 0 && pendingDropCount < 60) {
+                        pendingDrops[pendingDropCount] = def.dropBlockId;
+                        pendingDropCount++;
+                        if (def.dropCount > 1) {
+                            for (int k = 1; k < def.dropCount && pendingDropCount < 60; k++) {
+                                pendingDrops[pendingDropCount] = def.dropBlockId;
+                                pendingDropCount++;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        int w = 0;
+        for (int i = 0; i < mobCount; i++) { 
+            if (mobs[i] != null && mobs[i].alive) { 
+                mobs[w] = mobs[i]; 
+                w++; 
+            } 
+        }
+        mobCount = w;
+
+        if (isNight && mobCount < mobCap && rng2.nextDouble() < 0.012) {
+            int pcx = cast<int>(Math.floor(px / 16.0));
+            int pcz = cast<int>(Math.floor(pz / 16.0));
+            spawnHostileMob(pcx + cast<int>(Math.floor(rng2.nextDouble() * 6) - 3),
+                            pcz + cast<int>(Math.floor(rng2.nextDouble() * 6) - 3), true);
+        }
+    }
+
+    public func void explode(int cx, int cy, int cz, int radius) {
+        for (int dx = -radius; dx <= radius; dx++) {
+            for (int dy = -radius; dy <= radius; dy++) {
+                for (int dz = -radius; dz <= radius; dz++) {
+                    double dd = Math.sqrt(cast<double>(dx*dx + dy*dy + dz*dz));
+                    if (dd <= cast<double>(radius)) {
+                        int b = getWorldBlock(cx+dx, cy+dy, cz+dz);
+                        if (b != 0 && b != BLOCK_BEDROCK) {
+                            setWorldBlock(cx+dx, cy+dy, cz+dz, 0);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    public func int takePendingDrop(int idx) {
+        if (idx < 0 || idx >= pendingDropCount) return 0;
+        return pendingDrops[idx];
+    }
+
+    public func void clearPendingDrops() { pendingDropCount = 0; }
+
+    public func void runGenThread() {
+        while (running) {
+            Chunk target = null;
+            mutex.lock();
+            for (int i = 0; i < count; i++) { 
+                if (chunks[i].generating) { 
+                    target = chunks[i]; 
+                    break; 
+                } 
+            }
+            mutex.unlock();
+            if (target != null) { 
+                string key = target.chunkX + "," + target.chunkZ;
+                mutex.lock();
+                bool hasSaved = (savedChunkData != null && savedChunkData.containsKey(key));
+                string rle = hasSaved ? savedChunkData.get(key) : "";
+                mutex.unlock();
+
+                if (hasSaved && rle.length() > 0) {
+                    decodeChunkRLE(target.blocks, rle);
+                } else {
+                    target.generate(); 
+                }
+                target.generated = true; 
+                target.generating = false; 
+                target.dirty = true; 
+                markDirty(target.chunkX - 1, target.chunkZ);
+                markDirty(target.chunkX + 1, target.chunkZ);
+                markDirty(target.chunkX, target.chunkZ - 1);
+                markDirty(target.chunkX, target.chunkZ + 1);
+            } else { 
+                Thread.sleep(10);
+            }
+        }
+    }
+
+    public func void evictFar(int pcx, int pcz, int renderR) {
+        int limit = renderR + 2;
+        bool changed = false;
+        mutex.lock();
+        for (int i = 0; i < count; i++) {
+            int dx = cgx[i] - pcx; int dz = cgz[i] - pcz;
+            if (dx < 0) dx = -dx; 
+            if (dz < 0) dz = -dz;
+            if (dx > limit || dz > limit) {
+                if (chunks[i] != null && chunks[i].modified) {
+                    string key = cgx[i] + "," + cgz[i];
+                    string rle = encodeChunkRLE(chunks[i].blocks);
+                    if (savedChunkData != null) {
+                        if (!savedChunkData.containsKey(key) && savedChunkKeys != null) {
+                            savedChunkKeys.add(key);
+                        }
+                        savedChunkData.put(key, rle);
+                    }
+                    chunks[i].modified = false;
+                }
+                int last = count - 1;
+                if (i != last) {
+                    chunks[i] = chunks[last]; 
+                    cgx[i] = cgx[last]; 
+                    cgz[i] = cgz[last];
+                }
+                chunks[last] = null;
+                count--; 
+                i--;
+                changed = true;
+            }
+        }
+        mutex.unlock();
+        if (changed) {
+            rebuildHashTable();
+        }
+    }
+
+    public func bool shouldRenderFace(int bt, int nb) {
+        // nb == -1 means neighbor chunk is not loaded: NEVER render chunk side!
+        if (nb == -1) return false;
+        // Neighbor is air: always render face
+        if (nb == 0) return true;
+        // Same block: don't render internal faces
+        if (nb == bt) return false;
+        // Water face logic: water should never render against solid blocks or other water
+        if (bt == BLOCK_WATER) {
+            return !Blocks.isSolid(nb);
+        }
+        // Solid opaque block: render only if neighbor is transparent or air
+        if (Blocks.isSolid(bt) && !Blocks.isTransparent(bt)) {
+            return Blocks.isTransparent(nb);
+        }
+        return true;
+    }
+
+    public func bool blocksSunlight(int b) {
+        if (b <= 0) return false;
+        if (b == BLOCK_GLASS || b == BLOCK_FLOWER || b == BLOCK_WATER) return false;
+        return true;
+    }
+
+    // ── buildMesh: stride=8 format [x,y,z, ao, skylight, obstacles, u,v] ─────
+    public func void buildMesh(int i) {
+        Chunk c = chunks[i];
+        if (!c.generated) return;
+        int[] blk = c.blocks;
+        int wx0 = cgx[i] * 16; 
+        int wz0 = cgz[i] * 16;
+        int[] blk_nx = null; 
+        int[] blk_px = null; 
+        int[] blk_nz = null; 
+        int[] blk_pz = null;
+        int idx = findChunk(cgx[i]-1, cgz[i]); 
+        if (idx >= 0 && chunks[idx].generated) blk_nx = chunks[idx].blocks;
+        idx = findChunk(cgx[i]+1, cgz[i]); 
+        if (idx >= 0 && chunks[idx].generated) blk_px = chunks[idx].blocks;
+        idx = findChunk(cgx[i], cgz[i]-1); 
+        if (idx >= 0 && chunks[idx].generated) blk_nz = chunks[idx].blocks;
+        idx = findChunk(cgx[i], cgz[i]+1); 
+        if (idx >= 0 && chunks[idx].generated) blk_pz = chunks[idx].blocks;
+        float[] verts = meshVerts; 
+        int[] inds = meshInds;
+        int vi = 0; 
+        int ii = 0; 
+        int vc = 0;
+
+        float[] wverts = waterVerts;
+        int[] winds = waterInds;
+        int wvi = 0;
+        int wii = 0;
+        int wvc = 0;
+        float fwx = cast<float>(wx0); 
+        float fwz = cast<float>(wz0);
+
+        int[] topSolidY = new int[256];
+        for (int lx = 0; lx < 16; lx++) {
+            for (int lz = 0; lz < 16; lz++) {
+                int ty = 0;
+                int base = lx + lz * 16;
+                for (int ly = CHUNK_HEIGHT - 1; ly >= 0; ly--) {
+                    int b = blk[base + ly * CHUNK_LAYER];
+                    if (blocksSunlight(b)) {
+                        ty = ly;
+                        break;
+                    }
+                }
+                topSolidY[base] = ty;
+            }
+        }
+
+        // Padded 18x18 height grid: index (px + pz * 18) where px = lx + 1, pz = lz + 1
+        int[] padTop = new int[324];
+        for (int lx = 0; lx < 16; lx++) {
+            for (int lz = 0; lz < 16; lz++) {
+                padTop[(lx + 1) + (lz + 1) * 18] = topSolidY[lx + lz * 16];
+            }
+        }
+        for (int lz = 0; lz < 16; lz++) {
+            int ty = 0;
+            if (blk_nx != null) {
+                int base = 15 + lz * 16;
+                for (int ly = CHUNK_HEIGHT - 1; ly >= 0; ly--) {
+                    int b = blk_nx[base + ly * CHUNK_LAYER];
+                    if (blocksSunlight(b)) { ty = ly; break; }
+                }
+            } else {
+                ty = topSolidY[0 + lz * 16];
+            }
+            padTop[0 + (lz + 1) * 18] = ty;
+        }
+        for (int lz = 0; lz < 16; lz++) {
+            int ty = 0;
+            if (blk_px != null) {
+                int base = 0 + lz * 16;
+                for (int ly = CHUNK_HEIGHT - 1; ly >= 0; ly--) {
+                    int b = blk_px[base + ly * CHUNK_LAYER];
+                    if (blocksSunlight(b)) { ty = ly; break; }
+                }
+            } else {
+                ty = topSolidY[15 + lz * 16];
+            }
+            padTop[17 + (lz + 1) * 18] = ty;
+        }
+        for (int lx = 0; lx < 16; lx++) {
+            int ty = 0;
+            if (blk_nz != null) {
+                int base = lx + 15 * 16;
+                for (int ly = CHUNK_HEIGHT - 1; ly >= 0; ly--) {
+                    int b = blk_nz[base + ly * CHUNK_LAYER];
+                    if (blocksSunlight(b)) { ty = ly; break; }
+                }
+            } else {
+                ty = topSolidY[lx + 0 * 16];
+            }
+            padTop[(lx + 1) + 0 * 18] = ty;
+        }
+        for (int lx = 0; lx < 16; lx++) {
+            int ty = 0;
+            if (blk_pz != null) {
+                int base = lx + 0 * 16;
+                for (int ly = CHUNK_HEIGHT - 1; ly >= 0; ly--) {
+                    int b = blk_pz[base + ly * CHUNK_LAYER];
+                    if (blocksSunlight(b)) { ty = ly; break; }
+                }
+            } else {
+                ty = topSolidY[lx + 15 * 16];
+            }
+            padTop[(lx + 1) + 17 * 18] = ty;
+        }
+
+        for (int x = 0; x < 16; x++) {
+            for (int y = 0; y < CHUNK_HEIGHT; y++) {
+                for (int z = 0; z < 16; z++) {
+                    int bt = blk[x + z*16 + y*CHUNK_LAYER];
+                    if (bt <= 0) continue;
+                    if (bt == BLOCK_WATER) {
+                        if (wvi + 96 >= wverts.length || wii + 18 >= winds.length) break;
+                    } else {
+                        if (vi + 192 >= verts.length || ii + 36 >= inds.length) break;
+                    }
+                    float fx = fwx + cast<float>(x); 
+                    float fy = cast<float>(y); 
+                    float fz2 = fwz + cast<float>(z);
+                    float fx1 = fx+1.0; 
+                    float fy1 = fy+1.0; 
+                    float fz3 = fz2+1.0;
+                    int nb = 0;
+                    BlockDef def = Blocks.get(bt);
+                    bool transparent = (def != null && def.isTransparent());
+                    bool cross = (def != null && def.isCross());
+
+                    int px = x + 1;
+                    int pz = z + 1;
+
+                    int dh_px1 = padTop[(px + 1) + pz * 18] - y; if (dh_px1 < 0) dh_px1 = 0;
+                    int dh_px2 = 0;
+                    if (px + 2 <= 17) {
+                        int h2 = padTop[(px + 2) + pz * 18] - y;
+                        if (h2 > 0) dh_px2 = h2 / 2;
+                    }
+                    int eff_px = (dh_px1 > dh_px2) ? dh_px1 : dh_px2;
+                    if (eff_px > 15) eff_px = 15;
+
+                    int dh_nx1 = padTop[(px - 1) + pz * 18] - y; if (dh_nx1 < 0) dh_nx1 = 0;
+                    int dh_nx2 = 0;
+                    if (px - 2 >= 0) {
+                        int h2 = padTop[(px - 2) + pz * 18] - y;
+                        if (h2 > 0) dh_nx2 = h2 / 2;
+                    }
+                    int eff_nx = (dh_nx1 > dh_nx2) ? dh_nx1 : dh_nx2;
+                    if (eff_nx > 15) eff_nx = 15;
+
+                    int dh_pz1 = padTop[px + (pz + 1) * 18] - y; if (dh_pz1 < 0) dh_pz1 = 0;
+                    int dh_pz2 = 0;
+                    if (pz + 2 <= 17) {
+                        int h2 = padTop[px + (pz + 2) * 18] - y;
+                        if (h2 > 0) dh_pz2 = h2 / 2;
+                    }
+                    int eff_pz = (dh_pz1 > dh_pz2) ? dh_pz1 : dh_pz2;
+                    if (eff_pz > 15) eff_pz = 15;
+
+                    int dh_nz1 = padTop[px + (pz - 1) * 18] - y; if (dh_nz1 < 0) dh_nz1 = 0;
+                    int dh_nz2 = 0;
+                    if (pz - 2 >= 0) {
+                        int h2 = padTop[px + (pz - 2) * 18] - y;
+                        if (h2 > 0) dh_nz2 = h2 / 2;
+                    }
+                    int eff_nz = (dh_nz1 > dh_nz2) ? dh_nz1 : dh_nz2;
+                    if (eff_nz > 15) eff_nz = 15;
+
+                    float obs = cast<float>((eff_px & 0xF) | ((eff_nx & 0xF) << 4) | ((eff_pz & 0xF) << 8) | ((eff_nz & 0xF) << 12));
+
+                    // ── Top face ───────────────────────────────────────────────────
+                    if (y < CHUNK_HEIGHT - 1) { 
+                        nb = blk[x + z*16 + (y+1)*CHUNK_LAYER]; 
+                    } else { 
+                        nb = 0; 
+                    }
+                    if (shouldRenderFace(bt, nb)) {
+                        float[] uv = Blocks.faceUV(bt, 0); 
+                        float ao = Blocks.faceAO(0);
+                        float sl = (y >= topSolidY[x + z*16]) ? 1.0 : 0.0;
+                        float u0=uv[0]; 
+                        float v0=uv[1]; 
+                        float u1=uv[2]; 
+                        float v1=uv[3];
+                        if (bt == BLOCK_WATER) {
+                            if (wvi + 64 <= wverts.length && wii + 12 <= winds.length) {
+                                // Top surface (+Y)
+                                wverts[wvi]=fx;   wverts[wvi+1]=fy1; wverts[wvi+2]=fz3; wverts[wvi+3]=ao; wverts[wvi+4]=sl; wverts[wvi+5]=obs; wverts[wvi+6]=u0; wverts[wvi+7]=v1; wvi+=8;
+                                wverts[wvi]=fx1;  wverts[wvi+1]=fy1; wverts[wvi+2]=fz3; wverts[wvi+3]=ao; wverts[wvi+4]=sl; wverts[wvi+5]=obs; wverts[wvi+6]=u1; wverts[wvi+7]=v1; wvi+=8;
+                                wverts[wvi]=fx1;  wverts[wvi+1]=fy1; wverts[wvi+2]=fz2; wverts[wvi+3]=ao; wverts[wvi+4]=sl; wverts[wvi+5]=obs; wverts[wvi+6]=u1; wverts[wvi+7]=v0; wvi+=8;
+                                wverts[wvi]=fx;   wverts[wvi+1]=fy1; wverts[wvi+2]=fz2; wverts[wvi+3]=ao; wverts[wvi+4]=sl; wverts[wvi+5]=obs; wverts[wvi+6]=u0; wverts[wvi+7]=v0; wvi+=8;
+                                winds[wii]=wvc; winds[wii+1]=wvc+1; winds[wii+2]=wvc+2; winds[wii+3]=wvc+2; winds[wii+4]=wvc+3; winds[wii+5]=wvc; wii+=6; wvc+=4;
+                                // Underside looking from underwater (-Y)
+                                wverts[wvi]=fx;   wverts[wvi+1]=fy1; wverts[wvi+2]=fz2; wverts[wvi+3]=ao; wverts[wvi+4]=sl; wverts[wvi+5]=obs; wverts[wvi+6]=u0; wverts[wvi+7]=v0; wvi+=8;
+                                wverts[wvi]=fx1;  wverts[wvi+1]=fy1; wverts[wvi+2]=fz2; wverts[wvi+3]=ao; wverts[wvi+4]=sl; wverts[wvi+5]=obs; wverts[wvi+6]=u1; wverts[wvi+7]=v0; wvi+=8;
+                                wverts[wvi]=fx1;  wverts[wvi+1]=fy1; wverts[wvi+2]=fz3; wverts[wvi+3]=ao; wverts[wvi+4]=sl; wverts[wvi+5]=obs; wverts[wvi+6]=u1; wverts[wvi+7]=v1; wvi+=8;
+                                wverts[wvi]=fx;   wverts[wvi+1]=fy1; wverts[wvi+2]=fz3; wverts[wvi+3]=ao; wverts[wvi+4]=sl; wverts[wvi+5]=obs; wverts[wvi+6]=u0; wverts[wvi+7]=v1; wvi+=8;
+                                winds[wii]=wvc; winds[wii+1]=wvc+1; winds[wii+2]=wvc+2; winds[wii+3]=wvc+2; winds[wii+4]=wvc+3; winds[wii+5]=wvc; wii+=6; wvc+=4;
+                            }
+                        } else {
+                            verts[vi]=fx;  verts[vi+1]=fy1; verts[vi+2]=fz3; verts[vi+3]=ao; verts[vi+4]=sl; verts[vi+5]=obs; verts[vi+6]=u0; verts[vi+7]=v1; vi+=8;
+                            verts[vi]=fx1; verts[vi+1]=fy1; verts[vi+2]=fz3; verts[vi+3]=ao; verts[vi+4]=sl; verts[vi+5]=obs; verts[vi+6]=u1; verts[vi+7]=v1; vi+=8;
+                            verts[vi]=fx1; verts[vi+1]=fy1; verts[vi+2]=fz2; verts[vi+3]=ao; verts[vi+4]=sl; verts[vi+5]=obs; verts[vi+6]=u1; verts[vi+7]=v0; vi+=8;
+                            verts[vi]=fx;  verts[vi+1]=fy1; verts[vi+2]=fz2; verts[vi+3]=ao; verts[vi+4]=sl; verts[vi+5]=obs; verts[vi+6]=u0; verts[vi+7]=v0; vi+=8;
+                            inds[ii]=vc;inds[ii+1]=vc+1;inds[ii+2]=vc+2;inds[ii+3]=vc+2;inds[ii+4]=vc+3;inds[ii+5]=vc; ii+=6;vc+=4;
+                        }
+                    }
+                    // ── Bottom face ────────────────────────────────────────────
+                    if (y > 0) { 
+                        nb = blk[x + z*16 + (y-1)*CHUNK_LAYER]; 
+                    } else { 
+                        nb = -1; // Bedrock bottom at y=0 looking into void: never render
+                    }
+                    if (shouldRenderFace(bt, nb)) {
+                        float[] uv = Blocks.faceUV(bt, 1); 
+                        float ao = Blocks.faceAO(1);
+                        float sl = 0.0; // Underneath block: in shadow
+                        float u0=uv[0]; 
+                        float v0=uv[1]; 
+                        float u1=uv[2]; 
+                        float v1=uv[3];
+                        if (bt == BLOCK_WATER) {
+                            if (wvi + 32 <= wverts.length && wii + 6 <= winds.length) {
+                                wverts[wvi]=fx;  wverts[wvi+1]=fy; wverts[wvi+2]=fz2; wverts[wvi+3]=ao; wverts[wvi+4]=sl; wverts[wvi+5]=0.0; wverts[wvi+6]=u0; wverts[wvi+7]=v0; wvi+=8;
+                                wverts[wvi]=fx1; wverts[wvi+1]=fy; wverts[wvi+2]=fz2; wverts[wvi+3]=ao; wverts[wvi+4]=sl; wverts[wvi+5]=0.0; wverts[wvi+6]=u1; wverts[wvi+7]=v0; wvi+=8;
+                                wverts[wvi]=fx1; wverts[wvi+1]=fy; wverts[wvi+2]=fz3; wverts[wvi+3]=ao; wverts[wvi+4]=sl; wverts[wvi+5]=0.0; wverts[wvi+6]=u1; wverts[wvi+7]=v1; wvi+=8;
+                                wverts[wvi]=fx;  wverts[wvi+1]=fy; wverts[wvi+2]=fz3; wverts[wvi+3]=ao; wverts[wvi+4]=sl; wverts[wvi+5]=0.0; wverts[wvi+6]=u0; wverts[wvi+7]=v1; wvi+=8;
+                                winds[wii]=wvc; winds[wii+1]=wvc+1; winds[wii+2]=wvc+2; winds[wii+3]=wvc+2; winds[wii+4]=wvc+3; winds[wii+5]=wvc; wii+=6; wvc+=4;
+                            }
+                        } else {
+                            verts[vi]=fx;  verts[vi+1]=fy; verts[vi+2]=fz2; verts[vi+3]=ao; verts[vi+4]=sl; verts[vi+5]=0.0; verts[vi+6]=u0; verts[vi+7]=v0; vi+=8;
+                            verts[vi]=fx1; verts[vi+1]=fy; verts[vi+2]=fz2; verts[vi+3]=ao; verts[vi+4]=sl; verts[vi+5]=0.0; verts[vi+6]=u1; verts[vi+7]=v0; vi+=8;
+                            verts[vi]=fx1; verts[vi+1]=fy; verts[vi+2]=fz3; verts[vi+3]=ao; verts[vi+4]=sl; verts[vi+5]=0.0; verts[vi+6]=u1; verts[vi+7]=v1; vi+=8;
+                            verts[vi]=fx;  verts[vi+1]=fy; verts[vi+2]=fz3; verts[vi+3]=ao; verts[vi+4]=sl; verts[vi+5]=0.0; verts[vi+6]=u0; verts[vi+7]=v1; vi+=8;
+                            inds[ii]=vc; inds[ii+1]=vc+1; inds[ii+2]=vc+2; inds[ii+3]=vc+2; inds[ii+4]=vc+3; inds[ii+5]=vc; ii+=6;vc+=4;
+                        }
+                    }
+                    // ── +X face ──────────────────────────────────────────────────
+                    if (x < 15) { 
+                        nb = blk[(x+1)+z*16+y*CHUNK_LAYER]; 
+                    } else { 
+                        nb = (blk_px != null ? blk_px[0+z*16+y*CHUNK_LAYER] : -1); 
+                    }
+                    if (shouldRenderFace(bt, nb)) {
+                        float[] uv = Blocks.faceUV(bt, 2); 
+                        float ao = Blocks.faceAO(2);
+                        float sl = (x < 15) ? (y >= topSolidY[(x+1)+z*16] ? 1.0 : 0.0) : (y >= topSolidY[x+z*16] ? 1.0 : 0.0);
+                        float u0=uv[0]; 
+                        float v0=uv[1]; 
+                        float u1=uv[2]; 
+                        float v1=uv[3];
+                        if (bt == BLOCK_WATER) {
+                            if (wvi + 32 <= wverts.length && wii + 6 <= winds.length) {
+                                wverts[wvi]=fx1; wverts[wvi+1]=fy;  wverts[wvi+2]=fz3; wverts[wvi+3]=ao; wverts[wvi+4]=sl; wverts[wvi+5]=obs; wverts[wvi+6]=u0; wverts[wvi+7]=v1; wvi+=8;
+                                wverts[wvi]=fx1; wverts[wvi+1]=fy;  wverts[wvi+2]=fz2; wverts[wvi+3]=ao; wverts[wvi+4]=sl; wverts[wvi+5]=obs; wverts[wvi+6]=u1; wverts[wvi+7]=v1; wvi+=8;
+                                wverts[wvi]=fx1; wverts[wvi+1]=fy1; wverts[wvi+2]=fz2; wverts[wvi+3]=ao; wverts[wvi+4]=sl; wverts[wvi+5]=obs; wverts[wvi+6]=u1; wverts[wvi+7]=v0; wvi+=8;
+                                wverts[wvi]=fx1; wverts[wvi+1]=fy1; wverts[wvi+2]=fz3; wverts[wvi+3]=ao; wverts[wvi+4]=sl; wverts[wvi+5]=obs; wverts[wvi+6]=u0; wverts[wvi+7]=v0; wvi+=8;
+                                winds[wii]=wvc; winds[wii+1]=wvc+1; winds[wii+2]=wvc+2; winds[wii+3]=wvc+2; winds[wii+4]=wvc+3; winds[wii+5]=wvc; wii+=6; wvc+=4;
+                            }
+                        } else {
+                            verts[vi]=fx1; verts[vi+1]=fy;  verts[vi+2]=fz3; verts[vi+3]=ao; verts[vi+4]=sl; verts[vi+5]=obs; verts[vi+6]=u0; verts[vi+7]=v1; vi+=8;
+                            verts[vi]=fx1; verts[vi+1]=fy;  verts[vi+2]=fz2; verts[vi+3]=ao; verts[vi+4]=sl; verts[vi+5]=obs; verts[vi+6]=u1; verts[vi+7]=v1; vi+=8;
+                            verts[vi]=fx1; verts[vi+1]=fy1; verts[vi+2]=fz2; verts[vi+3]=ao; verts[vi+4]=sl; verts[vi+5]=obs; verts[vi+6]=u1; verts[vi+7]=v0; vi+=8;
+                            verts[vi]=fx1; verts[vi+1]=fy1; verts[vi+2]=fz3; verts[vi+3]=ao; verts[vi+4]=sl; verts[vi+5]=obs; verts[vi+6]=u0; verts[vi+7]=v0; vi+=8;
+                            inds[ii]=vc; inds[ii+1]=vc+1; inds[ii+2]=vc+2; inds[ii+3]=vc+2; inds[ii+4]=vc+3; inds[ii+5]=vc; ii+=6;vc+=4;
+                        }
+                    }
+                    // ── -X face ──────────────────────────────────────────────────
+                    if (x > 0) { 
+                        nb = blk[(x-1)+z*16+y*CHUNK_LAYER]; 
+                    } else { 
+                        nb = (blk_nx != null ? blk_nx[15+z*16+y*CHUNK_LAYER] : -1); 
+                    }
+                    if (shouldRenderFace(bt, nb)) {
+                        float[] uv = Blocks.faceUV(bt, 3); 
+                        float ao = Blocks.faceAO(3);
+                        float sl = (x > 0) ? (y >= topSolidY[(x-1)+z*16] ? 1.0 : 0.0) : (y >= topSolidY[x+z*16] ? 1.0 : 0.0);
+                        float u0=uv[0]; 
+                        float v0=uv[1]; 
+                        float u1=uv[2]; 
+                        float v1=uv[3];
+                        if (bt == BLOCK_WATER) {
+                            if (wvi + 32 <= wverts.length && wii + 6 <= winds.length) {
+                                wverts[wvi]=fx;  wverts[wvi+1]=fy;  wverts[wvi+2]=fz2; wverts[wvi+3]=ao; wverts[wvi+4]=sl; wverts[wvi+5]=obs; wverts[wvi+6]=u0; wverts[wvi+7]=v1; wvi+=8;
+                                wverts[wvi]=fx;  wverts[wvi+1]=fy;  wverts[wvi+2]=fz3; wverts[wvi+3]=ao; wverts[wvi+4]=sl; wverts[wvi+5]=obs; wverts[wvi+6]=u1; wverts[wvi+7]=v1; wvi+=8;
+                                wverts[wvi]=fx;  wverts[wvi+1]=fy1; wverts[wvi+2]=fz3; wverts[wvi+3]=ao; wverts[wvi+4]=sl; wverts[wvi+5]=obs; wverts[wvi+6]=u1; wverts[wvi+7]=v0; wvi+=8;
+                                wverts[wvi]=fx;  wverts[wvi+1]=fy1; wverts[wvi+2]=fz2; wverts[wvi+3]=ao; wverts[wvi+4]=sl; wverts[wvi+5]=obs; wverts[wvi+6]=u0; wverts[wvi+7]=v0; wvi+=8;
+                                winds[wii]=wvc; winds[wii+1]=wvc+1; winds[wii+2]=wvc+2; winds[wii+3]=wvc+2; winds[wii+4]=wvc+3; winds[wii+5]=wvc; wii+=6; wvc+=4;
+                            }
+                        } else {
+                            verts[vi]=fx;  verts[vi+1]=fy;  verts[vi+2]=fz2; verts[vi+3]=ao; verts[vi+4]=sl; verts[vi+5]=obs; verts[vi+6]=u0; verts[vi+7]=v1; vi+=8;
+                            verts[vi]=fx;  verts[vi+1]=fy;  verts[vi+2]=fz3; verts[vi+3]=ao; verts[vi+4]=sl; verts[vi+5]=obs; verts[vi+6]=u1; verts[vi+7]=v1; vi+=8;
+                            verts[vi]=fx;  verts[vi+1]=fy1; verts[vi+2]=fz3; verts[vi+3]=ao; verts[vi+4]=sl; verts[vi+5]=obs; verts[vi+6]=u1; verts[vi+7]=v0; vi+=8;
+                            verts[vi]=fx;  verts[vi+1]=fy1; verts[vi+2]=fz2; verts[vi+3]=ao; verts[vi+4]=sl; verts[vi+5]=obs; verts[vi+6]=u0; verts[vi+7]=v0; vi+=8;
+                            inds[ii]=vc; inds[ii+1]=vc+1; inds[ii+2]=vc+2; inds[ii+3]=vc+2; inds[ii+4]=vc+3; inds[ii+5]=vc; ii+=6;vc+=4;
+                        }
+                    }
+                    // ── +Z face ──────────────────────────────────────────────────
+                    if (z < 15) { 
+                        nb = blk[x+(z+1)*16+y*CHUNK_LAYER]; 
+                    } else { 
+                        nb = (blk_pz != null ? blk_pz[x+0*16+y*CHUNK_LAYER] : -1); 
+                    }
+                    if (shouldRenderFace(bt, nb)) {
+                        float[] uv = Blocks.faceUV(bt, 4); 
+                        float ao = Blocks.faceAO(4);
+                        float sl = (z < 15) ? (y >= topSolidY[x+(z+1)*16] ? 1.0 : 0.0) : (y >= topSolidY[x+z*16] ? 1.0 : 0.0);
+                        float u0=uv[0]; 
+                        float v0=uv[1]; 
+                        float u1=uv[2]; 
+                        float v1=uv[3];
+                        if (bt == BLOCK_WATER) {
+                            if (wvi + 32 <= wverts.length && wii + 6 <= winds.length) {
+                                wverts[wvi]=fx;  wverts[wvi+1]=fy;  wverts[wvi+2]=fz3; wverts[wvi+3]=ao; wverts[wvi+4]=sl; wverts[wvi+5]=obs; wverts[wvi+6]=u0; wverts[wvi+7]=v1; wvi+=8;
+                                wverts[wvi]=fx1; wverts[wvi+1]=fy;  wverts[wvi+2]=fz3; wverts[wvi+3]=ao; wverts[wvi+4]=sl; wverts[wvi+5]=obs; wverts[wvi+6]=u1; wverts[wvi+7]=v1; wvi+=8;
+                                wverts[wvi]=fx1; wverts[wvi+1]=fy1; wverts[wvi+2]=fz3; wverts[wvi+3]=ao; wverts[wvi+4]=sl; wverts[wvi+5]=obs; wverts[wvi+6]=u1; wverts[wvi+7]=v0; wvi+=8;
+                                wverts[wvi]=fx;  wverts[wvi+1]=fy1; wverts[wvi+2]=fz3; wverts[wvi+3]=ao; wverts[wvi+4]=sl; wverts[wvi+5]=obs; wverts[wvi+6]=u0; wverts[wvi+7]=v0; wvi+=8;
+                                winds[wii]=wvc; winds[wii+1]=wvc+1; winds[wii+2]=wvc+2; winds[wii+3]=wvc+2; winds[wii+4]=wvc+3; winds[wii+5]=wvc; wii+=6; wvc+=4;
+                            }
+                        } else {
+                            verts[vi]=fx;  verts[vi+1]=fy;  verts[vi+2]=fz3; verts[vi+3]=ao; verts[vi+4]=sl; verts[vi+5]=obs; verts[vi+6]=u0; verts[vi+7]=v1; vi+=8;
+                            verts[vi]=fx1; verts[vi+1]=fy;  verts[vi+2]=fz3; verts[vi+3]=ao; verts[vi+4]=sl; verts[vi+5]=obs; verts[vi+6]=u1; verts[vi+7]=v1; vi+=8;
+                            verts[vi]=fx1; verts[vi+1]=fy1; verts[vi+2]=fz3; verts[vi+3]=ao; verts[vi+4]=sl; verts[vi+5]=obs; verts[vi+6]=u1; verts[vi+7]=v0; vi+=8;
+                            verts[vi]=fx;  verts[vi+1]=fy1; verts[vi+2]=fz3; verts[vi+3]=ao; verts[vi+4]=sl; verts[vi+5]=obs; verts[vi+6]=u0; verts[vi+7]=v0; vi+=8;
+                            inds[ii]=vc; inds[ii+1]=vc+1; inds[ii+2]=vc+2; inds[ii+3]=vc+2; inds[ii+4]=vc+3; inds[ii+5]=vc; ii+=6;vc+=4;
+                        }
+                    }
+                    // ── -Z face ──────────────────────────────────────────────────
+                    if (z > 0) { 
+                        nb = blk[x+(z-1)*16+y*CHUNK_LAYER]; 
+                    } else { 
+                        nb = (blk_nz != null ? blk_nz[x+15*16+y*CHUNK_LAYER] : -1); 
+                    }
+                    if (shouldRenderFace(bt, nb)) {
+                        float[] uv = Blocks.faceUV(bt, 5); 
+                        float ao = Blocks.faceAO(5);
+                        float sl = (z > 0) ? (y >= topSolidY[x+(z-1)*16] ? 1.0 : 0.0) : (y >= topSolidY[x+z*16] ? 1.0 : 0.0);
+                        float u0=uv[0]; 
+                        float v0=uv[1]; 
+                        float u1=uv[2]; 
+                        float v1=uv[3];
+                        if (bt == BLOCK_WATER) {
+                            if (wvi + 32 <= wverts.length && wii + 6 <= winds.length) {
+                                wverts[wvi]=fx1; wverts[wvi+1]=fy;  wverts[wvi+2]=fz2; wverts[wvi+3]=ao; wverts[wvi+4]=sl; wverts[wvi+5]=obs; wverts[wvi+6]=u0; wverts[wvi+7]=v1; wvi+=8;
+                                wverts[wvi]=fx;  wverts[wvi+1]=fy;  wverts[wvi+2]=fz2; wverts[wvi+3]=ao; wverts[wvi+4]=sl; wverts[wvi+5]=obs; wverts[wvi+6]=u1; wverts[wvi+7]=v1; wvi+=8;
+                                wverts[wvi]=fx;  wverts[wvi+1]=fy1; wverts[wvi+2]=fz2; wverts[wvi+3]=ao; wverts[wvi+4]=sl; wverts[wvi+5]=obs; wverts[wvi+6]=u1; wverts[wvi+7]=v0; wvi+=8;
+                                wverts[wvi]=fx1; wverts[wvi+1]=fy1; wverts[wvi+2]=fz2; wverts[wvi+3]=ao; wverts[wvi+4]=sl; wverts[wvi+5]=obs; wverts[wvi+6]=u0; wverts[wvi+7]=v0; wvi+=8;
+                                winds[wii]=wvc; winds[wii+1]=wvc+1; winds[wii+2]=wvc+2; winds[wii+3]=wvc+2; winds[wii+4]=wvc+3; winds[wii+5]=wvc; wii+=6; wvc+=4;
+                            }
+                        } else {
+                            verts[vi]=fx1; verts[vi+1]=fy;  verts[vi+2]=fz2; verts[vi+3]=ao; verts[vi+4]=sl; verts[vi+5]=obs; verts[vi+6]=u0; verts[vi+7]=v1; vi+=8;
+                            verts[vi]=fx;  verts[vi+1]=fy;  verts[vi+2]=fz2; verts[vi+3]=ao; verts[vi+4]=sl; verts[vi+5]=obs; verts[vi+6]=u1; verts[vi+7]=v1; vi+=8;
+                            verts[vi]=fx;  verts[vi+1]=fy1; verts[vi+2]=fz2; verts[vi+3]=ao; verts[vi+4]=sl; verts[vi+5]=obs; verts[vi+6]=u1; verts[vi+7]=v0; vi+=8;
+                            verts[vi]=fx1; verts[vi+1]=fy1; verts[vi+2]=fz2; verts[vi+3]=ao; verts[vi+4]=sl; verts[vi+5]=obs; verts[vi+6]=u0; verts[vi+7]=v0; vi+=8;
+                            inds[ii]=vc; inds[ii+1]=vc+1; inds[ii+2]=vc+2; inds[ii+3]=vc+2; inds[ii+4]=vc+3; inds[ii+5]=vc; ii+=6;vc+=4;
+                        }
+                    }
+                }
+            }
+        }
+        c.faceCount = vc / 4;
+        if (c.faceCount == 0) {
+            if (c.mesh != null) c.mesh.updateData(verts, inds, 0, 0);
+        } else {
+            if (c.mesh == null) { 
+                c.mesh = Mesh.Create(verts, inds, 8); 
+            } else { 
+                c.mesh.updateData(verts, inds, vi, ii); 
+            }
+        }
+
+        c.waterFaceCount = wvc / 4;
+        if (c.waterFaceCount == 0) {
+            if (c.waterMesh != null) c.waterMesh.updateData(wverts, winds, 0, 0);
+        } else {
+            if (c.waterMesh == null) { 
+                c.waterMesh = Mesh.Create(wverts, winds, 8); 
+            } else { 
+                c.waterMesh.updateData(wverts, winds, wvi, wii); 
+            }
+        }
+
+        c.isBuilt = true; 
+        c.dirty = false;
+    }
+
+    public func void rebuildDirtyChunks(int maxPerFrame) {
+        int rebuilt = 0;
+        for (int i = 0; i < count; i++) {
+            if (chunks[i].dirty && chunks[i].generated) {
+                buildMesh(i); 
+                rebuilt++;
+                if (rebuilt >= maxPerFrame) return;
+            }
+        }
+    }
+}

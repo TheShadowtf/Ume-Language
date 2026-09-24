@@ -1,0 +1,36 @@
+// ═══════════════════════════════════════════════════════════════════════════
+// WorldGen.ume — Terrain height and biome calculation (Minecraft 1.10.2 scale)
+// ═══════════════════════════════════════════════════════════════════════════
+
+import std.math.*;
+
+public func int worldSurfaceAt(int wx, int wz, Noise noise) {
+    double fx = cast<double>(wx);
+    double fz = cast<double>(wz);
+
+    // 1. Continental / Base elevation (large features)
+    double continent = noise.perlin2D(fx * 0.003, fz * 0.003);
+
+    // 2. Mountain mask
+    double mountain = noise.perlin2D(fx * 0.008 + 100.0, fz * 0.008 + 100.0);
+    double mountainBoost = 0.0;
+    if (mountain > 0.20) {
+        double m = (mountain - 0.20) / 0.80;
+        mountainBoost = m * m * 60.0; // Sharp mountain peaks
+    }
+
+    // 3. Rolling hills (medium features)
+    double hills = noise.perlin2D(fx * 0.02, fz * 0.02) * 12.0
+                 + noise.perlin2D(fx * 0.04 + 50.0, fz * 0.04 + 50.0) * 5.0;
+
+    // 4. Surface detail (micro bumps)
+    double detail = noise.perlin2D(fx * 0.08, fz * 0.08) * 2.5;
+
+    double h = 66.0 + continent * 16.0 + hills + detail + mountainBoost;
+
+    int ih = cast<int>(h);
+    if (ih < 48)  ih = 48;
+    if (ih > 230) ih = 230;
+
+    return ih;
+}

@@ -309,21 +309,8 @@ struct Graphics {
     // loadImagePixels(path) → returns vector<Int> of [width, height, R,G,B,A, ...]
     // Allows Ume code to read PNG pixel data for atlas construction.
     static std::vector<Int> loadImagePixels(UmeString path) {
-        std::vector<Int> result;
-#if UME_HAS_STB
-        int w = 0, h = 0, channels = 0;
-        stbi_set_flip_vertically_on_load(0);
-        unsigned char* data = stbi_load(path.c_str(), &w, &h, &channels, 4);
-        if (!data) return result;
-        result.reserve(2 + w * h * 4);
-        result.push_back((Int)w);
-        result.push_back((Int)h);
-        for (int i = 0; i < w * h * 4; i++) result.push_back((Int)data[i]);
-        stbi_image_free(data);
-#else
-        (void)path;
-#endif
-        return result;
+        std::vector<int> raw = Ume::Graphics::LoadImagePixels(std::string(path));
+        return std::vector<Int>(raw.begin(), raw.end());
     }
 
 

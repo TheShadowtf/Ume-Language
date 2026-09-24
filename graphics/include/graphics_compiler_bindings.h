@@ -288,6 +288,13 @@ struct Graphics {
         if (auto ptr = _extractTexture(tex)) ptr->Bind(slot);
     }
 
+    // loadImagePixels(path) → returns vector<Int> of [width, height, R,G,B,A, ...]
+    // Allows Ume code to read PNG pixel data for atlas construction.
+    static std::vector<Int> loadImagePixels(UmeString path) {
+        std::vector<int> raw = Ume::Graphics::LoadImagePixels(std::string(path));
+        return std::vector<Int>(raw.begin(), raw.end());
+    }
+
     // ── Mesh
     static std::shared_ptr<NativeMesh> createCustomMesh(const std::vector<Float>& verts, const std::vector<Int>& inds, Int stride = 6) {
         std::vector<unsigned int> uinds(inds.begin(), inds.end());

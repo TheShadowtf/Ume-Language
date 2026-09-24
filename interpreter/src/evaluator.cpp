@@ -269,6 +269,34 @@ Value Evaluator::eval(const ASTNode& node, std::shared_ptr<Environment> env) {
                         return Value::makeFunction(fi);
                     }
                 }
+                const EnumDecl* enm = findEnum(tv.objVal->className);
+                if (enm) {
+                    if (n->name == "name") {
+                        auto en = tv.objVal->fields.find("__enumName");
+                        std::string s = en != tv.objVal->fields.end() ? en->second.strVal : "";
+                        auto fi = std::make_shared<FunctionInstance>();
+                        fi->name = "name";
+                        fi->native = [s](std::vector<Value>) { return Value::makeString(s); };
+                        return Value::makeFunction(fi);
+                    }
+                    if (n->name == "ordinal") {
+                        auto en = tv.objVal->fields.find("__enumValue");
+                        int64_t v = en != tv.objVal->fields.end() ? en->second.intVal : 0;
+                        auto fi = std::make_shared<FunctionInstance>();
+                        fi->name = "ordinal";
+                        fi->native = [v](std::vector<Value>) { return Value::makeInt(v); };
+                        return Value::makeFunction(fi);
+                    }
+                    const FuncDecl* m = findEnumMethod(*enm, n->name);
+                    if (m && m->body) {
+                        auto fi = std::make_shared<FunctionInstance>();
+                        fi->name   = m->name;
+                        fi->params = m->params;
+                        fi->body   = m->body.get();
+                        fi->closure = env;
+                        return Value::makeFunction(fi);
+                    }
+                }
                 // Check class static fields via __this__ className
                 std::string qk = tv.objVal->className + "." + n->name;
                 if (Value* gv = global_->lookup(qk)) return *gv;
@@ -437,8 +465,40 @@ void Evaluator::collectDeclarations(const Program& program,
                     eo->className = enm->name;
                     eo->fields["__enumName"] = Value::makeString(ev.name);
                     eo->fields["__enumValue"] = Value::makeInt(val);
-                    env->declare(enm->name + "_" + ev.name, Value::makeObject(eo));
-                    env->declare(ev.name, Value::makeObject(eo));
+                    eo->fields["name"] = Value::makeString(ev.name);
+                    eo->fields["ordinal"] = Value::makeInt(val);
+
+                    // Initialize fields
+                    for (auto& f : enm->fields) {
+                        eo->fields[f->name] = f->initializer ? eval(*f->initializer, env) : Value::makeNull();
+                    }
+
+                    // Run matching constructor if constructor arguments provided
+                    if (!enm->constructors.empty()) {
+                        const ConstructorDecl* matchedCtor = nullptr;
+                        for (auto& c : enm->constructors) {
+                            if (c->params.size() == ev.args.size()) {
+                                matchedCtor = c.get();
+                                break;
+                            }
+                        }
+                        if (matchedCtor && matchedCtor->body) {
+                            auto ctorEnv = env->child();
+                            ctorEnv->declare("this", Value::makeObject(eo));
+                            ctorEnv->declare("__this", Value::makeObject(eo));
+                            ctorEnv->declare("__class__", Value::makeString(enm->name));
+                            for (size_t argIdx = 0; argIdx < ev.args.size(); argIdx++) {
+                                Value argVal = eval(*ev.args[argIdx], env);
+                                ctorEnv->declare(matchedCtor->params[argIdx].name, argVal);
+                            }
+                            try { eval(*matchedCtor->body, ctorEnv); } catch (const ReturnSignal&) {}
+                        }
+                    }
+
+                    Value eoVal = Value::makeObject(eo);
+                    env->declare(enm->name + "_" + ev.name, eoVal);
+                    env->declare(ev.name, eoVal);
+                    global_->declare(enm->name + "." + ev.name, eoVal);
                     nextVal = val + 1;
                 }
             } else if (auto* str = dynamic_cast<const StructDecl*>(decl.get())) {
@@ -1360,6 +1420,40 @@ Value Evaluator::evalCall(const CallExpr& expr, std::shared_ptr<Environment> env
                     }
                 }
             }
+            // Static enum method call (EnumName.values(), EnumName.valueOf(s), etc.)
+            const EnumDecl* enmPtr = findEnum(objId->name);
+            if (enmPtr) {
+                if (ma->member == "values") {
+                    auto arr = std::make_shared<ArrayInstance>();
+                    for (auto& ev : enmPtr->values) {
+                        std::string qk = enmPtr->name + "." + ev.name;
+                        if (global_->has(qk)) arr->elements.push_back(global_->get(qk));
+                    }
+                    return Value::makeArray(arr);
+                }
+                if (ma->member == "valueOf" && !expr.args.empty()) {
+                    Value arg0 = eval(*expr.args[0], env);
+                    std::string qk = enmPtr->name + "." + arg0.strVal;
+                    if (global_->has(qk)) return global_->get(qk);
+                    throwRuntimeError("No enum constant " + enmPtr->name + "." + arg0.strVal, expr);
+                }
+                const FuncDecl* m = findEnumMethod(*enmPtr, ma->member);
+                if (m && m->body && m->isStatic) {
+                    std::vector<Value> args;
+                    for (auto& a : expr.args) args.push_back(eval(*a, env));
+                    auto staticEnv = env->child();
+                    for (size_t i = 0; i < m->params.size(); i++) {
+                        auto& p = m->params[i];
+                        if (i < args.size()) staticEnv->declare(p.name, args[i]);
+                        else if (p.defaultValue) staticEnv->declare(p.name, eval(*p.defaultValue, staticEnv));
+                        else staticEnv->declare(p.name, Value::makeNull());
+                    }
+                    try { eval(*m->body, staticEnv); }
+                    catch (const ReturnSignal& r) { return r.value; }
+                    return Value::makeNull();
+                }
+            }
+
             // Static class method call (ClassName.method(args))
             const ClassDecl* clsPtr = findClass(objId->name);
             if (clsPtr) {
@@ -1543,9 +1637,26 @@ Value Evaluator::evalCall(const CallExpr& expr, std::shared_ptr<Environment> env
         }
     }
 
-    // Static Class.fromJsonString(json)
+    // Static Class.fromJsonString(json) or Enum.values() / Enum.valueOf(str)
     if (auto* ma = dynamic_cast<const MemberAccessExpr*>(expr.callee.get())) {
         if (auto* objId = dynamic_cast<const IdentifierExpr*>(ma->object.get())) {
+            const EnumDecl* enm = findEnum(objId->name);
+            if (enm) {
+                if (ma->member == "values") {
+                    auto arr = std::make_shared<ArrayInstance>();
+                    for (auto& ev : enm->values) {
+                        std::string qk = enm->name + "." + ev.name;
+                        if (global_->has(qk)) arr->elements.push_back(global_->get(qk));
+                    }
+                    return Value::makeArray(arr);
+                }
+                if (ma->member == "valueOf" && !expr.args.empty()) {
+                    Value arg0 = eval(*expr.args[0], env);
+                    std::string qk = enm->name + "." + arg0.strVal;
+                    if (global_->has(qk)) return global_->get(qk);
+                    throwRuntimeError("No enum constant " + enm->name + "." + arg0.strVal, expr);
+                }
+            }
             const ClassDecl* cls = findClass(objId->name);
             if (ma->member == "fromJsonString" && cls) {
                 std::string jsonStr = eval(*expr.args[0], env).toString();
@@ -1628,25 +1739,40 @@ Value Evaluator::evalMemberAccess(const MemberAccessExpr& expr, std::shared_ptr<
                 }
             }
         }
-        // Enum value
+        // Enum value or Enum.values() / Enum.valueOf()
         const EnumDecl* eit = findEnum(id->name);
         if (eit) {
-            int64_t idx = 0;
-            for (auto& ev : eit->values) {
-                if (ev.name == expr.member) {
-                    int64_t val = idx;
-                    if (ev.value) {
-                        Value v = eval(*ev.value, env);
-                        if (v.isInt()) val = v.intVal;
+            if (expr.member == "values") {
+                auto fi = std::make_shared<FunctionInstance>();
+                fi->name = "values";
+                std::string enmName = eit->name;
+                fi->native = [this, enmName](std::vector<Value>) -> Value {
+                    const EnumDecl* enm = findEnum(enmName);
+                    auto arr = std::make_shared<ArrayInstance>();
+                    if (enm) {
+                        for (auto& ev : enm->values) {
+                            std::string qk = enm->name + "." + ev.name;
+                            if (global_->has(qk)) arr->elements.push_back(global_->get(qk));
+                        }
                     }
-                    auto eo = std::make_shared<ObjectInstance>();
-                    eo->className = eit->name;
-                    eo->fields["__enumName"] = Value::makeString(ev.name);
-                    eo->fields["__enumValue"] = Value::makeInt(val);
-                    return Value::makeObject(eo);
-                }
-                idx++;
+                    return Value::makeArray(arr);
+                };
+                return Value::makeFunction(fi);
             }
+            if (expr.member == "valueOf") {
+                auto fi = std::make_shared<FunctionInstance>();
+                fi->name = "valueOf";
+                std::string enmName = eit->name;
+                fi->native = [this, enmName](std::vector<Value> args) -> Value {
+                    if (args.empty() || !args[0].isString()) return Value::makeNull();
+                    std::string qk = enmName + "." + args[0].strVal;
+                    if (global_->has(qk)) return global_->get(qk);
+                    return Value::makeNull();
+                };
+                return Value::makeFunction(fi);
+            }
+            std::string qKey = eit->name + "." + expr.member;
+            if (global_->has(qKey)) return global_->get(qKey);
         }
         // Static field on class (not in env — look in global_)
         const ClassDecl* sCls = findClass(id->name);
@@ -1768,6 +1894,39 @@ Value Evaluator::evalMemberAccess(const MemberAccessExpr& expr, std::shared_ptr<
                     fi->closure = thisEnv;
                     return Value::makeFunction(fi);
                 }
+            }
+        }
+        // Enum methods and properties
+        auto eit = enumDefs_.find(obj.objVal->className);
+        if (eit != enumDefs_.end()) {
+            if (expr.member == "name") {
+                auto en = obj.objVal->fields.find("__enumName");
+                std::string s = en != obj.objVal->fields.end() ? en->second.strVal : "";
+                auto fi = std::make_shared<FunctionInstance>();
+                fi->name = "name";
+                fi->native = [s](std::vector<Value>) { return Value::makeString(s); };
+                return Value::makeFunction(fi);
+            }
+            if (expr.member == "ordinal") {
+                auto en = obj.objVal->fields.find("__enumValue");
+                int64_t v = en != obj.objVal->fields.end() ? en->second.intVal : 0;
+                auto fi = std::make_shared<FunctionInstance>();
+                fi->name = "ordinal";
+                fi->native = [v](std::vector<Value>) { return Value::makeInt(v); };
+                return Value::makeFunction(fi);
+            }
+            const FuncDecl* method = findEnumMethod(*eit->second, expr.member);
+            if (method) {
+                auto fi    = std::make_shared<FunctionInstance>();
+                fi->name   = method->name;
+                fi->params = method->params;
+                fi->body   = method->body.get();
+                auto thisEnv = env->child();
+                thisEnv->declare("this",   obj);
+                thisEnv->declare("__this", obj);
+                thisEnv->declare("__class__", Value::makeString(obj.objVal->className));
+                fi->closure = thisEnv;
+                return Value::makeFunction(fi);
             }
         }
         // fallthrough: check toString/length below
@@ -2556,6 +2715,14 @@ Value Evaluator::callMethod(Value& object, const std::string& method,
     if (object.isObject() && object.objVal) {
         auto eit = enumDefs_.find(object.objVal->className);
         if (eit != enumDefs_.end()) {
+            if (method == "name") {
+                auto en = object.objVal->fields.find("__enumName");
+                if (en != object.objVal->fields.end()) return en->second;
+            }
+            if (method == "ordinal") {
+                auto en = object.objVal->fields.find("__enumValue");
+                if (en != object.objVal->fields.end()) return en->second;
+            }
             const FuncDecl* m = findEnumMethod(*eit->second, method);
             if (m && m->body) {
                 auto mEnv = global_->child();

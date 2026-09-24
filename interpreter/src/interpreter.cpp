@@ -112,6 +112,12 @@ InterpreterResult Interpreter::runSource(const std::string& source,
         PackageResolver resolver(searchPaths);
         resolver.resolveImports(*program, filename);
 
+        // Run semantic analysis to enforce @Override, abstract methods, etc.
+        SemanticAnalyzer analyzer;
+        analyzer.analyze(*program);
+        for (auto& w : analyzer.warnings())
+            std::cerr << "[warning] " << w << "\n";
+
         Evaluator evaluator;
         evaluator.setArgs(opts_.args);
 

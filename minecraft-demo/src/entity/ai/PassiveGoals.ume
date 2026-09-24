@@ -1,0 +1,224 @@
+// ═══════════════════════════════════════════════════════════════════════════
+// PassiveGoals.ume — Passive & Utility AI Goals
+// ═══════════════════════════════════════════════════════════════════════════
+
+import std.math.*;
+import std.random.*;
+
+// (Block, IGoal, Mob are included before this file)
+
+// FloatGoal — Keep mob afloat when in water
+public class FloatGoal implements IGoal {
+    private Mob mob;
+
+    public FloatGoal(Mob m) { mob = m; }
+    @Override public func bool canUse() { return mob.groundBlockId == BLOCK_WATER; }
+    @Override public func bool canContinueToUse() { return canUse(); }
+    @Override public func void start() {}
+    @Override public func void stop() {}
+    @Override public func void tick() {
+        if (mob.vy < 0.02) mob.vy += 0.035;
+    }
+}
+
+// PanicGoal — Passive mobs flee when taking damage
+public class PanicGoal implements IGoal {
+    private Mob    mob;
+    private double speedMult;
+
+    public PanicGoal(Mob m, double mult) {
+        mob = m; speedMult = mult;
+    }
+
+    @Override public func bool canUse() {
+        return mob.hurtFlash > 0.0;
+    }
+
+    @Override public func bool canContinueToUse() {
+        return mob.wanderTimer > 0.0;
+    }
+
+    @Override public func void start() {
+        mob.lookTimer = 0.0;
+        mob.wanderTimer = 2.0 + mob.rng.nextDouble() * 2.0;
+        double angle = 0.0;
+        if (mob.hasSuggestedAngle) {
+            angle = mob.suggestedAngle;
+            mob.hasSuggestedAngle = false;
+        } else {
+            angle = (mob.rng.nextDouble() - 0.5) * 6.2831853;
+        }
+        double panicSpd = 0.050 * speedMult;
+        mob.wanderDirX = Math.sin(angle) * panicSpd;
+        mob.wanderDirZ = -Math.cos(angle) * panicSpd;
+        mob.targetYaw = cast<float>(angle);
+        mob.facingYaw = cast<float>(angle);
+    }
+
+    @Override public func void stop() {}
+
+    @Override public func void tick() {
+        mob.wanderTimer -= mob.currentDt;
+        mob.vx = mob.wanderDirX;
+        mob.vz = mob.wanderDirZ;
+    }
+}
+
+// RandomStrollGoal — Wanders around periodically (turns smoothly before walking)
+public class RandomStrollGoal implements IGoal {
+    private Mob    mob;
+    private double walkSpeed;
+    private double targetAngle;
+    private double turnTimer;
+    private bool   isTurning;
+
+    public RandomStrollGoal(Mob m, double spd) {
+        mob = m; walkSpeed = spd;
+        targetAngle = 0.0;
+        turnTimer = 0.0;
+        isTurning = false;
+    }
+
+    @Override public func bool canUse() {
+        return mob.wanderTimer <= 0.0 && (mob.isBlockedAhead || (mob.lookTimer <= 0.0 && mob.rng.nextDouble() < 0.03));
+    }
+
+    @Override public func bool canContinueToUse() {
+        return mob.wanderTimer > 0.0;
+    }
+
+    @Override public func void start() {
+        mob.targetPitch = 0.0;
+        mob.wanderTimer = 2.5 + mob.rng.nextDouble() * 3.5;
+        if (!mob.isBlockedAhead && mob.rng.nextDouble() < 0.30) {
+            mob.wanderDirX = 0.0;
+            mob.wanderDirZ = 0.0;
+            mob.vx = 0.0; mob.vz = 0.0;
+            isTurning = false;
+            turnTimer = 0.0;
+        } else {
+            if (mob.hasSuggestedAngle) {
+                targetAngle = mob.suggestedAngle;
+                mob.hasSuggestedAngle = false;
+            } else if (mob.isBlockedAhead) {
+                targetAngle = mob.facingYaw + 2.2 + mob.rng.nextDouble() * 1.88;
+            } else {
+                targetAngle = (mob.rng.nextDouble() - 0.5) * 6.2831853;
+            }
+            mob.isBlockedAhead = false;
+            mob.targetYaw = cast<float>(targetAngle);
+            mob.wanderDirX = 0.0;
+            mob.wanderDirZ = 0.0;
+            mob.vx = 0.0; mob.vz = 0.0;
+            isTurning = true;
+            turnTimer = 0.35 + mob.rng.nextDouble() * 0.35;
+        }
+    }
+
+    @Override public func void stop() {
+        mob.vx = 0.0; mob.vz = 0.0;
+        mob.wanderDirX = 0.0; mob.wanderDirZ = 0.0;
+        isTurning = false;
+    }
+
+    @Override public func void tick() {
+        mob.wanderTimer -= mob.currentDt;
+
+        if (mob.isBlockedAhead) {
+            mob.wanderTimer = 0.0;
+            mob.vx = 0.0; mob.vz = 0.0;
+            mob.wanderDirX = 0.0; mob.wanderDirZ = 0.0;
+            isTurning = false;
+            return;
+        }
+
+        if (isTurning) {
+            turnTimer -= mob.currentDt;
+            mob.targetYaw = cast<float>(targetAngle);
+            mob.vx = 0.0;
+            mob.vz = 0.0;
+
+            float yawDiff = mob.targetYaw - mob.facingYaw;
+            while (yawDiff > 3.14159265)  yawDiff -= 6.2831853;
+            while (yawDiff < -3.14159265) yawDiff += 6.2831853;
+
+            if (turnTimer <= 0.0 || Math.abs(yawDiff) < 0.25) {
+                isTurning = false;
+                mob.wanderDirX = Math.sin(targetAngle) * walkSpeed;
+                mob.wanderDirZ = -Math.cos(targetAngle) * walkSpeed;
+                mob.vx = mob.wanderDirX;
+                mob.vz = mob.wanderDirZ;
+            }
+        } else {
+            mob.vx = mob.wanderDirX;
+            mob.vz = mob.wanderDirZ;
+            if (mob.wanderDirX != 0.0 || mob.wanderDirZ != 0.0) {
+                mob.targetYaw = cast<float>(Math.atan2(mob.wanderDirX, -mob.wanderDirZ));
+            }
+        }
+    }
+}
+
+// LookAtPlayerGoal — Look at player for a short duration while stationary, then look away
+public class LookAtPlayerGoal implements IGoal {
+    private Mob    mob;
+    private double maxDist;
+
+    public LookAtPlayerGoal(Mob m, double dist) {
+        mob = m; maxDist = dist;
+    }
+
+    @Override public func bool canUse() {
+        double speed = Math.sqrt(mob.vx * mob.vx + mob.vz * mob.vz);
+        return speed < 0.003 && mob.lookCooldown <= 0.0 && mob.targetDist < maxDist;
+    }
+
+    @Override public func bool canContinueToUse() {
+        double speed = Math.sqrt(mob.vx * mob.vx + mob.vz * mob.vz);
+        return speed < 0.003 && mob.lookTimer > 0.0 && mob.targetDist < maxDist;
+    }
+
+    @Override public func void start() {
+        mob.lookTimer = 2.0 + mob.rng.nextDouble() * 1.5;
+    }
+
+    @Override public func void stop() {
+        mob.lookCooldown = 3.5 + mob.rng.nextDouble() * 3.5;
+        mob.lookTimer = 0.0;
+        mob.targetPitch = 0.0;
+    }
+
+    @Override public func void tick() {
+        mob.lookTimer -= mob.currentDt;
+        double dx = mob.playerX - mob.x;
+        double dz = mob.playerZ - mob.z;
+        mob.targetYaw = cast<float>(Math.atan2(dx, -dz));
+
+        // Look up/down at player eye level
+        double horizDist = Math.sqrt(dx*dx + dz*dz);
+        double mobEyeY = mob.y + mob.height * 0.85;
+        double playerEyeY = mob.playerY + 1.62;
+        double dy = playerEyeY - mobEyeY;
+        if (horizDist > 0.05) {
+            float p = cast<float>(Math.atan2(dy, horizDist));
+            if (p > 0.85) p = 0.85;
+            if (p < -0.85) p = -0.85;
+            mob.targetPitch = p;
+        }
+    }
+}
+
+// ChickenFlapGoal — Flaps wings and reduces falling speed
+public class ChickenFlapGoal implements IGoal {
+    private Mob mob;
+
+    public ChickenFlapGoal(Mob m) { mob = m; }
+    @Override public func bool canUse() { return !mob.onGround; }
+    @Override public func bool canContinueToUse() { return !mob.onGround; }
+    @Override public func void start() {}
+    @Override public func void stop() {}
+    @Override public func void tick() {
+        mob.flapTimer += mob.currentDt * 10.0;
+        if (mob.vy < -0.05) mob.vy = -0.05;
+    }
+}

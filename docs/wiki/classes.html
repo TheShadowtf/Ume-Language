@@ -204,16 +204,37 @@ Console.println(d.describe());
 <h2 id="super"><code>super</code></h2>
 <p>Two uses of <code>super</code>: (1) <code>super(args)</code> calls the parent constructor — this must be the first statement in the subclass constructor. (2) <code>super.methodName(args)</code> calls an inherited method that the current class has overridden, bypassing the override. You cannot use <code>super</code> in a static context.</p>
 
-<h2 id="override"><code>override</code></h2>
-<p>When a subclass provides a new implementation of a method inherited from its parent, mark the new method with <code>override</code>. This is a safety check — if you misspell the method name or get the signature wrong, the compiler will reject the <code>override</code> because there's nothing to override. Without <code>override</code>, you'd silently be adding a new method instead of replacing the inherited one.</p>
+<h2 id="override"><code>override</code> and <code>@Override</code> (Mandatory)</h2>
+<p>When a subclass provides a new implementation of a method inherited from its parent or an implemented interface, marking the method with <code>override</code> or <code>@Override</code> is <strong>mandatory</strong> in Ume. If an overriding method is not marked, the compiler and interpreter will reject it with an error.</p>
+<p>Both styles are fully supported and equivalent:</p>
+<ul>
+  <li><strong>C# / Kotlin style</strong>: <code>public override func double area()</code></li>
+  <li><strong>Java style</strong>: <code>@Override public func double area()</code></li>
+</ul>
 <pre><code class="language-ume">public class Rectangle extends Shape {
+    // Style 1: keyword
     public override func double area() {
         return width * height;
     }
+}
+
+public class Circle extends Shape {
+    // Style 2: Java-style annotation
+    @Override
+    public func double area() {
+        return Math.PI * radius * radius;
+    }
+}
+
+// Error if omitted:
+public class Triangle extends Shape {
+    public func double area() { return 0.5 * b * h; }
+    // error: Method 'area' overrides or implements a method in 'Shape', but is missing 'override' or '@Override'
 }</code></pre>
+<p>Conversely, if you mark a method with <code>override</code> or <code>@Override</code> but no matching method exists in any superclass or interface (for instance due to a typo or parameter mismatch), the compiler catches it immediately.</p>
 
 <h2 id="abstract"><code>abstract</code> classes and methods</h2>
-<p>An <code>abstract</code> class cannot be instantiated directly — it can only be subclassed. An <code>abstract</code> method declares a signature but no body; subclasses must provide the implementation. This is how Ume does polymorphism: you program against the abstract parent's interface, and the actual behavior comes from whichever concrete subclass is present at runtime.</p>
+<p>An <code>abstract</code> class cannot be instantiated directly — it can only be subclassed. An <code>abstract</code> method declares a signature but no body; concrete subclasses <strong>must</strong> provide an implementation, otherwise a compile-time error is raised. This is how Ume does polymorphism: you program against the abstract parent's interface, and the actual behavior comes from whichever concrete subclass is present at runtime.</p>
 <pre><code class="language-ume">public abstract class Shape {
     public abstract func double area();    // no body — subclass must implement
 

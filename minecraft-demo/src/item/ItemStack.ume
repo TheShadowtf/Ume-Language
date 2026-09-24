@@ -1,0 +1,43 @@
+// ═══════════════════════════════════════════════════════════════════════════
+// ItemStack.ume — Inventory item stack representation
+// ═══════════════════════════════════════════════════════════════════════════
+
+public int MAX_STACK = 64;
+
+public class ItemStack {
+    public int blockId;
+    public int count;
+
+    public ItemStack() {
+        blockId = 0;
+        count = 0;
+    }
+
+    public ItemStack(int id, int n) {
+        blockId = id;
+        count = n;
+        if (count < 0) count = 0;
+        if (count > MAX_STACK) count = MAX_STACK;
+    }
+
+    public func bool isEmpty() { return blockId == 0 || count <= 0; }
+
+    public func void setEmpty() { blockId = 0; count = 0; }
+
+    public func void set(int id, int n) {
+        blockId = id;
+        count = n;
+        if (count < 0) count = 0;
+        if (count > MAX_STACK) count = MAX_STACK;
+    }
+
+    public func void add(int n) {
+        count += n;
+        if (count > MAX_STACK) count = MAX_STACK;
+        if (count <= 0) { blockId = 0; count = 0; }
+    }
+
+    public func ItemStack copy() {
+        return new ItemStack(blockId, count);
+    }
+}

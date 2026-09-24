@@ -334,11 +334,10 @@ std::unique_ptr<Program> Parser::parse() {
 
 std::vector<Attribute> Parser::parseAttributes() {
     std::vector<Attribute> attrs;
-    while (check(TokenType::LBRACKET)) {
-        advance(); // consume '['
-        while (!check(TokenType::RBRACKET) && !isAtEnd()) {
+    while (check(TokenType::LBRACKET) || check(TokenType::AT)) {
+        if (match(TokenType::AT)) {
             Attribute attr;
-            attr.name = expect(TokenType::IDENTIFIER, "Expected attribute name").value;
+            attr.name = expect(TokenType::IDENTIFIER, "Expected attribute name after '@'").value;
             if (match(TokenType::LPAREN)) {
                 if (!check(TokenType::RPAREN)) {
                     do {
@@ -348,9 +347,23 @@ std::vector<Attribute> Parser::parseAttributes() {
                 expect(TokenType::RPAREN, "Expected ')' after attribute arguments");
             }
             attrs.push_back(std::move(attr));
-            if (!match(TokenType::COMMA)) break;
+        } else if (match(TokenType::LBRACKET)) {
+            while (!check(TokenType::RBRACKET) && !isAtEnd()) {
+                Attribute attr;
+                attr.name = expect(TokenType::IDENTIFIER, "Expected attribute name").value;
+                if (match(TokenType::LPAREN)) {
+                    if (!check(TokenType::RPAREN)) {
+                        do {
+                            attr.args.push_back(parseExpression());
+                        } while (match(TokenType::COMMA));
+                    }
+                    expect(TokenType::RPAREN, "Expected ')' after attribute arguments");
+                }
+                attrs.push_back(std::move(attr));
+                if (!match(TokenType::COMMA)) break;
+            }
+            expect(TokenType::RBRACKET, "Expected ']' after attributes");
         }
-        expect(TokenType::RBRACKET, "Expected ']' after attributes");
     }
     return attrs;
 }
@@ -384,13 +397,22 @@ ASTNodePtr Parser::parseTopLevel() {
         case TokenType::KW_ABSTRACT: isAbstract = true; advance(); break;
         case TokenType::KW_FINAL:    isFinal    = true; advance(); break;
         case TokenType::KW_OVERRIDE: isOverride = true; advance(); break;
+        case TokenType::AT:
+        case TokenType::LBRACKET: {
+            auto moreAttrs = parseAttributes();
+            attrs.insert(attrs.end(), std::make_move_iterator(moreAttrs.begin()), std::make_move_iterator(moreAttrs.end()));
+            break;
+        }
         default: scanning = false;
         }
+    }
+    for (const auto& a : attrs) {
+        if (a.name == "Override") isOverride = true;
     }
 
     ASTNodePtr declNode = nullptr;
     switch (current().type) {
-    case TokenType::KW_CLASS:     declNode = parseClassDecl(access); break;
+    case TokenType::KW_CLASS:     declNode = parseClassDecl(access, isAbstract, isFinal, isStatic); break;
     case TokenType::KW_INTERFACE: declNode = parseInterfaceDecl(access); break;
     case TokenType::KW_ENUM:      declNode = parseEnumDecl(access); break;
     case TokenType::KW_STRUCT:    declNode = parseStructDecl(); break;
@@ -417,6 +439,7 @@ ASTNodePtr Parser::parseTopLevel() {
     else if (auto e = dynamic_cast<EnumDecl*>(declNode.get())) e->attributes = std::move(attrs);
     else if (auto s = dynamic_cast<StructDecl*>(declNode.get())) s->attributes = std::move(attrs);
     else if (auto f = dynamic_cast<FuncDecl*>(declNode.get())) f->attributes = std::move(attrs);
+    else if (auto ifc = dynamic_cast<InterfaceDecl*>(declNode.get())) ifc->attributes = std::move(attrs);
     
     return declNode;
 }
@@ -548,10 +571,9 @@ ASTNodePtr Parser::parseFuncDecl(AccessModifier access, bool isStatic,
     return decl;
 }
 
-ASTNodePtr Parser::parseClassDecl(AccessModifier access) {
+ASTNodePtr Parser::parseClassDecl(AccessModifier access, bool isAbstract, bool isFinal, bool isStatic) {
     int l = current().line, c = current().column;
 
-    bool isAbstract = false, isFinal = false, isStatic = false;
     if (match(TokenType::KW_ABSTRACT)) isAbstract = true;
     if (match(TokenType::KW_STATIC))   isStatic   = true;
     if (match(TokenType::KW_FINAL))    isFinal    = true;
@@ -616,8 +638,17 @@ ASTNodePtr Parser::parseClassDecl(AccessModifier access) {
             case TokenType::KW_FINAL:    mFinal    = true; advance(); break;
             case TokenType::KW_OVERRIDE: mOverride = true; advance(); break;
             case TokenType::KW_CONST:    mConst    = true; advance(); break;
+            case TokenType::AT:
+            case TokenType::LBRACKET: {
+                auto moreAttrs = parseAttributes();
+                attrs.insert(attrs.end(), std::make_move_iterator(moreAttrs.begin()), std::make_move_iterator(moreAttrs.end()));
+                break;
+            }
             default: scan = false;
             }
+        }
+        for (const auto& a : attrs) {
+            if (a.name == "Override") mOverride = true;
         }
 
         // Nested type declarations
@@ -759,12 +790,14 @@ ASTNodePtr Parser::parseEnumDecl(AccessModifier access) {
     while (!check(TokenType::RBRACE) && !isAtEnd()) {
         // Enum values: NAME, NAME = val, or NAME(args)
         if (check(TokenType::IDENTIFIER)) {
-            // Check if this is a field/method (after a ';' separator)
             EnumValue ev;
             ev.name = current().value;
             advance();
-            if (match(TokenType::ASSIGN))
+            if (check(TokenType::LPAREN)) {
+                ev.args = parseArgList();
+            } else if (match(TokenType::ASSIGN)) {
                 ev.value = parseExpression();
+            }
             decl->values.push_back(std::move(ev));
             if (match(TokenType::SEMICOLON)) break; // end of values
             match(TokenType::COMMA);
@@ -773,16 +806,45 @@ ASTNodePtr Parser::parseEnumDecl(AccessModifier access) {
         }
     }
 
-    // Parse methods after the semicolon
+    // Parse methods, fields, and constructors after the semicolon
     while (!check(TokenType::RBRACE) && !isAtEnd()) {
-        AccessModifier ma = parseAccessModifier();
-        bool mStatic = match(TokenType::KW_STATIC);
+        std::vector<Attribute> attrs = parseAttributes();
+        AccessModifier ma = AccessModifier::Default;
+        bool mStatic = false, mFinal = false, mConst = false;
+        bool scan = true;
+        while (scan) {
+            switch (current().type) {
+            case TokenType::KW_PUBLIC:
+            case TokenType::KW_PRIVATE:
+            case TokenType::KW_PROTECTED:
+            case TokenType::KW_INTERNAL:
+                ma = parseAccessModifier();
+                break;
+            case TokenType::KW_STATIC: mStatic = true; advance(); break;
+            case TokenType::KW_FINAL:  mFinal  = true; advance(); break;
+            case TokenType::KW_CONST:  mConst  = true; advance(); break;
+            case TokenType::AT:
+            case TokenType::LBRACKET: {
+                auto moreAttrs = parseAttributes();
+                attrs.insert(attrs.end(), std::make_move_iterator(moreAttrs.begin()), std::make_move_iterator(moreAttrs.end()));
+                break;
+            }
+            default: scan = false;
+            }
+        }
+        (void)mFinal;
         if (check(TokenType::KW_FUNC)) {
-            decl->methods.push_back(std::unique_ptr<FuncDecl>(
+            auto fd = std::unique_ptr<FuncDecl>(
                 static_cast<FuncDecl*>(
-                    parseFuncDecl(ma, mStatic, false, false, false).release())));
+                    parseFuncDecl(ma, mStatic, false, false, false).release()));
+            fd->attributes = std::move(attrs);
+            decl->methods.push_back(std::move(fd));
+        } else if (check(TokenType::IDENTIFIER) && peek().type == TokenType::LPAREN && current().value == decl->name) {
+            decl->constructors.push_back(parseConstructor(ma, decl->name));
         } else {
-            decl->fields.push_back(parseField(ma, mStatic, false));
+            auto fd = parseField(ma, mStatic, mConst);
+            fd->attributes = std::move(attrs);
+            decl->fields.push_back(std::move(fd));
         }
     }
 

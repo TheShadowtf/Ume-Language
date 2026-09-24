@@ -1,0 +1,135 @@
+// ═══════════════════════════════════════════════════════════════════════════
+// MobPart.ume — Entity model part and mesh structure
+// ═══════════════════════════════════════════════════════════════════════════
+
+import std.graphics.*;
+
+// Animation roles
+public int ANIM_NONE      = 0;  // static
+public int ANIM_LEG       = 1;  // rotate around X axis based on walk phase
+public int ANIM_LEG_INV   = 2;  // opposite phase (other side)
+public int ANIM_BODY_BOB  = 3;  // translate Y by small sin
+public int ANIM_HEAD      = 4;  // nod/pitch based on look/walk
+public int ANIM_WING      = 5;  // chicken wing flap
+public int ANIM_WING_INV  = 6;
+public int ANIM_LEG_2     = 7;  // spider second pair phase
+public int ANIM_LEG_INV_2 = 8;
+
+// Mob type IDs (integers)
+public int MOB_PIG      = 0;
+public int MOB_COW      = 1;
+public int MOB_CHICKEN  = 2;
+public int MOB_SHEEP    = 3;
+public int MOB_ZOMBIE   = 4;
+public int MOB_SKELETON = 5;
+public int MOB_SPIDER   = 6;
+public int MOB_CREEPER  = 7;
+public int MOB_PLAYER   = 8;
+public int MOB_MAX      = 9;
+
+public class MobPart {
+    public string name;
+    public Mesh   mesh;
+    public float  offsetX; public float offsetY; public float offsetZ;
+    public int    anim;        // ANIM_*
+    public float  pivotY;      // rotation pivot Y (local offset)
+    public bool   visible;
+
+    public MobPart(string name, Mesh mesh,
+                   float ox, float oy, float oz,
+                   int anim, float pivotY) {
+        this.name = name; this.mesh = mesh;
+        offsetX = ox; offsetY = oy; offsetZ = oz;
+        this.anim = anim; this.pivotY = pivotY;
+        visible = true;
+    }
+}
+
+public class MobModel {
+    public MobPart[] parts;
+    public int       partCount;
+    public float     heightScale;
+    public float     widthScale;
+    public Texture   texture;
+    public bool      hasTexture;
+
+    public MobModel(int maxParts) {
+        parts = new MobPart[maxParts];
+        partCount = 0;
+        heightScale = 1.0;
+        widthScale = 1.0;
+        texture = null;
+        hasTexture = false;
+    }
+
+    public func void addPart(MobPart p) {
+        if (partCount >= parts.length()) return;
+        parts[partCount] = p;
+        partCount++;
+    }
+}
+
+// Procedural fallback box mesh builder (stride=8)
+public func Mesh makeBox8(float hw, float h, float hd, float r, float g, float b) {
+    float[] verts = new float[192];
+    int[]   inds  = new int[36];
+
+    float[] shade = new float[6];
+    shade[0] = 1.00;   // top (+Y)
+    shade[1] = 0.50;   // bottom (-Y)
+    shade[2] = 0.80;   // +X
+    shade[3] = 0.70;   // -X
+    shade[4] = 0.85;   // +Z
+    shade[5] = 0.65;   // -Z
+
+    // Face: top (+Y)
+    int f = 0; float s = shade[f];
+    int off = f * 32;
+    verts[off+0 ]=-hw; verts[off+1 ]=h; verts[off+2 ]=-hd; verts[off+3 ]=r*s; verts[off+4 ]=g*s; verts[off+5 ]=b*s; verts[off+6 ]=0.0; verts[off+7 ]=0.0;
+    verts[off+8 ]= hw; verts[off+9 ]=h; verts[off+10]=-hd; verts[off+11]=r*s; verts[off+12]=g*s; verts[off+13]=b*s; verts[off+14]=1.0; verts[off+15]=0.0;
+    verts[off+16]= hw; verts[off+17]=h; verts[off+18]= hd; verts[off+19]=r*s; verts[off+20]=g*s; verts[off+21]=b*s; verts[off+22]=1.0; verts[off+23]=1.0;
+    verts[off+24]=-hw; verts[off+25]=h; verts[off+26]= hd; verts[off+27]=r*s; verts[off+28]=g*s; verts[off+29]=b*s; verts[off+30]=0.0; verts[off+31]=1.0;
+
+    // Face: bottom (-Y)
+    f = 1; s = shade[f]; off = f * 32;
+    verts[off+0 ]=-hw; verts[off+1 ]=0.0; verts[off+2 ]= hd; verts[off+3 ]=r*s; verts[off+4 ]=g*s; verts[off+5 ]=b*s; verts[off+6 ]=0.0; verts[off+7 ]=0.0;
+    verts[off+8 ]= hw; verts[off+9 ]=0.0; verts[off+10]= hd; verts[off+11]=r*s; verts[off+12]=g*s; verts[off+13]=b*s; verts[off+14]=1.0; verts[off+15]=0.0;
+    verts[off+16]= hw; verts[off+17]=0.0; verts[off+18]=-hd; verts[off+19]=r*s; verts[off+20]=g*s; verts[off+21]=b*s; verts[off+22]=1.0; verts[off+23]=1.0;
+    verts[off+24]=-hw; verts[off+25]=0.0; verts[off+26]=-hd; verts[off+27]=r*s; verts[off+28]=g*s; verts[off+29]=b*s; verts[off+30]=0.0; verts[off+31]=1.0;
+
+    // Face: +X
+    f = 2; s = shade[f]; off = f * 32;
+    verts[off+0 ]= hw; verts[off+1 ]=0.0; verts[off+2 ]=-hd; verts[off+3 ]=r*s; verts[off+4 ]=g*s; verts[off+5 ]=b*s; verts[off+6 ]=0.0; verts[off+7 ]=1.0;
+    verts[off+8 ]= hw; verts[off+9 ]=0.0; verts[off+10]= hd; verts[off+11]=r*s; verts[off+12]=g*s; verts[off+13]=b*s; verts[off+14]=1.0; verts[off+15]=1.0;
+    verts[off+16]= hw; verts[off+17]=h;   verts[off+18]= hd; verts[off+19]=r*s; verts[off+20]=g*s; verts[off+21]=b*s; verts[off+22]=1.0; verts[off+23]=0.0;
+    verts[off+24]= hw; verts[off+25]=h;   verts[off+26]=-hd; verts[off+27]=r*s; verts[off+28]=g*s; verts[off+29]=b*s; verts[off+30]=0.0; verts[off+31]=0.0;
+
+    // Face: -X
+    f = 3; s = shade[f]; off = f * 32;
+    verts[off+0 ]=-hw; verts[off+1 ]=0.0; verts[off+2 ]= hd; verts[off+3 ]=r*s; verts[off+4 ]=g*s; verts[off+5 ]=b*s; verts[off+6 ]=0.0; verts[off+7 ]=1.0;
+    verts[off+8 ]=-hw; verts[off+9 ]=0.0; verts[off+10]=-hd; verts[off+11]=r*s; verts[off+12]=g*s; verts[off+13]=b*s; verts[off+14]=1.0; verts[off+15]=1.0;
+    verts[off+16]=-hw; verts[off+17]=h;   verts[off+18]=-hd; verts[off+19]=r*s; verts[off+20]=g*s; verts[off+21]=b*s; verts[off+22]=1.0; verts[off+23]=0.0;
+    verts[off+24]=-hw; verts[off+25]=h;   verts[off+26]= hd; verts[off+27]=r*s; verts[off+28]=g*s; verts[off+29]=b*s; verts[off+30]=0.0; verts[off+31]=0.0;
+
+    // Face: +Z
+    f = 4; s = shade[f]; off = f * 32;
+    verts[off+0 ]=-hw; verts[off+1 ]=0.0; verts[off+2 ]= hd; verts[off+3 ]=r*s; verts[off+4 ]=g*s; verts[off+5 ]=b*s; verts[off+6 ]=0.0; verts[off+7 ]=1.0;
+    verts[off+8 ]= hw; verts[off+9 ]=0.0; verts[off+10]= hd; verts[off+11]=r*s; verts[off+12]=g*s; verts[off+13]=b*s; verts[off+14]=1.0; verts[off+15]=1.0;
+    verts[off+16]= hw; verts[off+17]=h;   verts[off+18]= hd; verts[off+19]=r*s; verts[off+20]=g*s; verts[off+21]=b*s; verts[off+22]=1.0; verts[off+23]=0.0;
+    verts[off+24]=-hw; verts[off+25]=h;   verts[off+26]= hd; verts[off+27]=r*s; verts[off+28]=g*s; verts[off+29]=b*s; verts[off+30]=0.0; verts[off+31]=0.0;
+
+    // Face: -Z
+    f = 5; s = shade[f]; off = f * 32;
+    verts[off+0 ]= hw; verts[off+1 ]=0.0; verts[off+2 ]=-hd; verts[off+3 ]=r*s; verts[off+4 ]=g*s; verts[off+5 ]=b*s; verts[off+6 ]=0.0; verts[off+7 ]=1.0;
+    verts[off+8 ]=-hw; verts[off+9 ]=0.0; verts[off+10]=-hd; verts[off+11]=r*s; verts[off+12]=g*s; verts[off+13]=b*s; verts[off+14]=1.0; verts[off+15]=1.0;
+    verts[off+16]=-hw; verts[off+17]=h;   verts[off+18]=-hd; verts[off+19]=r*s; verts[off+20]=g*s; verts[off+21]=b*s; verts[off+22]=1.0; verts[off+23]=0.0;
+    verts[off+24]= hw; verts[off+25]=h;   verts[off+26]=-hd; verts[off+27]=r*s; verts[off+28]=g*s; verts[off+29]=b*s; verts[off+30]=0.0; verts[off+31]=0.0;
+
+    for (int i = 0; i < 6; i++) {
+        int v = i * 4; int idx = i * 6;
+        inds[idx+0] = v + 0; inds[idx+1] = v + 1; inds[idx+2] = v + 2;
+        inds[idx+3] = v + 2; inds[idx+4] = v + 3; inds[idx+5] = v + 0;
+    }
+
+    return Mesh.Create(verts, inds, 8);
+}

@@ -1,0 +1,403 @@
+// ═══════════════════════════════════════════════════════════════════════════
+// MenuScreen.ume — Main menu, settings/pause menu, and death screen
+// ═══════════════════════════════════════════════════════════════════════════
+
+// (Widget is included by UI.ume before this file)
+
+// ── Dirt-tile background (Minecraft main menu style) ────────────────────────
+public func void drawDirtBackground(Window win, Shader hudSh, Mesh quad, float sw, float sh) {
+    // Solid base dirt background
+    drawRect2D(win, hudSh, quad, 0.0, 0.0, sw, sh, 0.22 * 0.85, 0.22 * 0.52, 0.22 * 0.28, 1.0, sw, sh);
+
+    // Alternate checkered tiles
+    float tileSize = 64.0;
+    int cols = cast<int>(sw / tileSize) + 1;
+    int rows = cast<int>(sh / tileSize) + 1;
+    for (int row = 0; row < rows; row++) {
+        for (int col = 0; col < cols; col++) {
+            if ((col + row) % 2 == 0) {
+                float tx = cast<float>(col) * tileSize;
+                float ty = cast<float>(row) * tileSize;
+                drawRect2D(win, hudSh, quad, tx, ty, tileSize, tileSize, 0.28 * 0.85, 0.28 * 0.52, 0.28 * 0.28, 1.0, sw, sh);
+            }
+        }
+    }
+    // Vignette
+    for (int i = 0; i < 5; i++) {
+        float alpha = 0.15 + cast<float>(i) * 0.12;
+        float h = 24.0;
+        drawRect2D(win, hudSh, quad, 0, cast<float>(i) * h * 0.5, sw, h, 0.0, 0.0, 0.0, alpha, sw, sh);
+        drawRect2D(win, hudSh, quad, 0, sh - cast<float>(i+1) * h * 0.5, sw, h, 0.0, 0.0, 0.0, alpha, sw, sh);
+    }
+}
+
+// ── UmeCraft title ───────────────────────────────────────────────────────────
+public func void drawTitle(Window win, float sw, float y) {
+    float titleFontSize = 42.0;
+    string title = "UmeCraft";
+    float titleW = cast<float>(title.length()) * titleFontSize;
+    float cx = (sw - titleW) * 0.5;
+
+    // Shadow layers
+    win.drawTextDefaultRGB(title, cx + 3, y + 4, 0.0, 0.0, 0.0, titleFontSize);
+    win.drawTextDefaultRGB(title, cx + 2, y + 2, 0.12, 0.06, 0.0, titleFontSize);
+    // Minecraft's classic gold/yellow title
+    win.drawTextDefaultRGB(title, cx, y, 1.0, 0.84, 0.05, titleFontSize);
+    // Top highlight
+    win.drawTextDefaultRGB(title, cx, y - 1, 1.0, 1.0, 0.50, titleFontSize);
+
+    // Subtitle
+    string sub = "Enhanced Edition";
+    float subFontSize = 15.0;
+    float subW = cast<float>(sub.length()) * subFontSize;
+    float subX = (sw - subW) * 0.5;
+    win.drawTextDefaultRGB(sub, subX + 1, y + 49, 0.0, 0.0, 0.0, subFontSize);
+    win.drawTextDefaultRGB(sub, subX, y + 48, 1.0, 0.95, 0.40, subFontSize);
+}
+
+// ── Main menu (Minecraft Java Edition Style) ─────────────────────────────────
+public func void drawMainMenu(
+    Window win, Shader hudSh, Mesh quad, float sw, float sh,
+    Button btnSingleplayer, Button btnOptions, Button btnQuit,
+    float mx, float my, bool mouseDown
+) {
+    drawDirtBackground(win, hudSh, quad, sw, sh);
+
+    // Title banner
+    float titleY = sh * 0.18;
+    drawTitle(win, sw, titleY);
+
+    // Buttons
+    float btnW = 380.0;
+    float btnH = 42.0;
+    float btnX = (sw - btnW) * 0.5;
+    float btnGap = 12.0;
+    float btnStartY = sh * 0.48;
+
+    // Singleplayer button (full width)
+    btnSingleplayer.x = btnX;
+    btnSingleplayer.y = btnStartY;
+    btnSingleplayer.w = btnW;
+    btnSingleplayer.h = btnH;
+    btnSingleplayer.update(mx, my, mouseDown);
+    btnSingleplayer.draw(win, hudSh, quad, sw, sh);
+
+    // Second row: Options & Quit side-by-side
+    float halfW = (btnW - btnGap) * 0.5;
+    btnOptions.x = btnX;
+    btnOptions.y = btnStartY + btnH + btnGap;
+    btnOptions.w = halfW;
+    btnOptions.h = btnH;
+    btnOptions.update(mx, my, mouseDown);
+    btnOptions.draw(win, hudSh, quad, sw, sh);
+
+    btnQuit.x = btnX + halfW + btnGap;
+    btnQuit.y = btnStartY + btnH + btnGap;
+    btnQuit.w = halfW;
+    btnQuit.h = btnH;
+    btnQuit.update(mx, my, mouseDown);
+    btnQuit.draw(win, hudSh, quad, sw, sh);
+
+    // Footer - cleanly separated, no overlapping
+    drawTextShadow(win, "UmeCraft v6.0 - Enhanced Edition", 12.0, sh - 22.0, 0.75, 0.75, 0.75, 12.0);
+    string ctrlStr = "WASD: Move | Space: Jump | E: Inventory | F3: Debug | F5: Save";
+    float ctrlW = cast<float>(ctrlStr.length()) * 11.0;
+    drawTextShadow(win, ctrlStr, sw - ctrlW - 12.0, sh - 22.0, 0.50, 0.50, 0.50, 11.0);
+}
+
+// ── Select World Screen (Minecraft Java Edition Style) ────────────────────────
+public func string drawSelectWorldMenu(
+    Window win, Shader hudSh, Mesh quad, float sw, float sh,
+    List<WorldMeta> worlds, string selectedWorldId,
+    Button btnPlay, Button btnCreate, Button btnDelete, Button btnCancel,
+    float mx, float my, bool mouseDown, bool mouseClicked
+) {
+    drawDirtBackground(win, hudSh, quad, sw, sh);
+
+    string clickedId = "";
+
+    // Header
+    string header = "Select World";
+    float hW = cast<float>(header.length()) * 22.0;
+    drawTextShadow(win, header, (sw - hW) * 0.5, 24.0, 1.0, 1.0, 1.0, 22.0);
+
+    float listW = 620.0;
+    if (listW > sw - 40.0) listW = sw - 40.0;
+    float listX = (sw - listW) * 0.5;
+    float listY = 60.0;
+    float listH = sh - 135.0;
+
+    // Dark inset container
+    drawRect2D(win, hudSh, quad, listX, listY, listW, listH, 0.06, 0.06, 0.08, 0.88, sw, sh);
+    drawRect2D(win, hudSh, quad, listX - 2, listY - 2, listW + 4, 2, 0.28, 0.28, 0.32, 1.0, sw, sh);
+    drawRect2D(win, hudSh, quad, listX - 2, listY + listH, listW + 4, 2, 0.28, 0.28, 0.32, 1.0, sw, sh);
+    drawRect2D(win, hudSh, quad, listX - 2, listY, 2, listH, 0.28, 0.28, 0.32, 1.0, sw, sh);
+    drawRect2D(win, hudSh, quad, listX + listW, listY, 2, listH, 0.28, 0.28, 0.32, 1.0, sw, sh);
+
+    int totalWorlds = worlds != null ? worlds.size() : 0;
+    if (totalWorlds == 0) {
+        string emptyMsg = "No worlds found. Click 'Create New World' to begin!";
+        float emW = cast<float>(emptyMsg.length()) * 13.0;
+        drawTextShadow(win, emptyMsg, (sw - emW) * 0.5, listY + listH * 0.45, 0.60, 0.60, 0.60, 13.0);
+    } else {
+        float cardW = listW - 20.0;
+        float cardH = 54.0;
+        float cardGap = 8.0;
+        for (int i = 0; i < totalWorlds; i++) {
+            WorldMeta wm = worlds.get(i);
+            if (wm == null) continue;
+            float cy = listY + 10.0 + cast<float>(i) * (cardH + cardGap);
+            if (cy + cardH > listY + listH) break;
+
+            float cx = listX + 10.0;
+            bool cardHovered = (mx >= cx && mx <= cx + cardW && my >= cy && my <= cy + cardH);
+            bool isSelected = (wm.id == selectedWorldId);
+
+            if (cardHovered && mouseClicked) {
+                clickedId = wm.id;
+            }
+
+            if (isSelected) {
+                // White selection border around card
+                drawRect2D(win, hudSh, quad, cx - 2, cy - 2, cardW + 4, cardH + 4, 1.0, 1.0, 1.0, 1.0, sw, sh);
+                drawRect2D(win, hudSh, quad, cx, cy, cardW, cardH, 0.22, 0.22, 0.26, 1.0, sw, sh);
+            } else if (cardHovered) {
+                drawRect2D(win, hudSh, quad, cx - 1, cy - 1, cardW + 2, cardH + 2, 0.45, 0.45, 0.50, 1.0, sw, sh);
+                drawRect2D(win, hudSh, quad, cx, cy, cardW, cardH, 0.16, 0.16, 0.20, 1.0, sw, sh);
+            } else {
+                drawRect2D(win, hudSh, quad, cx - 1, cy - 1, cardW + 2, cardH + 2, 0.22, 0.22, 0.25, 1.0, sw, sh);
+                drawRect2D(win, hudSh, quad, cx, cy, cardW, cardH, 0.12, 0.12, 0.15, 1.0, sw, sh);
+            }
+
+            // World thumbnail swatch
+            drawRect2D(win, hudSh, quad, cx + 5, cy + 5, 44, 44, 0.18, 0.18, 0.18, 1.0, sw, sh);
+            drawItemIcon(win, hudSh, quad, BLOCK_GRASS, cx + 5, cy + 5, 44.0, sw, sh);
+
+            // World name
+            drawTextShadow(win, wm.name, cx + 58.0, cy + 8.0, 1.0, 1.0, 1.0, 16.0);
+
+            // Folder and last played date
+            string dateStr = wm.id + " (" + wm.lastPlayed + ")";
+            drawTextShadow(win, dateStr, cx + 58.0, cy + 30.0, 0.55, 0.55, 0.60, 12.0);
+
+            // Mode and seed on the right
+            string modeStr = wm.mode + " Mode";
+            string seedStr = "Seed: " + wm.seed;
+            float msW1 = cast<float>(modeStr.length()) * 12.0;
+            float msW2 = cast<float>(seedStr.length()) * 11.0;
+            drawTextShadow(win, modeStr, cx + cardW - msW1 - 10.0, cy + 8.0, 0.85, 0.85, 0.40, 12.0);
+            drawTextShadow(win, seedStr, cx + cardW - msW2 - 10.0, cy + 28.0, 0.50, 0.75, 0.50, 11.0);
+        }
+    }
+
+    // Bottom action bar
+    float btnY = sh - 56.0;
+    float btnH = 38.0;
+    float wPlay = 160.0;
+    float wCreate = 160.0;
+    float wDelete = 90.0;
+    float wCancel = 90.0;
+    float gap = 12.0;
+    float totalBtnW = wPlay + wCreate + wDelete + wCancel + gap * 3.0;
+    float bStartX = (sw - totalBtnW) * 0.5;
+
+    btnPlay.disabled = (selectedWorldId.length() == 0);
+    btnDelete.disabled = (selectedWorldId.length() == 0);
+
+    btnPlay.x = bStartX; btnPlay.y = btnY; btnPlay.w = wPlay; btnPlay.h = btnH;
+    btnPlay.update(mx, my, mouseDown);
+    btnPlay.draw(win, hudSh, quad, sw, sh);
+
+    btnCreate.x = bStartX + wPlay + gap; btnCreate.y = btnY; btnCreate.w = wCreate; btnCreate.h = btnH;
+    btnCreate.update(mx, my, mouseDown);
+    btnCreate.draw(win, hudSh, quad, sw, sh);
+
+    btnDelete.x = bStartX + wPlay + wCreate + gap * 2.0; btnDelete.y = btnY; btnDelete.w = wDelete; btnDelete.h = btnH;
+    btnDelete.update(mx, my, mouseDown);
+    btnDelete.draw(win, hudSh, quad, sw, sh);
+
+    btnCancel.x = bStartX + wPlay + wCreate + wDelete + gap * 3.0; btnCancel.y = btnY; btnCancel.w = wCancel; btnCancel.h = btnH;
+    btnCancel.update(mx, my, mouseDown);
+    btnCancel.draw(win, hudSh, quad, sw, sh);
+
+    return clickedId;
+}
+
+// ── Create New World Screen (Minecraft Java Edition Style) ───────────────────
+public func void drawCreateWorldMenu(
+    Window win, Shader hudSh, Mesh quad, float sw, float sh,
+    TextInput inputName, Button btnMode, TextInput inputSeed,
+    Button btnCreateWorld, Button btnCancelCreate,
+    string gameMode,
+    float mx, float my, bool mouseDown
+) {
+    drawDirtBackground(win, hudSh, quad, sw, sh);
+
+    // Header
+    string header = "Create New World";
+    float hW = cast<float>(header.length()) * 22.0;
+    drawTextShadow(win, header, (sw - hW) * 0.5, 30.0, 1.0, 1.0, 1.0, 22.0);
+
+    float boxW = 400.0;
+    float boxX = (sw - boxW) * 0.5;
+
+    // Field 1: World Name
+    float y1 = 80.0;
+    drawTextShadow(win, "World Name", boxX, y1, 0.90, 0.90, 0.90, 14.0);
+    inputName.x = boxX; 
+    inputName.y = y1 + 22.0; 
+    inputName.w = boxW; 
+    inputName.h = 36.0;
+    inputName.update(win, mx, my, mouseDown);
+    inputName.draw(win, hudSh, quad, sw, sh);
+    drawTextShadow(win, "Will be saved in saves folder", boxX, y1 + 64.0, 0.50, 0.50, 0.50, 11.0);
+
+    // Field 2: Game Mode
+    float y2 = y1 + 95.0;
+    drawTextShadow(win, "Game Mode", boxX, y2, 0.90, 0.90, 0.90, 14.0);
+    btnMode.label = "Game Mode: " + gameMode;
+    btnMode.x = boxX; btnMode.y = y2 + 22.0; btnMode.w = boxW; btnMode.h = 36.0;
+    btnMode.update(mx, my, mouseDown);
+    btnMode.draw(win, hudSh, quad, sw, sh);
+    if (gameMode == "Survival") {
+        drawTextShadow(win, "Survival: Health, hunger, resource gathering & monsters", boxX, y2 + 64.0, 0.65, 0.65, 0.65, 11.0);
+    } else {
+        drawTextShadow(win, "Creative: Flying enabled, infinite building & no damage", boxX, y2 + 64.0, 0.65, 0.65, 0.65, 11.0);
+    }
+
+    // Field 3: Seed
+    float y3 = y2 + 95.0;
+    drawTextShadow(win, "Seed for the World Generator", boxX, y3, 0.90, 0.90, 0.90, 14.0);
+    inputSeed.x = boxX; inputSeed.y = y3 + 22.0; inputSeed.w = boxW; inputSeed.h = 36.0;
+    inputSeed.update(win, mx, my, mouseDown);
+    inputSeed.draw(win, hudSh, quad, sw, sh);
+    drawTextShadow(win, "Leave blank for a random seed", boxX, y3 + 64.0, 0.50, 0.50, 0.50, 11.0);
+
+    // Bottom action buttons
+    float btnY = sh - 68.0;
+    float btnW = 190.0;
+    float btnH = 40.0;
+    float gap = 20.0;
+    float totalW = btnW * 2.0 + gap;
+    float startX = (sw - totalW) * 0.5;
+
+    btnCreateWorld.x = startX; btnCreateWorld.y = btnY; btnCreateWorld.w = btnW; btnCreateWorld.h = btnH;
+    btnCreateWorld.update(mx, my, mouseDown);
+    btnCreateWorld.draw(win, hudSh, quad, sw, sh);
+
+    btnCancelCreate.x = startX + btnW + gap; btnCancelCreate.y = btnY; btnCancelCreate.w = btnW; btnCancelCreate.h = btnH;
+    btnCancelCreate.update(mx, my, mouseDown);
+    btnCancelCreate.draw(win, hudSh, quad, sw, sh);
+}
+
+// ── Settings ─────────────────────────────────────────────────────────────────
+public func void drawSettings(
+    Window win, Shader hudSh, Mesh quad, float sw, float sh,
+    Button btnResume, Button btnSaveQuit,
+    Slider sliderRD, Slider sliderSens,
+    int health, int maxHealth, int hunger, int maxHunger, double worldTime,
+    float mx, float my, bool mouseDown, bool flying, bool showDebug
+) {
+    // Dim overlay
+    drawRect2D(win, hudSh, quad, 0, 0, sw, sh, 0.0, 0.0, 0.0, 0.78, sw, sh);
+
+    float panW = 660.0; float panH = 540.0;
+    float panX = (sw - panW) * 0.5; float panY = (sh - panH) * 0.5;
+
+    drawPanel(win, hudSh, quad, panX, panY, panW, panH, sw, sh);
+
+    drawTextShadow(win, "Game Menu", panX + panW * 0.5 - 70, panY + 16, 1.0, 1.0, 1.0, 26.0);
+    drawRect2D(win, hudSh, quad, panX + 20, panY + 52, panW - 40, 2, 0.45, 0.45, 0.55, 1.0, sw, sh);
+
+    // Sliders
+    sliderRD.x = panX + 40; sliderRD.y = panY + 70; sliderRD.w = panW - 80;
+    sliderRD.update(mx, my, mouseDown);
+    sliderRD.draw(win, hudSh, quad, sw, sh);
+
+    sliderSens.x = panX + 40; sliderSens.y = panY + 140; sliderSens.w = panW - 80;
+    sliderSens.update(mx, my, mouseDown);
+    sliderSens.draw(win, hudSh, quad, sw, sh);
+
+    // Status section
+    float statusY = panY + 220;
+    drawTextShadow(win, "Status", panX + 40, statusY, 1.0, 0.87, 0.10, 18.0);
+    drawRect2D(win, hudSh, quad, panX + 40, statusY + 22, panW - 80, 1, 0.45, 0.45, 0.55, 1.0, sw, sh);
+
+    // Health bar
+    float hpY = statusY + 32;
+    drawTextShadow(win, "Health", panX + 40, hpY, 0.90, 0.90, 0.90, 15.0);
+    float hpBarX = panX + 120; float hpBarW = panW - 160; float hpBarH = 18.0;
+    drawRect2D(win, hudSh, quad, hpBarX, hpY + 2, hpBarW, hpBarH, 0.12, 0.05, 0.05, 1.0, sw, sh);
+    float hpPct = cast<float>(health) / cast<float>(maxHealth);
+    float hpR = hpPct > 0.5 ? (1.0 - (hpPct - 0.5) * 2.0) : 1.0;
+    float hpG = hpPct < 0.5 ? hpPct * 2.0 : 1.0;
+    drawRect2D(win, hudSh, quad, hpBarX, hpY + 2, hpBarW * hpPct, hpBarH, hpR, hpG, 0.0, 1.0, sw, sh);
+    drawTextShadow(win, "" + health + "/" + maxHealth, hpBarX + hpBarW + 6, hpY + 2, 1.0, 1.0, 1.0, 15.0);
+
+    // Hunger bar
+    float hgY = hpY + 36;
+    drawTextShadow(win, "Hunger", panX + 40, hgY, 0.90, 0.90, 0.90, 15.0);
+    float hgBarX = panX + 120; float hgBarW = panW - 160;
+    drawRect2D(win, hudSh, quad, hgBarX, hgY + 2, hgBarW, hpBarH, 0.10, 0.08, 0.05, 1.0, sw, sh);
+    float hgPct = cast<float>(hunger) / cast<float>(maxHunger);
+    drawRect2D(win, hudSh, quad, hgBarX, hgY + 2, hgBarW * hgPct, hpBarH, 0.75, 0.55, 0.15, 1.0, sw, sh);
+    drawTextShadow(win, "" + hunger + "/" + maxHunger, hgBarX + hgBarW + 6, hgY + 2, 1.0, 1.0, 1.0, 15.0);
+
+    // Time bar
+    float tdY = hgY + 36;
+    drawTextShadow(win, "Time", panX + 40, tdY, 0.90, 0.90, 0.90, 15.0);
+    float tdBarX = panX + 120; float tdBarW = panW - 160;
+    drawRect2D(win, hudSh, quad, tdBarX, tdY + 2, tdBarW, hpBarH, 0.05, 0.05, 0.15, 1.0, sw, sh);
+    float tdPct = cast<float>(worldTime);
+    float sunR = 0.95; float sunG = 0.85; float sunB = 0.30;
+    if (worldTime > 0.45 && worldTime < 0.95) { sunR = 0.70; sunG = 0.75; sunB = 0.95; }
+    drawRect2D(win, hudSh, quad, tdBarX, tdY + 2, tdBarW, hpBarH, sunR, sunG, sunB, 0.4, sw, sh);
+    float sunX = tdBarX + tdBarW * tdPct - 8;
+    drawRect2D(win, hudSh, quad, sunX, tdY, 16, hpBarH + 4, sunR, sunG, sunB, 1.0, sw, sh);
+    int hour = cast<int>(worldTime * 24.0 + 6) % 24;
+    string ampm = hour >= 12 ? "PM" : "AM";
+    int displayHour = hour % 12; if (displayHour == 0) displayHour = 12;
+    drawTextShadow(win, "" + displayHour + ":00 " + ampm, tdBarX + tdBarW + 6, tdY + 2, 1.0, 1.0, 0.7, 15.0);
+
+    // Mode display
+    float modeY = tdY + 34;
+    string modeStr = flying ? "Creative (Flying)" : "Survival";
+    drawTextShadow(win, "Mode: " + modeStr, panX + 40, modeY, 0.80, 0.80, 0.80, 15.0);
+    string dbgStr = showDebug ? "ON" : "OFF";
+    drawTextShadow(win, "Debug (F3): " + dbgStr, panX + 220, modeY, 0.80, 0.80, 0.80, 15.0);
+
+    // Buttons at bottom
+    float btnW = 240.0; float btnH = 44.0;
+    float btnY = panY + panH - 62;
+    btnResume.x = panX + 30; btnResume.y = btnY; btnResume.w = btnW; btnResume.h = btnH;
+    btnSaveQuit.x = panX + panW - btnW - 30; btnSaveQuit.y = btnY; btnSaveQuit.w = btnW; btnSaveQuit.h = btnH;
+
+    btnResume.update(mx, my, mouseDown);
+    btnSaveQuit.update(mx, my, mouseDown);
+    btnResume.draw(win, hudSh, quad, sw, sh);
+    btnSaveQuit.draw(win, hudSh, quad, sw, sh);
+
+    drawTextShadow(win, "ESC: Resume | F5: Save | F3: Debug Info",
+                   panX + panW * 0.5 - 160, panY + panH + 10, 0.7, 0.7, 0.7, 14.0);
+}
+
+// ── Death screen ─────────────────────────────────────────────────────────────
+public func void drawDeathScreen(Window win, Shader hudSh, Mesh quad, float sw, float sh, Button btnRespawn) {
+    // Deep red overlay
+    drawRect2D(win, hudSh, quad, 0, 0, sw, sh, 0.55, 0.0, 0.0, 0.80, sw, sh);
+
+    float panW = 420.0; float panH = 200.0;
+    float panX = (sw - panW) * 0.5; float panY = (sh - panH) * 0.5;
+    drawPanel(win, hudSh, quad, panX, panY, panW, panH, sw, sh);
+
+    // "You Died!"
+    float titleW = 200.0;
+    float titleX = (sw - titleW) * 0.5;
+    float titleY = panY + 20;
+    win.drawTextDefaultRGB("You Died!", titleX + 2, titleY + 2, 0.0, 0.0, 0.0, 48.0);
+    win.drawTextDefaultRGB("You Died!", titleX, titleY, 1.0, 0.20, 0.20, 48.0);
+
+    drawTextShadow(win, "Press R to respawn", (sw - 220) * 0.5, panY + 100, 0.85, 0.85, 0.85, 18.0);
+
+    btnRespawn.x = (sw - 240) * 0.5; btnRespawn.y = panY + panH - 55; btnRespawn.w = 240; btnRespawn.h = 42;
+}

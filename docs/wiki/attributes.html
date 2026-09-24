@@ -111,38 +111,88 @@
 <main class="content">
 
 <span class="eyebrow">Language</span>
-<h1>Attributes</h1>
-<p class="lead">Attributes are metadata attached to declarations. They sit in square brackets above the declaration and are read by the compiler to drive code generation — most importantly, <code>[Serializable]</code> and <code>[JsonProperty]</code> which together trigger automatic JSON serialization code generation.</p>
+<h1>Attributes &amp; Annotations</h1>
+<p class="lead">Attributes (also known as annotations) attach metadata to declarations. Ume supports both Java-style <code>@Annotation</code> syntax and C#-style <code>[Attribute]</code> syntax. Several built-in annotations drive compiler verification and code generation, including <code>@Override</code>, <code>@FunctionalInterface</code>, <code>@Deprecated</code>, and <code>@Serializable</code>.</p>
 
 <h2 id="syntax">Syntax</h2>
-<p>An attribute is written as <code>[Name]</code> or <code>[Name(args)]</code>, placed immediately before the declaration it applies to. Multiple attributes can be stacked — either as separate <code>[Attr1] [Attr2]</code> lines or comma-separated inside one set of brackets: <code>[Attr1, Attr2]</code>. Attributes can be applied to classes, fields, methods, and enums.</p>
-<pre><code class="language-ume">[Serializable]
+<p>You can write attributes using either <strong>Java-style</strong> (<code>@Name</code>) or <strong>C#-style</strong> (<code>[Name]</code>). Both can take arguments: <code>@Name(args)</code> or <code>[Name(args)]</code>. You can stack multiple annotations on separate lines or combine bracketed attributes with commas.</p>
+<pre><code class="language-ume">// Java style:
+@Serializable
 public class User {
-    [JsonProperty(&quot;user_id&quot;)]
+    @JsonProperty(&quot;user_id&quot;)
     public int id;
 
-    [JsonProperty(&quot;username&quot;)]
+    @JsonProperty(&quot;username&quot;)
     public string name;
+}
 
-    public double score;
+// Equivalent C# style:
+[Serializable]
+public class User2 {
+    [JsonProperty(&quot;user_id&quot;)]
+    public int id;
 }</code></pre>
 
-<h2 id="serializable"><code>[Serializable]</code></h2>
-<p>Applying <code>[Serializable]</code> to a class tells the compiler to generate two methods automatically:</p>
+<h2 id="builtin-annotations">Built-in annotations</h2>
+<table>
+  <thead><tr><th>Annotation</th><th>Target</th><th>Behavior</th></tr></thead>
+  <tbody>
+    <tr><td><code>@Override</code></td><td>Method</td><td>Marks an overridden method. The compiler/interpreter validates that the method exists in a superclass or interface hierarchy. Overriding methods <strong>must</strong> be marked with <code>override</code> or <code>@Override</code>.</td></tr>
+    <tr><td><code>@FunctionalInterface</code></td><td>Interface</td><td>Validates that an interface declares exactly one abstract method (ideal for lambdas). Fails compile-time/interpret-time if it has 0 or &gt;1 abstract methods.</td></tr>
+    <tr><td><code>@Deprecated</code></td><td>Any declaration</td><td>Marks a symbol as deprecated, emitting a compiler/interpreter warning upon usage. Accepts an optional message argument: <code>@Deprecated(&quot;use newFunc()&quot;)</code>.</td></tr>
+    <tr><td><code>@Serializable</code></td><td>Class</td><td>Generates <code>toJsonString()</code> and static <code>fromJsonString()</code> at compile time.</td></tr>
+    <tr><td><code>@JsonProperty</code></td><td>Field</td><td>Specifies a custom JSON field name during serialization/deserialization.</td></tr>
+  </tbody>
+</table>
+
+<h2 id="override-annotation"><code>@Override</code></h2>
+<p>When implementing interface methods or overriding superclass methods, marking them is <strong>mandatory</strong>. Using <code>@Override</code> (or the <code>override</code> keyword) guarantees that you don't accidentally introduce subtle bugs:</p>
+<pre><code class="language-ume">abstract class Vehicle {
+    public abstract func void drive(int speed);
+}
+
+class ElectricCar extends Vehicle {
+    // Valid override:
+    @Override
+    public func void drive(int speed) {
+        Console.println(&quot;Driving at &quot; + speed);
+    }
+
+    // Compile error: typo in method name or parameter mismatch!
+    @Override
+    public func void drve(int speed) {}
+    // error: Method 'drve' marked with 'override' or '@Override' does not override or implement any method from a supertype
+}</code></pre>
+
+<h2 id="functional-interface"><code>@FunctionalInterface</code></h2>
+<p>Applied to an interface, <code>@FunctionalInterface</code> guarantees that the interface is suitable for single-method lambda contracts. If the interface contains zero or more than one abstract method, the compiler immediately rejects it:</p>
+<pre><code class="language-ume">@FunctionalInterface
+public interface Action {
+    func void execute();
+}
+
+// Error if violated:
+@FunctionalInterface
+public interface BadAction {
+    func void stepOne();
+    func void stepTwo(); // error: Interface contains 2 abstract methods (expected 1)
+}</code></pre>
+
+<h2 id="serializable"><code>[Serializable]</code> / <code>@Serializable</code></h2>
+<p>Applying <code>@Serializable</code> (or <code>[Serializable]</code>) to a class tells the compiler to generate two methods automatically:</p>
 <ul>
   <li><code>toJsonString()</code> — serializes the instance to a JSON string.</li>
   <li><code>fromJsonString(string json)</code> — static method that parses a JSON string and returns a new instance.</li>
 </ul>
-<p>Every public field becomes a key in the JSON object. The key defaults to the field's name; use <code>[JsonProperty]</code> to override it. This is zero-overhead in the sense that the serialization code is generated at compile time — there's no runtime reflection.</p>
-<pre><code class="language-ume">[Serializable]
+<pre><code class="language-ume">@Serializable
 public class Product {
-    [JsonProperty(&quot;product_id&quot;)]
+    @JsonProperty(&quot;product_id&quot;)
     public int id;
 
-    [JsonProperty(&quot;display_name&quot;)]
+    @JsonProperty(&quot;display_name&quot;)
     public string name;
 
-    [JsonProperty(&quot;price_usd&quot;)]
+    @JsonProperty(&quot;price_usd&quot;)
     public double price;
 }
 
@@ -165,39 +215,24 @@ public class Main {
     }
 }</code></pre>
 
-<h2 id="jsonproperty"><code>[JsonProperty("key")]</code></h2>
-<p>Applied to a field, <code>[JsonProperty]</code> overrides the JSON key used for that field during serialization and deserialization. The argument is a string literal. This is essential when your field names don't match the JSON schema you need to interoperate with — for example, when the JSON uses snake_case but your Ume fields use camelCase, or when the JSON uses an opaque identifier like <code>"_id"</code>.</p>
-
-<h2 id="field-without-attr">Fields without <code>[JsonProperty]</code></h2>
-<p>A field in a <code>[Serializable]</code> class that doesn't have a <code>[JsonProperty]</code> attribute uses its own field name as the JSON key. In the example above, <code>score</code> would serialize as <code>"score":...</code> rather than being excluded.</p>
-
 <h2 id="custom">Custom attributes</h2>
-<p>Attribute syntax supports any name, so you can attach arbitrary metadata to declarations for your own tooling or code generators to consume. The built-in compiler currently only acts on <code>[Serializable]</code> and <code>[JsonProperty]</code>; unknown attributes are stored on the AST but don't trigger any code generation. They're available to custom passes or external tools that read the AST.</p>
-<pre><code class="language-ume">[Experimental]
-[Deprecated(&quot;use NewClass instead&quot;)]
+<p>Attribute syntax supports any name, so you can attach arbitrary metadata to declarations for your own tooling or code generators to consume:</p>
+<pre><code class="language-ume">@Experimental
+@Deprecated(&quot;use NewClass instead&quot;)
 public class OldClass {
-    [Range(0, 100)]
+    @Range(0, 100)
     public int percentage;
 }</code></pre>
-
-<h2 id="stacking">Stacking attributes</h2>
-<p>You can apply multiple attributes to the same declaration. They can be on separate lines or combined in one bracket group with commas:</p>
-<pre><code class="language-ume">// Two equivalent forms:
-[Serializable]
-[Obsolete]
-public class OldModel { /* ... */ }
-
-[Serializable, Obsolete]
-public class OldModel2 { /* ... */ }</code></pre>
 
 <h2 id="applies-where">Where attributes can appear</h2>
 <table>
   <thead><tr><th>Target</th><th>Example</th></tr></thead>
   <tbody>
-    <tr><td>Class</td><td><code>[Serializable] class User { … }</code></td></tr>
-    <tr><td>Field</td><td><code>[JsonProperty("id")] int id;</code></td></tr>
-    <tr><td>Method</td><td><code>[Deprecated] func void old() { … }</code></td></tr>
-    <tr><td>Enum</td><td><code>[Flags] enum Perm { … }</code></td></tr>
+    <tr><td>Class</td><td><code>@Serializable class User { … }</code></td></tr>
+    <tr><td>Interface</td><td><code>@FunctionalInterface interface Runner { … }</code></td></tr>
+    <tr><td>Field</td><td><code>@JsonProperty(&quot;id&quot;) int id;</code></td></tr>
+    <tr><td>Method</td><td><code>@Override func void drive() { … }</code></td></tr>
+    <tr><td>Enum</td><td><code>@Flags enum Perm { … }</code></td></tr>
   </tbody>
 </table>
 

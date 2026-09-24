@@ -1,0 +1,103 @@
+// ═══════════════════════════════════════════════════════════════════════════
+// CombatGoals.ume — Hostile & Combat AI Goals
+// ═══════════════════════════════════════════════════════════════════════════
+
+import std.math.*;
+
+// (IGoal, Mob are included before this file)
+
+// TargetPlayerGoal — Locks onto player within combat radius
+public class TargetPlayerGoal implements IGoal {
+    private Mob    mob;
+    private double searchRange;
+
+    public TargetPlayerGoal(Mob m, double range) {
+        mob = m; searchRange = range;
+    }
+
+    @Override public func bool canUse() {
+        return mob.targetDist < searchRange;
+    }
+
+    @Override public func bool canContinueToUse() {
+        return mob.targetDist < searchRange * 1.5;
+    }
+
+    @Override public func void start() {}
+    @Override public func void stop() {}
+    @Override public func void tick() {}
+}
+
+// MeleeAttackGoal — Chases player and attacks in melee
+public class MeleeAttackGoal implements IGoal {
+    private Mob    mob;
+    private double chaseSpeed;
+    private double reach;
+
+    public MeleeAttackGoal(Mob m, double spd, double r) {
+        mob = m; chaseSpeed = spd; reach = r;
+    }
+
+    @Override public func bool canUse() {
+        return mob.hasPlayerTarget;
+    }
+
+    @Override public func bool canContinueToUse() {
+        return mob.hasPlayerTarget && mob.targetDist > reach * 0.7;
+    }
+
+    @Override public func void start() {}
+    @Override public func void stop() {
+        mob.targetPitch = 0.0;
+    }
+
+    @Override public func void tick() {
+        double dx = mob.playerX - mob.x;
+        double dz = mob.playerZ - mob.z;
+        double dist = Math.sqrt(dx*dx + dz*dz);
+        if (dist > 0.01) {
+            mob.vx = (dx / dist) * chaseSpeed;
+            mob.vz = (dz / dist) * chaseSpeed;
+            mob.targetYaw = cast<float>(Math.atan2(dx, -dz));
+
+            double mobEyeY = mob.y + mob.height * 0.85;
+            double playerEyeY = mob.playerY + 1.62;
+            double dy = playerEyeY - mobEyeY;
+            float p = cast<float>(Math.atan2(dy, dist));
+            if (p > 0.85) p = 0.85;
+            if (p < -0.85) p = -0.85;
+            mob.targetPitch = p;
+        }
+    }
+}
+
+// CreeperIgniteGoal — Ticks fuse and explodes when close
+public class CreeperIgniteGoal implements IGoal {
+    private Mob    mob;
+    private double fuseRadius;
+
+    public CreeperIgniteGoal(Mob m, double radius) {
+        mob = m; fuseRadius = radius;
+    }
+
+    @Override public func bool canUse() {
+        return mob.targetDist < fuseRadius;
+    }
+
+    @Override public func bool canContinueToUse() {
+        return mob.targetDist < fuseRadius * 1.3;
+    }
+
+    @Override public func void start() {}
+    @Override public func void stop() {
+        if (mob.fuseTimer > 0.0) mob.fuseTimer -= mob.currentDt * 0.5;
+    }
+
+    @Override public func void tick() {
+        mob.fuseTimer += mob.currentDt;
+        if (mob.fuseTimer > 1.5) {
+            mob.exploded = true;
+            mob.alive = false;
+        }
+    }
+}

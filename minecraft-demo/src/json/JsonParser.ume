@@ -1,0 +1,168 @@
+// ═══════════════════════════════════════════════════════════════════════════
+// JsonParser.ume — Fast recursive-descent JSON parser
+// ═══════════════════════════════════════════════════════════════════════════
+
+// (JsonValue is included by Json.ume before this file)
+
+public class JsonParser {
+    private string src;
+    private int    pos;
+    private int    len;
+
+    public JsonParser(string s) {
+        src = s;
+        pos = 0;
+        len = s.length();
+    }
+
+    public static func JsonValue parseJson(string s) {
+        JsonParser p = new JsonParser(s);
+        return p.parse();
+    }
+
+    private func void skipWhitespace() {
+        while (pos < len) {
+            string c = src.charAt(pos);
+            if (c == " " || c == "\t" || c == "\n" || c == "\r") {
+                pos++;
+            } else if (c == "/" && pos + 1 < len) {
+                // Comments support (// single line comment)
+                string next = src.charAt(pos + 1);
+                if (next == "/") {
+                    pos += 2;
+                    while (pos < len && src.charAt(pos) != "\n") pos++;
+                } else {
+                    break;
+                }
+            } else {
+                break;
+            }
+        }
+    }
+
+    public func JsonValue parse() {
+        skipWhitespace();
+        if (pos >= len) return null;
+        string c = src.charAt(pos);
+        if (c == "{") return parseObject();
+        if (c == "[") return parseArray();
+        if (c == "\"") return parseString();
+        if (c == "t" || c == "f") return parseBool();
+        if (c == "n") return parseNull();
+        if (c == "-" || (c >= "0" && c <= "9")) return parseNumber();
+        return null;
+    }
+
+    private func JsonValue parseObject() {
+        JsonValue obj = new JsonValue(JSON_OBJECT);
+        pos++; // skip '{'
+        skipWhitespace();
+        if (pos < len && src.charAt(pos) == "}") {
+            pos++;
+            return obj;
+        }
+        while (pos < len) {
+            skipWhitespace();
+            if (pos >= len || src.charAt(pos) != "\"") break;
+            JsonValue keyVal = parseString();
+            string key = keyVal.strVal;
+            skipWhitespace();
+            if (pos < len && src.charAt(pos) == ":") pos++;
+            skipWhitespace();
+            JsonValue val = parse();
+            if (val != null) {
+                obj.objKeys.add(key);
+                obj.objVals.add(val);
+            }
+            skipWhitespace();
+            if (pos < len && src.charAt(pos) == ",") {
+                pos++;
+            } else {
+                break;
+            }
+        }
+        skipWhitespace();
+        if (pos < len && src.charAt(pos) == "}") pos++;
+        return obj;
+    }
+
+    private func JsonValue parseArray() {
+        JsonValue arr = new JsonValue(JSON_ARRAY);
+        pos++; // skip '['
+        skipWhitespace();
+        if (pos < len && src.charAt(pos) == "]") {
+            pos++;
+            return arr;
+        }
+        while (pos < len) {
+            skipWhitespace();
+            JsonValue val = parse();
+            if (val != null) arr.arrVal.add(val);
+            skipWhitespace();
+            if (pos < len && src.charAt(pos) == ",") {
+                pos++;
+            } else {
+                break;
+            }
+        }
+        skipWhitespace();
+        if (pos < len && src.charAt(pos) == "]") pos++;
+        return arr;
+    }
+
+    private func JsonValue parseString() {
+        JsonValue val = new JsonValue(JSON_STRING);
+        pos++; // skip leading quote
+        int start = pos;
+        while (pos < len) {
+            string c = src.charAt(pos);
+            if (c == "\\") {
+                pos += 2;
+            } else if (c == "\"") {
+                break;
+            } else {
+                pos++;
+            }
+        }
+        val.strVal = src.substring(start, pos);
+        if (pos < len && src.charAt(pos) == "\"") pos++;
+        return val;
+    }
+
+    private func JsonValue parseNumber() {
+        JsonValue val = new JsonValue(JSON_NUMBER);
+        int start = pos;
+        if (pos < len && src.charAt(pos) == "-") pos++;
+        while (pos < len) {
+            string c = src.charAt(pos);
+            if ((c >= "0" && c <= "9") || c == "." || c == "e" || c == "E" || c == "+" || c == "-") {
+                pos++;
+            } else {
+                break;
+            }
+        }
+        string numStr = src.substring(start, pos);
+        val.numVal = numStr.toDouble();
+        return val;
+    }
+
+    private func JsonValue parseBool() {
+        JsonValue val = new JsonValue(JSON_BOOL);
+        if (pos + 4 <= len && src.substring(pos, pos + 4) == "true") {
+            val.boolVal = true;
+            pos += 4;
+        } else if (pos + 5 <= len && src.substring(pos, pos + 5) == "false") {
+            val.boolVal = false;
+            pos += 5;
+        }
+        return val;
+    }
+
+    private func JsonValue parseNull() {
+        JsonValue val = new JsonValue(JSON_NULL);
+        if (pos + 4 <= len && src.substring(pos, pos + 4) == "null") {
+            pos += 4;
+        }
+        return val;
+    }
+}

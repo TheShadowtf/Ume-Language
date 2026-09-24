@@ -1,0 +1,52 @@
+// ═══════════════════════════════════════════════════════════════════════════
+// EntityBase.ume — Base entity and living entity class hierarchy
+// ═══════════════════════════════════════════════════════════════════════════
+
+public abstract class Entity {
+    public double x; public double y; public double z;
+    public double vx; public double vy; public double vz;
+    public bool   onGround;
+    public bool   alive;
+    public float  facingYaw;
+    public float  targetYaw;
+    public double width;
+    public double height;
+
+    public Entity(double x, double y, double z) {
+        this.x = x; this.y = y; this.z = z;
+        vx = 0.0; vy = 0.0; vz = 0.0;
+        onGround = true;
+        alive = true;
+        facingYaw = 0.0;
+        targetYaw = 0.0;
+        width = 0.6;
+        height = 0.8;
+    }
+
+    public abstract func void tick(double dt);
+}
+
+public abstract class LivingEntity extends Entity {
+    public int    health;
+    public int    maxHealth;
+    public double hurtFlash;
+    public double burnTimer;
+
+    public LivingEntity(double x, double y, double z, int hp) {
+        super(x, y, z);
+        maxHealth = hp;
+        health = hp;
+        hurtFlash = 0.0;
+        burnTimer = 0.0;
+    }
+
+    public func void takeDamage(int dmg) {
+        if (!alive) return;
+        health -= dmg;
+        hurtFlash = 0.4;
+        if (health <= 0) {
+            health = 0;
+            alive = false;
+        }
+    }
+}

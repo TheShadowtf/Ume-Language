@@ -1,0 +1,25 @@
+// ═══════════════════════════════════════════════════════════════════════════
+// Camera.ume — First-person 3D view camera and projection matrix
+// ═══════════════════════════════════════════════════════════════════════════
+
+import std.math.*;
+
+public class Camera {
+    public double x; public double y; public double z;
+    public double yaw; public double pitch;
+
+    public Camera(double x, double y, double z) {
+        this.x = x; this.y = y; this.z = z;
+        yaw = 0.0; pitch = 0.0;
+    }
+
+    public func double fwdX() { return -Math.sin(yaw) * Math.cos(pitch); }
+    public func double fwdY() { return  Math.sin(pitch); }
+    public func double fwdZ() { return -Math.cos(yaw)  * Math.cos(pitch); }
+
+    public func Matrix4x4 getVP(float aspect) {
+        Matrix4x4 view = Matrix4x4.lookAt(x, y, z, x+fwdX(), y+fwdY(), z+fwdZ(), 0.0, 1.0, 0.0);
+        Matrix4x4 proj = Matrix4x4.perspective(1.15, aspect, 0.05, 1000.0);
+        return proj * view;
+    }
+}

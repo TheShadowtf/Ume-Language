@@ -1,0 +1,56 @@
+// ═══════════════════════════════════════════════════════════════════════════
+// PassiveMobs.ume — Passive animal mob entity classes
+// ═══════════════════════════════════════════════════════════════════════════
+
+// (Mob, PassiveGoals, and MobPart are included before this file)
+
+public class AnimalEntity extends Mob {
+    public AnimalEntity(double x, double y, double z, int type) {
+        super(x, y, z, type);
+    }
+
+    @Override
+    public func void registerGoals() {
+        goalSelector.addGoal(0, new FloatGoal(this));
+        goalSelector.addGoal(1, new PanicGoal(this, 1.25));
+        goalSelector.addGoal(2, new RandomStrollGoal(this, 0.022));
+        goalSelector.addGoal(3, new LookAtPlayerGoal(this, 7.0));
+    }
+}
+
+public class PigEntity extends AnimalEntity {
+    public PigEntity(double x, double y, double z) {
+        super(x, y, z, MOB_PIG);
+        registerGoals();
+    }
+}
+
+public class CowEntity extends AnimalEntity {
+    public CowEntity(double x, double y, double z) {
+        super(x, y, z, MOB_COW);
+        registerGoals();
+    }
+}
+
+public class SheepEntity extends AnimalEntity {
+    public SheepEntity(double x, double y, double z) {
+        super(x, y, z, MOB_SHEEP);
+        registerGoals();
+    }
+}
+
+public class ChickenEntity extends AnimalEntity {
+    public ChickenEntity(double x, double y, double z) {
+        super(x, y, z, MOB_CHICKEN);
+        registerGoals();
+    }
+
+    @Override
+    public func void registerGoals() {
+        goalSelector.addGoal(0, new FloatGoal(this));
+        goalSelector.addGoal(1, new ChickenFlapGoal(this));
+        goalSelector.addGoal(2, new PanicGoal(this, 1.30));
+        goalSelector.addGoal(3, new RandomStrollGoal(this, 0.025));
+        goalSelector.addGoal(4, new LookAtPlayerGoal(this, 6.0));
+    }
+}

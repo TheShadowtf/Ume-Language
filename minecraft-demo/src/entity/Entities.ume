@@ -1,0 +1,20 @@
+// ═══════════════════════════════════════════════════════════════════════════
+// Entities.ume — Factory for creating concrete mob instances
+// ═══════════════════════════════════════════════════════════════════════════
+
+// (PassiveMobs and HostileMobs are included by Entity.ume before this file)
+
+public class Entities {
+    public static func Mob create(int type, double x, double y, double z) {
+        if (type == MOB_PIG)      return new PigEntity(x, y, z);
+        if (type == MOB_COW)      return new CowEntity(x, y, z);
+        if (type == MOB_CHICKEN)  return new ChickenEntity(x, y, z);
+        if (type == MOB_SHEEP)    return new SheepEntity(x, y, z);
+        if (type == MOB_ZOMBIE)   return new ZombieEntity(x, y, z);
+        if (type == MOB_SKELETON) return new SkeletonEntity(x, y, z);
+        if (type == MOB_SPIDER)   return new SpiderEntity(x, y, z);
+        if (type == MOB_CREEPER)  return new CreeperEntity(x, y, z);
+        if (type == MOB_PLAYER)   return new PlayerEntity(x, y, z);
+        return new PigEntity(x, y, z);
+    }
+}

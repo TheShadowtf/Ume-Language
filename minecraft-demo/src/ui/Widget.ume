@@ -1,0 +1,382 @@
+// ═══════════════════════════════════════════════════════════════════════════
+// Widget.ume — UI drawing primitives, Button, Slider, Panel & Slot widgets
+// ═══════════════════════════════════════════════════════════════════════════
+
+// (Block is included by main.ume before ui/UI.ume)
+
+// ── Color helpers ────────────────────────────────────────────────────────────
+public func void setColor(Shader sh, float r, float g, float b, float a) {
+    sh.setVec4("uColor", r, g, b, a);
+}
+
+// ── drawRect2D — quick colored rectangle ─────────────────────────────────────
+public func void drawRect2D(Window win, Shader sh, Mesh quad,
+                            float x, float y, float w, float h,
+                            float r, float g, float b, float a,
+                            float sw, float sh_) {
+    sh.setVec4("uColor", r, g, b, a);
+    sh.setVec4("uRect", x, y, w, h);
+    sh.setFloat("uScreenW", sw);
+    sh.setFloat("uScreenH", sh_);
+    sh.setInt("uUseTexture", 0);
+    sh.setFloat("uUVScale", 1.0);
+    win.drawMesh(quad, sh);
+}
+
+// ── drawTextWithShadow — convenience wrapper ─────────────────────────────────
+public func void drawTextShadow(Window win, string text, float x, float y,
+                                float r, float g, float b, float size) {
+    win.drawTextDefaultRGB(text, x + 1, y + 1, 0.0, 0.0, 0.0, size);
+    win.drawTextDefaultRGB(text, x, y, r, g, b, size);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Button — Minecraft-style beveled stone button
+// ═══════════════════════════════════════════════════════════════════════════
+public class Button {
+    public string label;
+    public float  x; public float y; public float w; public float h;
+    public bool   hovered;
+    public bool   clicked;
+    public bool   wasMouseDown;
+    public float  bgR; public float bgG; public float bgB;
+    public float  hoverR; public float hoverG; public float hoverB;
+    public float  textR; public float textG; public float textB;
+    public float  fontSize;
+    public bool   disabled;
+
+    public Button(string label, float x, float y, float w, float h) {
+        this.label = label;
+        this.x = x; this.y = y; this.w = w; this.h = h;
+        hovered = false; clicked = false; wasMouseDown = false;
+        bgR = 0.40; bgG = 0.40; bgB = 0.44;
+        hoverR = 0.55; hoverG = 0.55; hoverB = 0.62;
+        textR = 1.0; textG = 1.0; textB = 1.0;
+        fontSize = 18.0;
+        disabled = false;
+    }
+
+    public func Button setColor(float r, float g, float b) { bgR = r; bgG = g; bgB = b; return this; }
+    public func Button setHoverColor(float r, float g, float b) { hoverR = r; hoverG = g; hoverB = b; return this; }
+    public func Button setTextColor(float r, float g, float b) { textR = r; textG = g; textB = b; return this; }
+
+    public func void update(float mx, float my, bool mouseDown) {
+        if (disabled) { hovered = false; clicked = false; wasMouseDown = mouseDown; return; }
+        hovered = (mx >= x && mx <= x + w && my >= y && my <= y + h);
+        clicked = false;
+        if (hovered && mouseDown && !wasMouseDown) {
+            clicked = true;
+        }
+        wasMouseDown = mouseDown;
+    }
+
+    public func void draw(Window win, Shader hudSh, Mesh quad, float sw, float sh) {
+        float r = hovered ? hoverR : bgR;
+        float g = hovered ? hoverG : bgG;
+        float b = hovered ? hoverB : bgB;
+        if (disabled) { r = bgR * 0.5; g = bgG * 0.5; b = bgB * 0.5; }
+
+        // Outer dark shadow (bottom-right)
+        drawRect2D(win, hudSh, quad, x + 2, y + 2, w, h, r * 0.30, g * 0.30, b * 0.30, 1.0, sw, sh);
+
+        // Main body
+        drawRect2D(win, hudSh, quad, x, y, w, h, r, g, b, 1.0, sw, sh);
+
+        // Top-left highlight (bevel)
+        drawRect2D(win, hudSh, quad, x, y, w, 2, r + 0.25, g + 0.25, b + 0.25, 1.0, sw, sh);
+        drawRect2D(win, hudSh, quad, x, y, 2, h, r + 0.25, g + 0.25, b + 0.25, 1.0, sw, sh);
+
+        // Bottom-right shadow (bevel)
+        drawRect2D(win, hudSh, quad, x, y + h - 2, w, 2, r * 0.50, g * 0.50, b * 0.50, 1.0, sw, sh);
+        drawRect2D(win, hudSh, quad, x + w - 2, y, 2, h, r * 0.50, g * 0.50, b * 0.50, 1.0, sw, sh);
+
+        // Inner 1px highlight pixel-corners (1.8-style)
+        drawRect2D(win, hudSh, quad, x + 2, y + 2, 1, 1, r + 0.30, g + 0.30, b + 0.30, 1.0, sw, sh);
+
+        // Label
+        float curFont = fontSize;
+        float textW = cast<float>(label.length()) * curFont;
+        if (textW > w - 16.0 && label.length() > 0) {
+            curFont = (w - 16.0) / cast<float>(label.length());
+            if (curFont < 9.0) curFont = 9.0;
+            textW = cast<float>(label.length()) * curFont;
+        }
+        float textX = x + (w - textW) * 0.5;
+        float textY = y + (h - curFont) * 0.5;
+        // Shadow
+        float sbr = disabled ? 0.2 : 0.0;
+        win.drawTextDefaultRGB(label, textX + 1, textY + 1, sbr, sbr, sbr, curFont);
+        // Main text — yellow when hovered, white otherwise
+        float fr = hovered ? 1.0 : textR;
+        float fg = hovered ? 1.0 : textG;
+        float fb = hovered ? 0.20 : textB;
+        if (disabled) { fr = 0.5; fg = 0.5; fb = 0.5; }
+        win.drawTextDefaultRGB(label, textX, textY, fr, fg, fb, curFont);
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Slider — labeled value track with a draggable knob
+// ═══════════════════════════════════════════════════════════════════════════
+public class Slider {
+    public string label;
+    public float x; public float y; public float w; public float h;
+    public float minVal; public float maxVal; public float value;
+    public bool  dragging; public bool hovered;
+    public float fontSize;
+
+    public Slider(string label, float x, float y, float w, float minVal, float maxVal, float value) {
+        this.label = label;
+        this.x = x; this.y = y; this.w = w; this.h = 20.0;
+        this.minVal = minVal; this.maxVal = maxVal; this.value = value;
+        dragging = false; hovered = false;
+        fontSize = 16.0;
+    }
+
+    public func void update(float mx, float my, bool mouseDown) {
+        float trackY = y + 28;
+        float trackH = 18.0;
+        hovered = (mx >= x && mx <= x + w && my >= trackY - 6 && my <= trackY + trackH + 6);
+        if (hovered && mouseDown) dragging = true;
+        if (!mouseDown) dragging = false;
+        if (dragging) {
+            float pct = (mx - x) / w;
+            if (pct < 0.0) pct = 0.0;
+            if (pct > 1.0) pct = 1.0;
+            value = minVal + pct * (maxVal - minVal);
+        }
+    }
+
+    public func void draw(Window win, Shader hudSh, Mesh quad, float sw, float sh) {
+        float trackY = y + 28;
+        float trackH = 18.0;
+        float pct = (value - minVal) / (maxVal - minVal);
+
+        // Label with current value
+        string valStr = "" + cast<int>(value);
+        if (label.contains("Render Distance")) {
+            valStr = "" + cast<int>(value) + " chunks";
+        } else if (label.contains("Sensitivity")) {
+            valStr = "" + (cast<int>(value * 10.0) / 10);
+        } else if (maxVal <= 10.0 && minVal >= 1.0) {
+            valStr = "" + cast<int>(value);
+        }
+        drawTextShadow(win, label + ": " + valStr, x, y, 1.0, 1.0, 1.0, fontSize);
+
+        // Track outer (darker groove — beveled)
+        drawRect2D(win, hudSh, quad, x, trackY, w, trackH, 0.05, 0.05, 0.06, 1.0, sw, sh);
+        drawRect2D(win, hudSh, quad, x + 2, trackY + 2, w - 4, trackH - 4, 0.10, 0.10, 0.12, 1.0, sw, sh);
+
+        // Filled portion (Minecraft green)
+        drawRect2D(win, hudSh, quad, x + 2, trackY + 2, (w - 4) * pct, trackH - 4, 0.30, 0.65, 0.32, 1.0, sw, sh);
+        // Inner highlight
+        drawRect2D(win, hudSh, quad, x + 2, trackY + 2, (w - 4) * pct, 1, 0.45, 0.80, 0.45, 1.0, sw, sh);
+
+        // Handle — stone button style with bevel
+        float handleW = 10.0;
+        float handleH = trackH + 6.0;
+        float handleX = x + w * pct - handleW * 0.5;
+        float handleY = trackY - 3.0;
+
+        // Shadow
+        drawRect2D(win, hudSh, quad, handleX + 2, handleY + 2, handleW, handleH, 0.05, 0.05, 0.05, 1.0, sw, sh);
+
+        float hbr = dragging ? 0.78 : (hovered ? 0.70 : 0.60);
+        // Body
+        drawRect2D(win, hudSh, quad, handleX, handleY, handleW, handleH, hbr, hbr, hbr + 0.05, 1.0, sw, sh);
+        // Top-left highlight
+        drawRect2D(win, hudSh, quad, handleX, handleY, handleW, 2, hbr + 0.20, hbr + 0.20, hbr + 0.25, 1.0, sw, sh);
+        drawRect2D(win, hudSh, quad, handleX, handleY, 2, handleH, hbr + 0.20, hbr + 0.20, hbr + 0.25, 1.0, sw, sh);
+        // Bottom-right shadow
+        drawRect2D(win, hudSh, quad, handleX, handleY + handleH - 2, handleW, 2, hbr * 0.50, hbr * 0.50, hbr * 0.50, 1.0, sw, sh);
+        drawRect2D(win, hudSh, quad, handleX + handleW - 2, handleY, 2, handleH, hbr * 0.50, hbr * 0.50, hbr * 0.50, 1.0, sw, sh);
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// drawPanel — Minecraft-style dark inventory panel with beveled edges
+// ═══════════════════════════════════════════════════════════════════════════
+public func void drawPanel(Window win, Shader hudSh, Mesh quad,
+                           float x, float y, float w, float h,
+                           float sw, float sh) {
+    // Outer dark border
+    drawRect2D(win, hudSh, quad, x - 4, y - 4, w + 8, h + 8, 0.04, 0.04, 0.05, 1.0, sw, sh);
+    // Main panel body — dark stone grey (#3B3B3B)
+    drawRect2D(win, hudSh, quad, x, y, w, h, 0.16, 0.16, 0.20, 1.0, sw, sh);
+    // Inner panel — slightly lighter
+    drawRect2D(win, hudSh, quad, x + 3, y + 3, w - 6, h - 6, 0.22, 0.22, 0.27, 1.0, sw, sh);
+    // Top-left highlight (bevel)
+    drawRect2D(win, hudSh, quad, x, y, w, 3, 0.50, 0.50, 0.55, 1.0, sw, sh);
+    drawRect2D(win, hudSh, quad, x, y, 3, h, 0.50, 0.50, 0.55, 1.0, sw, sh);
+    // Bottom-right shadow
+    drawRect2D(win, hudSh, quad, x, y + h - 3, w, 3, 0.06, 0.06, 0.07, 1.0, sw, sh);
+    drawRect2D(win, hudSh, quad, x + w - 3, y, 3, h, 0.06, 0.06, 0.07, 1.0, sw, sh);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// drawSlot — single inventory slot (beveled, with hover highlight)
+// ═══════════════════════════════════════════════════════════════════════════
+public func void drawSlot(Window win, Shader hudSh, Mesh quad,
+                          float x, float y, float size,
+                          bool hovered, bool selected,
+                          float sw, float sh) {
+    // Selection box (white, around slot)
+    if (selected) {
+        drawRect2D(win, hudSh, quad, x - 4, y - 4, size + 8, size + 8, 1.0, 1.0, 1.0, 1.0, sw, sh);
+        drawRect2D(win, hudSh, quad, x - 2, y - 2, size + 4, size + 4, 0.0, 0.0, 0.0, 1.0, sw, sh);
+    } else {
+        // Slot border (lighter on top-left, darker on bottom-right)
+        drawRect2D(win, hudSh, quad, x - 1, y - 1, size + 2, size + 2, 0.55, 0.55, 0.55, 1.0, sw, sh);
+    }
+
+    // Slot background
+    float bgR = hovered ? 0.55 : 0.18;
+    float bgG = hovered ? 0.55 : 0.18;
+    float bgB = hovered ? 0.60 : 0.22;
+    drawRect2D(win, hudSh, quad, x, y, size, size, bgR, bgG, bgB, 1.0, sw, sh);
+
+    // Inner bevel — top-left highlight
+    drawRect2D(win, hudSh, quad, x, y, size, 1, bgR + 0.15, bgG + 0.15, bgB + 0.15, 1.0, sw, sh);
+    drawRect2D(win, hudSh, quad, x, y, 1, size, bgR + 0.15, bgG + 0.15, bgB + 0.15, 1.0, sw, sh);
+    // Inner bevel — bottom-right shadow
+    drawRect2D(win, hudSh, quad, x, y + size - 1, size, 1, 0.04, 0.04, 0.05, 1.0, sw, sh);
+    drawRect2D(win, hudSh, quad, x + size - 1, y, 1, size, 0.04, 0.04, 0.05, 1.0, sw, sh);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// drawItemIcon — render a block swatch inside a slot (color-based, no tex)
+// ═══════════════════════════════════════════════════════════════════════════
+public func void drawItemIcon(Window win, Shader hudSh, Mesh quad,
+                              int blockId, float x, float y, float slotSize,
+                              float sw, float sh) {
+    if (blockId == 0) return;
+    float[] bc = Blocks.hudColor(blockId);
+    float pad = slotSize * 0.18;
+    float iconSize = slotSize - pad * 2;
+    // Main color
+    drawRect2D(win, hudSh, quad, x + pad, y + pad, iconSize, iconSize, bc[0], bc[1], bc[2], 1.0, sw, sh);
+    // Top-left highlight
+    drawRect2D(win, hudSh, quad, x + pad, y + pad, iconSize, 2, bc[0] + 0.20, bc[1] + 0.20, bc[2] + 0.20, 1.0, sw, sh);
+    drawRect2D(win, hudSh, quad, x + pad, y + pad, 2, iconSize, bc[0] + 0.20, bc[1] + 0.20, bc[2] + 0.20, 1.0, sw, sh);
+    // Bottom-right shadow
+    drawRect2D(win, hudSh, quad, x + pad, y + pad + iconSize - 2, iconSize, 2, bc[0] * 0.55, bc[1] * 0.55, bc[2] * 0.55, 1.0, sw, sh);
+    drawRect2D(win, hudSh, quad, x + pad + iconSize - 2, y + pad, 2, iconSize, bc[0] * 0.55, bc[1] * 0.55, bc[2] * 0.55, 1.0, sw, sh);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// drawItemCount — render "x99" style count badge
+// ═══════════════════════════════════════════════════════════════════════════
+public func void drawItemCount(Window win, int count, float x, float y, float slotSize) {
+    if (count <= 1) return;
+    string s = "" + count;
+    // Shadow then white text
+    win.drawTextDefaultRGB(s, x + slotSize - 20 + 1, y + slotSize - 16 + 1, 0.0, 0.0, 0.0, 14.0);
+    win.drawTextDefaultRGB(s, x + slotSize - 20, y + slotSize - 16, 1.0, 1.0, 1.0, 14.0);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// TextInput — Minecraft-style text box with typing & backspace support
+// ═══════════════════════════════════════════════════════════════════════════
+public class TextInput {
+    public string text;
+    public float  x; public float y; public float w; public float h;
+    public bool   focused;
+    public string placeholder;
+    public int    cursorTimer;
+    public int    keyTimer;
+    public int    backspaceTimer;
+
+    public TextInput(string defaultText, float x, float y, float w, float h, string placeholder) {
+        this.text = defaultText;
+        this.x = x; this.y = y; this.w = w; this.h = h;
+        this.placeholder = placeholder;
+        this.focused = false;
+        this.cursorTimer = 0;
+        this.keyTimer = 0;
+        this.backspaceTimer = 0;
+    }
+
+    public func void update(Window win, float mx, float my, bool mouseDown) {
+        if (mouseDown) {
+            focused = (mx >= x && mx <= x + w && my >= y && my <= y + h);
+        }
+        if (!focused) return;
+
+        cursorTimer++;
+        if (keyTimer > 0) keyTimer--;
+        if (backspaceTimer > 0) backspaceTimer--;
+
+        if (win.isKeyPressed(Key.Backspace) && backspaceTimer <= 0) {
+            if (text.length() > 0) {
+                text = text.substring(0, text.length() - 1);
+            }
+            backspaceTimer = 6;
+        }
+
+        if (keyTimer <= 0 && text.length() < 30) {
+            bool shift = win.isKeyPressed(Key.LeftShift) || win.isKeyPressed(Key.RightShift);
+            string ch = "";
+
+            if (win.isKeyPressed(Key.A)) ch = shift ? "A" : "a";
+            else if (win.isKeyPressed(Key.B)) ch = shift ? "B" : "b";
+            else if (win.isKeyPressed(Key.C)) ch = shift ? "C" : "c";
+            else if (win.isKeyPressed(Key.D)) ch = shift ? "D" : "d";
+            else if (win.isKeyPressed(Key.E)) ch = shift ? "E" : "e";
+            else if (win.isKeyPressed(Key.F)) ch = shift ? "F" : "f";
+            else if (win.isKeyPressed(Key.G)) ch = shift ? "G" : "g";
+            else if (win.isKeyPressed(Key.H)) ch = shift ? "H" : "h";
+            else if (win.isKeyPressed(Key.I)) ch = shift ? "I" : "i";
+            else if (win.isKeyPressed(Key.J)) ch = shift ? "J" : "j";
+            else if (win.isKeyPressed(Key.K)) ch = shift ? "K" : "k";
+            else if (win.isKeyPressed(Key.L)) ch = shift ? "L" : "l";
+            else if (win.isKeyPressed(Key.M)) ch = shift ? "M" : "m";
+            else if (win.isKeyPressed(Key.N)) ch = shift ? "N" : "n";
+            else if (win.isKeyPressed(Key.O)) ch = shift ? "O" : "o";
+            else if (win.isKeyPressed(Key.P)) ch = shift ? "P" : "p";
+            else if (win.isKeyPressed(Key.Q)) ch = shift ? "Q" : "q";
+            else if (win.isKeyPressed(Key.R)) ch = shift ? "R" : "r";
+            else if (win.isKeyPressed(Key.S)) ch = shift ? "S" : "s";
+            else if (win.isKeyPressed(Key.T)) ch = shift ? "T" : "t";
+            else if (win.isKeyPressed(Key.U)) ch = shift ? "U" : "u";
+            else if (win.isKeyPressed(Key.V)) ch = shift ? "V" : "v";
+            else if (win.isKeyPressed(Key.W)) ch = shift ? "W" : "w";
+            else if (win.isKeyPressed(Key.X)) ch = shift ? "X" : "x";
+            else if (win.isKeyPressed(Key.Y)) ch = shift ? "Y" : "y";
+            else if (win.isKeyPressed(Key.Z)) ch = shift ? "Z" : "z";
+            else if (win.isKeyPressed(Key.Space)) ch = " ";
+            else if (win.isKeyPressed(Key.Key0)) ch = "0";
+            else if (win.isKeyPressed(Key.Key1)) ch = "1";
+            else if (win.isKeyPressed(Key.Key2)) ch = "2";
+            else if (win.isKeyPressed(Key.Key3)) ch = "3";
+            else if (win.isKeyPressed(Key.Key4)) ch = "4";
+            else if (win.isKeyPressed(Key.Key5)) ch = "5";
+            else if (win.isKeyPressed(Key.Key6)) ch = "6";
+            else if (win.isKeyPressed(Key.Key7)) ch = "7";
+            else if (win.isKeyPressed(Key.Key8)) ch = "8";
+            else if (win.isKeyPressed(Key.Key9)) ch = "9";
+            else if (win.isKeyPressed(Key.Minus)) ch = shift ? "_" : "-";
+
+            if (ch.length() > 0) {
+                text = text + ch;
+                keyTimer = 8;
+            }
+        }
+    }
+
+    public func void draw(Window win, Shader hudSh, Mesh quad, float sw, float sh) {
+        float bc = focused ? 1.0 : 0.45;
+        drawRect2D(win, hudSh, quad, x - 1, y - 1, w + 2, h + 2, bc, bc, bc, 1.0, sw, sh);
+        drawRect2D(win, hudSh, quad, x, y, w, h, 0.05, 0.05, 0.05, 1.0, sw, sh);
+        
+        float fs = 15.0;
+        string displayText = text;
+        if (displayText.length() == 0 && !focused) {
+            drawTextShadow(win, placeholder, x + 8, y + (h - fs) * 0.5, 0.45, 0.45, 0.45, fs);
+        } else {
+            if (focused && (cursorTimer % 40 < 20)) {
+                displayText = displayText + "_";
+            }
+            drawTextShadow(win, displayText, x + 8, y + (h - fs) * 0.5, 1.0, 1.0, 1.0, fs);
+        }
+    }
+}

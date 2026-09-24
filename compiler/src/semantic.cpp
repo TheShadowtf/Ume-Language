@@ -2,6 +2,7 @@
 #include "../include/semantic.h"
 #include <sstream>
 #include <algorithm>
+#include <unordered_set>
 
 namespace Ume {
 
@@ -140,6 +141,23 @@ void SemanticAnalyzer::collectInterface(InterfaceDecl& iface) {
         ci.indexers.push_back(sig);
     }
     classes_[iface.name] = std::move(ci);
+
+    // Validate @FunctionalInterface
+    bool isFunctional = false;
+    for (const auto& a : iface.attributes) {
+        if (a.name == "FunctionalInterface") isFunctional = true;
+    }
+    if (isFunctional) {
+        int abstractCount = 0;
+        for (auto& m : iface.methods) {
+            if (!m->body) abstractCount++;
+        }
+        if (abstractCount != 1) {
+            throw SemanticError("Interface '" + iface.name + "' is annotated with @FunctionalInterface, but contains " +
+                                std::to_string(abstractCount) + " abstract methods (expected 1)",
+                                iface.line, iface.column, iface.filename);
+        }
+    }
 }
 
 void SemanticAnalyzer::collectEnum(EnumDecl& enm) {
@@ -149,6 +167,16 @@ void SemanticAnalyzer::collectEnum(EnumDecl& enm) {
     for (auto& v : enm.values) {
         TypeInfo vt; vt.name = enm.name;
         ci.fields[v.name] = vt;
+    }
+    for (auto& f : enm.fields) {
+        ci.fields[f->name] = resolveAnnotation(f->type);
+    }
+    for (auto& m : enm.methods) {
+        FunctionSignature sig;
+        sig.returnType = resolveAnnotation(m->returnType);
+        sig.isStatic   = m->isStatic;
+        for (auto& p : m->params) sig.paramTypes.push_back(resolveAnnotation(p.type));
+        ci.methods[m->name] = sig;
     }
     classes_[enm.name] = std::move(ci);
 }
@@ -222,7 +250,161 @@ void SemanticAnalyzer::checkClassDecl(ClassDecl& cls) {
         for (auto& [n, t] : cit->second.fields) symbols_.declare(n, t);
         for (auto& [n, t] : cit->second.properties) symbols_.declare(n, t);
     }
-    for (auto& m : cls.methods)   checkFuncDecl(*m);
+    // Collect all superclasses
+    std::vector<std::string> allSuperClasses;
+    std::string curSuper = cls.superClass ? cls.superClass->name : "";
+    while (!curSuper.empty()) {
+        allSuperClasses.push_back(curSuper);
+        auto sit = classes_.find(curSuper);
+        if (sit != classes_.end() && sit->second.superClass) {
+            curSuper = *sit->second.superClass;
+        } else {
+            break;
+        }
+    }
+
+    // Collect all interfaces (from cls and all superclasses, plus parent interfaces)
+    std::vector<std::string> allInterfaces;
+    std::unordered_set<std::string> visitedIfaces;
+    for (const auto& ifc : cls.interfaces) {
+        if (visitedIfaces.insert(ifc.name).second) allInterfaces.push_back(ifc.name);
+    }
+    for (const auto& sc : allSuperClasses) {
+        auto sit = classes_.find(sc);
+        if (sit != classes_.end()) {
+            for (const auto& iname : sit->second.interfaces) {
+                if (visitedIfaces.insert(iname).second) allInterfaces.push_back(iname);
+            }
+        }
+    }
+    for (size_t i = 0; i < allInterfaces.size(); ++i) {
+        auto iit = classes_.find(allInterfaces[i]);
+        if (iit != classes_.end()) {
+            for (const auto& pi : iit->second.interfaces) {
+                if (visitedIfaces.insert(pi).second) allInterfaces.push_back(pi);
+            }
+        }
+    }
+
+    for (auto& m : cls.methods) {
+        checkFuncDecl(*m);
+        bool hasOverride = m->isOverride;
+        for (const auto& a : m->attributes) {
+            if (a.name == "Override") hasOverride = true;
+        }
+
+        bool foundInSuper = false;
+        std::string superSource;
+        if (!m->isStatic) {
+            for (const auto& sc : allSuperClasses) {
+                auto sit = classes_.find(sc);
+                if (sit != classes_.end()) {
+                    auto mit = sit->second.methods.find(m->name);
+                    if (mit != sit->second.methods.end() && !mit->second.isStatic && mit->second.paramTypes.size() == m->params.size()) {
+                        foundInSuper = true;
+                        superSource = sc;
+                        break;
+                    }
+                }
+            }
+            if (!foundInSuper) {
+                for (const auto& ifcName : allInterfaces) {
+                    auto iit = classes_.find(ifcName);
+                    if (iit != classes_.end()) {
+                        auto mit = iit->second.methods.find(m->name);
+                        if (mit != iit->second.methods.end() && !mit->second.isStatic && mit->second.paramTypes.size() == m->params.size()) {
+                            foundInSuper = true;
+                            superSource = ifcName;
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
+        if (hasOverride) {
+            if (m->isStatic) {
+                throw SemanticError("Static method '" + m->name + "' cannot be marked with 'override' or '@Override'",
+                                    m->line, m->column, m->filename);
+            }
+            if (!foundInSuper) {
+                throw SemanticError("Method '" + m->name + "' marked with 'override' or '@Override' does not override or implement any method from a supertype",
+                                    m->line, m->column, m->filename);
+            }
+        } else {
+            if (foundInSuper) {
+                throw SemanticError("Method '" + m->name + "' overrides or implements a method in '" + superSource + "', but is missing 'override' or '@Override'",
+                                    m->line, m->column, m->filename);
+            }
+        }
+    }
+
+    if (!cls.isAbstract) {
+        for (const auto& sc : allSuperClasses) {
+            auto sit = classes_.find(sc);
+            if (sit != classes_.end()) {
+                for (auto& [mName, sig] : sit->second.methods) {
+                    if (sig.isAbstract) {
+                        bool implemented = false;
+                        auto citLocal = classes_.find(cls.name);
+                        if (citLocal != classes_.end()) {
+                            auto mit = citLocal->second.methods.find(mName);
+                            if (mit != citLocal->second.methods.end() && !mit->second.isAbstract) {
+                                implemented = true;
+                            }
+                        }
+                        for (const auto& isc : allSuperClasses) {
+                            if (isc == sc) break;
+                            auto isit = classes_.find(isc);
+                            if (isit != classes_.end()) {
+                                auto imit = isit->second.methods.find(mName);
+                                if (imit != isit->second.methods.end() && !imit->second.isAbstract) {
+                                    implemented = true;
+                                    break;
+                                }
+                            }
+                        }
+                        if (!implemented) {
+                            throw SemanticError("Class '" + cls.name + "' is not abstract and does not implement abstract method '" + mName + "' from '" + sit->first + "'",
+                                                cls.line, cls.column, cls.filename);
+                        }
+                    }
+                }
+            }
+        }
+
+        for (const auto& ifcName : allInterfaces) {
+            auto iit = classes_.find(ifcName);
+            if (iit != classes_.end()) {
+                for (auto& [mName, sig] : iit->second.methods) {
+                    if (sig.isAbstract) {
+                        bool implemented = false;
+                        auto citLocal = classes_.find(cls.name);
+                        if (citLocal != classes_.end()) {
+                            auto mit = citLocal->second.methods.find(mName);
+                            if (mit != citLocal->second.methods.end() && !mit->second.isAbstract) {
+                                implemented = true;
+                            }
+                        }
+                        for (const auto& sc : allSuperClasses) {
+                            if (implemented) break;
+                            auto sit = classes_.find(sc);
+                            if (sit != classes_.end()) {
+                                auto mit = sit->second.methods.find(mName);
+                                if (mit != sit->second.methods.end() && !mit->second.isAbstract) {
+                                    implemented = true;
+                                }
+                            }
+                        }
+                        if (!implemented) {
+                            throw SemanticError("Class '" + cls.name + "' is not abstract and does not implement abstract method '" + mName + "' in interface '" + ifcName + "'",
+                                                cls.line, cls.column, cls.filename);
+                        }
+                    }
+                }
+            }
+        }
+    }
     for (auto& p : cls.properties) {
         checkAttributes(p->attributes);
         TypeInfo savedRet = currentReturnType_;

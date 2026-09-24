@@ -126,20 +126,30 @@ public interface IClickable {
 }
 
 public class Button implements IDrawable, IClickable {
+    @Override
     public func void draw() {
         Console.println(&quot;[Button Drawn]&quot;);
     }
 
+    @Override
     public func void resize(double factor) {
         Console.println(&quot;Resized by &quot; + factor);
     }
 
+    @Override
     public func void onClick() {
         Console.println(&quot;Button Clicked&quot;);
     }
 }</code></pre>
 
-<p>A class can implement multiple interfaces (comma-separated after <code>implements</code>), and can also extend a base class at the same time. The class must provide an implementation for every method declared in every interface it implements.</p>
+<p>A class can implement multiple interfaces (comma-separated after <code>implements</code>), and can also extend a base class at the same time. The class <strong>must</strong> provide an implementation for every abstract method declared in every interface it implements. In Ume, implementing interface methods requires the <code>override</code> keyword or the <code>@Override</code> annotation.</p>
+
+<h2 id="functional-interface"><code>@FunctionalInterface</code></h2>
+<p>You can annotate an interface with <code>@FunctionalInterface</code> to declare that it is intended as a single-abstract-method (SAM) interface (ideal for lambda targets). The compiler and interpreter strictly verify that exactly one abstract method is present. If zero or multiple abstract methods exist, an error is reported at compile time.</p>
+<pre><code class="language-ume">@FunctionalInterface
+public interface Transformer {
+    func string transform(string input);
+}</code></pre>
 
 <h2 id="using">Using interfaces as types</h2>
 <p>An interface is a type. You can declare variables, parameters, and fields of an interface type, and assign any object whose class implements that interface. Method calls through an interface variable dispatch to the actual runtime class's implementation.</p>
@@ -167,13 +177,17 @@ renderTwice(new Button());</code></pre>
 }
 
 public class EnglishGreeter implements IGreeter {
+    @Override
     public func string name()  { return &quot;World&quot;; }
     // inherits the default greet()
 }
 
 public class FancyGreeter implements IGreeter {
+    @Override
     public func string name()  { return &quot;Alice&quot;; }
-    public func string greet() { return $&quot;✨ Hi there, {name()}! ✨&quot;; }   // override
+
+    @Override
+    public func string greet() { return $&quot;✨ Hi there, {name()}! ✨&quot;; }   // override default
 }</code></pre>
 
 <h2 id="constants">Interface constants</h2>

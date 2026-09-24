@@ -183,6 +183,26 @@ Texture* Texture::Load(const std::string& path) {
 #endif
 }
 
+std::vector<int> LoadImagePixels(const std::string& path) {
+    std::vector<int> result;
+#if UME_HAS_STB
+    int w = 0, h = 0, channels = 0;
+    stbi_set_flip_vertically_on_load(0);  // Atlas building expects top-to-bottom layout
+    unsigned char* data = stbi_load(path.c_str(), &w, &h, &channels, 4);
+    if (!data) return result;
+    result.reserve(2 + w * h * 4);
+    result.push_back(w);
+    result.push_back(h);
+    for (int i = 0; i < w * h * 4; i++) {
+        result.push_back((int)data[i]);
+    }
+    stbi_image_free(data);
+#else
+    (void)path;
+#endif
+    return result;
+}
+
 void Texture::Bind(unsigned int slot) const {
     glActiveTexture(GL_TEXTURE0 + slot);
     glBindTexture(GL_TEXTURE_2D, id_);
@@ -451,7 +471,7 @@ bool Window::InitOpenGL() {
     glfwMakeContextCurrent((GLFWwindow*)native_window_);
     glfwSwapInterval(1);
     glfwSetInputMode((GLFWwindow*)native_window_, GLFW_STICKY_KEYS, GLFW_TRUE);
-    glfwSetInputMode((GLFWwindow*)native_window_, GLFW_STICKY_MOUSE_BUTTONS, GLFW_TRUE);
+    glfwSetInputMode((GLFWwindow*)native_window_, GLFW_STICKY_MOUSE_BUTTONS, GLFW_FALSE);
 
     if (!gladLoadGLLoader((void*(*)(const char*))glfwGetProcAddress)) {
         fprintf(stderr, "Failed to load OpenGL functions\n");
@@ -767,12 +787,80 @@ bool Window::IsKeyPressed(Key key) const {
         case Key::Down: glfwKey = GLFW_KEY_DOWN; break;
         case Key::Home: glfwKey = GLFW_KEY_HOME; break;
         case Key::End: glfwKey = GLFW_KEY_END; break;
+        case Key::F1: glfwKey = GLFW_KEY_F1; break;
+        case Key::F2: glfwKey = GLFW_KEY_F2; break;
+        case Key::F3: glfwKey = GLFW_KEY_F3; break;
+        case Key::F4: glfwKey = GLFW_KEY_F4; break;
+        case Key::F5: glfwKey = GLFW_KEY_F5; break;
+        case Key::F6: glfwKey = GLFW_KEY_F6; break;
+        case Key::F7: glfwKey = GLFW_KEY_F7; break;
+        case Key::F8: glfwKey = GLFW_KEY_F8; break;
+        case Key::F9: glfwKey = GLFW_KEY_F9; break;
+        case Key::F10: glfwKey = GLFW_KEY_F10; break;
+        case Key::F11: glfwKey = GLFW_KEY_F11; break;
+        case Key::F12: glfwKey = GLFW_KEY_F12; break;
         case Key::LeftShift: glfwKey = GLFW_KEY_LEFT_SHIFT; break;
         case Key::RightShift: glfwKey = GLFW_KEY_RIGHT_SHIFT; break;
         case Key::LeftControl: glfwKey = GLFW_KEY_LEFT_CONTROL; break;
         case Key::RightControl: glfwKey = GLFW_KEY_RIGHT_CONTROL; break;
         case Key::LeftAlt: glfwKey = GLFW_KEY_LEFT_ALT; break;
         case Key::RightAlt: glfwKey = GLFW_KEY_RIGHT_ALT; break;
+        case Key::Apostrophe: glfwKey = GLFW_KEY_APOSTROPHE; break;
+        case Key::Comma: glfwKey = GLFW_KEY_COMMA; break;
+        case Key::Minus: glfwKey = GLFW_KEY_MINUS; break;
+        case Key::Period: glfwKey = GLFW_KEY_PERIOD; break;
+        case Key::Slash: glfwKey = GLFW_KEY_SLASH; break;
+        case Key::Semicolon: glfwKey = GLFW_KEY_SEMICOLON; break;
+        case Key::Equal: glfwKey = GLFW_KEY_EQUAL; break;
+        case Key::LeftBracket: glfwKey = GLFW_KEY_LEFT_BRACKET; break;
+        case Key::Backslash: glfwKey = GLFW_KEY_BACKSLASH; break;
+        case Key::RightBracket: glfwKey = GLFW_KEY_RIGHT_BRACKET; break;
+        case Key::GraveAccent: glfwKey = GLFW_KEY_GRAVE_ACCENT; break;
+        case Key::NumLock: glfwKey = GLFW_KEY_NUM_LOCK; break;
+        case Key::Insert: glfwKey = GLFW_KEY_INSERT; break;
+        case Key::PageUp: glfwKey = GLFW_KEY_PAGE_UP; break;
+        case Key::PageDown: glfwKey = GLFW_KEY_PAGE_DOWN; break;
+        case Key::CapsLock: glfwKey = GLFW_KEY_CAPS_LOCK; break;
+        case Key::ScrollLock: glfwKey = GLFW_KEY_SCROLL_LOCK; break;
+        case Key::PrintScreen: glfwKey = GLFW_KEY_PRINT_SCREEN; break;
+        case Key::Pause: glfwKey = GLFW_KEY_PAUSE; break;
+        case Key::F13: glfwKey = GLFW_KEY_F13; break;
+        case Key::F14: glfwKey = GLFW_KEY_F14; break;
+        case Key::F15: glfwKey = GLFW_KEY_F15; break;
+        case Key::F16: glfwKey = GLFW_KEY_F16; break;
+        case Key::F17: glfwKey = GLFW_KEY_F17; break;
+        case Key::F18: glfwKey = GLFW_KEY_F18; break;
+        case Key::F19: glfwKey = GLFW_KEY_F19; break;
+        case Key::F20: glfwKey = GLFW_KEY_F20; break;
+        case Key::F21: glfwKey = GLFW_KEY_F21; break;
+        case Key::F22: glfwKey = GLFW_KEY_F22; break;
+        case Key::F23: glfwKey = GLFW_KEY_F23; break;
+        case Key::F24: glfwKey = GLFW_KEY_F24; break;
+        case Key::F25: glfwKey = GLFW_KEY_F25; break;
+        case Key::Kp0: glfwKey = GLFW_KEY_KP_0; break;
+        case Key::Kp1: glfwKey = GLFW_KEY_KP_1; break;
+        case Key::Kp2: glfwKey = GLFW_KEY_KP_2; break;
+        case Key::Kp3: glfwKey = GLFW_KEY_KP_3; break;
+        case Key::Kp4: glfwKey = GLFW_KEY_KP_4; break;
+        case Key::Kp5: glfwKey = GLFW_KEY_KP_5; break;
+        case Key::Kp6: glfwKey = GLFW_KEY_KP_6; break;
+        case Key::Kp7: glfwKey = GLFW_KEY_KP_7; break;
+        case Key::Kp8: glfwKey = GLFW_KEY_KP_8; break;
+        case Key::Kp9: glfwKey = GLFW_KEY_KP_9; break;
+        case Key::KpDecimal: glfwKey = GLFW_KEY_KP_DECIMAL; break;
+        case Key::KpDivide: glfwKey = GLFW_KEY_KP_DIVIDE; break;
+        case Key::KpMultiply: glfwKey = GLFW_KEY_KP_MULTIPLY; break;
+        case Key::KpSubtract: glfwKey = GLFW_KEY_KP_SUBTRACT; break;
+        case Key::KpAdd: glfwKey = GLFW_KEY_KP_ADD; break;
+        case Key::KpEnter: glfwKey = GLFW_KEY_KP_ENTER; break;
+        case Key::KpEqual: glfwKey = GLFW_KEY_KP_EQUAL; break;
+        case Key::LeftSuper: glfwKey = GLFW_KEY_LEFT_SUPER; break;
+        case Key::RightSuper: glfwKey = GLFW_KEY_RIGHT_SUPER; break;
+        case Key::Menu: glfwKey = GLFW_KEY_MENU; break;
+        case Key::World1: glfwKey = GLFW_KEY_WORLD_1; break;
+        case Key::World2: glfwKey = GLFW_KEY_WORLD_2; break;
+        case Key::Unknown: glfwKey = GLFW_KEY_UNKNOWN; break;
+
         default: return false;
     }
     

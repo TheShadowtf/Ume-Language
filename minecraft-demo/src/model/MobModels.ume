@@ -1,0 +1,131 @@
+// ═══════════════════════════════════════════════════════════════════════════
+// MobModels.ume — Model cache, registry, and part transform computation
+// ═══════════════════════════════════════════════════════════════════════════
+
+import std.math.*;
+import std.matrix.*;
+
+// (GeoModelLoader and MobFallbacks are included before this file)
+
+public class MobModelRegistry {
+    public MobModel[] models;
+    public bool[]     built;
+
+    public MobModelRegistry() {
+        models = new MobModel[MOB_MAX];
+        built  = new bool[MOB_MAX];
+        for (int i = 0; i < MOB_MAX; i++) built[i] = false;
+    }
+
+    public func MobModel get(int mobType) {
+        if (mobType < 0 || mobType >= MOB_MAX) return null;
+        if (!built[mobType]) {
+            MobModel m = null;
+            if (mobType == MOB_PIG) {
+                m = loadModelFromJson("assets/models/entity/pig.geo.json", 0.90, 0.44, 0.46);
+                if (m == null) m = buildPigFallback();
+            } else if (mobType == MOB_COW) {
+                m = loadModelFromJson("assets/models/entity/cow.geo.json", 0.40, 0.27, 0.15);
+                if (m == null) m = buildCowFallback();
+            } else if (mobType == MOB_CHICKEN) {
+                m = loadModelFromJson("assets/models/entity/chicken.geo.json", 0.95, 0.95, 0.92);
+                if (m == null) m = buildChickenFallback();
+            } else if (mobType == MOB_SHEEP) {
+                m = loadModelFromJson("assets/models/entity/sheep.geo.json", 0.92, 0.92, 0.92);
+                if (m == null) m = buildSheepFallback();
+            } else if (mobType == MOB_ZOMBIE) {
+                m = loadModelFromJson("assets/models/entity/zombie.geo.json", 0.45, 0.65, 0.40);
+                if (m == null) m = buildZombieFallback();
+            } else if (mobType == MOB_SKELETON) {
+                m = loadModelFromJson("assets/models/entity/skeleton.geo.json", 0.85, 0.85, 0.80);
+                if (m == null) m = buildSkeletonFallback();
+            } else if (mobType == MOB_SPIDER) {
+                m = loadModelFromJson("assets/models/entity/spider.geo.json", 0.18, 0.15, 0.20);
+                if (m == null) m = buildSpiderFallback();
+            } else if (mobType == MOB_CREEPER) {
+                m = loadModelFromJson("assets/models/entity/creeper.geo.json", 0.55, 0.75, 0.30);
+                if (m == null) m = buildCreeperFallback();
+            } else if (mobType == MOB_PLAYER) {
+                m = loadModelFromJson("assets/models/entity/player.geo.json", 0.85, 0.70, 0.55);
+                if (m == null) m = buildPlayerFallback();
+            }
+            if (m != null) {
+                if (mobType == MOB_PIG) {
+                    m.widthScale = 1.0; m.heightScale = 1.0;
+                } else if (mobType == MOB_COW) {
+                    m.widthScale = 1.05; m.heightScale = 1.10;
+                } else if (mobType == MOB_CHICKEN) {
+                    m.widthScale = 0.65; m.heightScale = 0.65;
+                } else if (mobType == MOB_SHEEP) {
+                    m.widthScale = 0.95; m.heightScale = 1.0;
+                } else if (mobType == MOB_ZOMBIE) {
+                    m.widthScale = 1.0; m.heightScale = 1.8;
+                } else if (mobType == MOB_SKELETON) {
+                    m.widthScale = 1.0; m.heightScale = 1.8;
+                } else if (mobType == MOB_SPIDER) {
+                    m.widthScale = 1.1; m.heightScale = 0.75;
+                } else if (mobType == MOB_CREEPER) {
+                    m.widthScale = 0.95; m.heightScale = 1.45;
+                } else if (mobType == MOB_PLAYER) {
+                    m.widthScale = 1.0; m.heightScale = 1.8;
+                }
+            }
+            models[mobType] = m;
+            built[mobType] = true;
+        }
+        return models[mobType];
+    }
+}
+
+public MobModelRegistry MobModels = new MobModelRegistry();
+
+// Compute per-part model matrix
+public func Matrix4x4 computePartMatrix(
+    MobPart part,
+    double mobX, double mobY, double mobZ,
+    float facingYaw,
+    float headPitch,
+    float walkPhase,
+    float walkAmp,
+    float modelScale
+) {
+    Matrix4x4 m = Matrix4x4.translation(
+        cast<float>(mobX),
+        cast<float>(mobY),
+        cast<float>(mobZ)
+    );
+
+    m = m * Matrix4x4.rotationY(facingYaw);
+    m = m * Matrix4x4.scale(modelScale, modelScale, modelScale);
+    m = m * Matrix4x4.translation(part.offsetX, part.offsetY, part.offsetZ);
+
+    if (part.anim == ANIM_LEG || part.anim == ANIM_LEG_INV ||
+        part.anim == ANIM_LEG_2 || part.anim == ANIM_LEG_INV_2) {
+        float phase = walkPhase;
+        if (part.anim == ANIM_LEG_INV)   phase = -walkPhase;
+        if (part.anim == ANIM_LEG_2)     phase = walkPhase + 1.5708;
+        if (part.anim == ANIM_LEG_INV_2) phase = -walkPhase + 1.5708;
+        float angle = Math.sin(phase) * (walkAmp * 0.55);
+        m = m * Matrix4x4.translation(0.0, part.pivotY, 0.0);
+        m = m * Matrix4x4.rotationX(angle);
+        m = m * Matrix4x4.translation(0.0, -part.pivotY, 0.0);
+    } else if (part.anim == ANIM_HEAD) {
+        float walkBob = Math.sin(walkPhase * 0.5) * 0.05 * walkAmp;
+        float angle = -headPitch + walkBob;
+        m = m * Matrix4x4.translation(0.0, part.pivotY, 0.0);
+        m = m * Matrix4x4.rotationX(angle);
+        m = m * Matrix4x4.translation(0.0, -part.pivotY, 0.0);
+    } else if (part.anim == ANIM_BODY_BOB) {
+        float bob = Math.abs(Math.sin(walkPhase)) * 0.04 * walkAmp;
+        m = m * Matrix4x4.translation(0.0, bob, 0.0);
+    } else if (part.anim == ANIM_WING || part.anim == ANIM_WING_INV) {
+        float phase = walkPhase * 2.5;
+        if (part.anim == ANIM_WING_INV) phase = -phase;
+        float angle = Math.sin(phase) * 0.7;
+        m = m * Matrix4x4.translation(0.0, part.pivotY, 0.0);
+        m = m * Matrix4x4.rotationZ(angle);
+        m = m * Matrix4x4.translation(0.0, -part.pivotY, 0.0);
+    }
+
+    return m;
+}

@@ -411,21 +411,11 @@ void Evaluator::registerGraphics(std::shared_ptr<Environment> env) {
         auto result = std::make_shared<ArrayInstance>();
         if (args.empty()) return Value::makeArray(result);
         std::string path = args[0].toString();
-#if UME_HAS_STB
-        int w = 0, h = 0, channels = 0;
-        stbi_set_flip_vertically_on_load(0);  // Don't flip for atlas building
-        unsigned char* data = stbi_load(path.c_str(), &w, &h, &channels, 4);
-        if (!data) return Value::makeArray(result);
-        result->elements.reserve(2 + w * h * 4);
-        result->elements.push_back(Value::makeInt(w));
-        result->elements.push_back(Value::makeInt(h));
-        for (int i = 0; i < w * h * 4; i++) {
-            result->elements.push_back(Value::makeInt((int)data[i]));
+        std::vector<int> pixels = Ume::Graphics::LoadImagePixels(path);
+        result->elements.reserve(pixels.size());
+        for (int val : pixels) {
+            result->elements.push_back(Value::makeInt(val));
         }
-        stbi_image_free(data);
-#else
-        (void)path;
-#endif
         return Value::makeArray(result);
     });
 

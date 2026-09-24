@@ -1,0 +1,170 @@
+// ═══════════════════════════════════════════════════════════════════════════
+// Blocks.ume — BlockRegistry and global instance
+// ═══════════════════════════════════════════════════════════════════════════
+
+// (BlockDef is included by Block.ume before this file)
+
+public class BlockRegistry {
+    public BlockDef[] defs;
+    public int        count;
+
+    public BlockRegistry() {
+        defs = new BlockDef[BLOCK_MAX_ID + 4];
+        count = 0;
+        registerDefaults();
+    }
+
+    public func void registerDef(BlockDef def) {
+        if (def.id < 0 || def.id >= defs.length()) return;
+        defs[def.id] = def;
+        if (def.id >= count) count = def.id + 1;
+    }
+
+    public func BlockDef get(int id) {
+        if (id < 0 || id >= count) return null;
+        return defs[id];
+    }
+
+    public func string name(int id) {
+        BlockDef d = get(id);
+        if (d == null) return "Unknown";
+        return d.name;
+    }
+
+    public func bool isSolid(int id) {
+        BlockDef d = get(id);
+        if (d == null) return false;
+        return d.isSolid();
+    }
+
+    public func bool isTransparent(int id) {
+        BlockDef d = get(id);
+        if (d == null) return true; // air is transparent
+        return d.isTransparent();
+    }
+
+    public func bool isAir(int id) { return id == 0; }
+
+    // ── Atlas UV helpers ────────────────────────────────────────────────────
+    public func float[] atlasUV(int col, int row) {
+        float[] uv = new float[4];
+        float tw = 1.0 / cast<float>(ATLAS_COLS);
+        float th = 1.0 / cast<float>(ATLAS_ROWS);
+        uv[0] = cast<float>(col) * tw;
+        uv[1] = cast<float>(row) * th;
+        uv[2] = uv[0] + tw;
+        uv[3] = uv[1] + th;
+        return uv;
+    }
+
+    // face: 0=top, 1=bottom, 2..5=side
+    public func float[] faceUV(int bt, int face) {
+        BlockDef d = get(bt);
+        if (d == null) return atlasUV(4, 2);
+        int col; int row;
+        if      (face == 0) { col = d.topCol;  row = d.topRow;  }
+        else if (face == 1) { col = d.botCol;  row = d.botRow;  }
+        else                { col = d.sideCol; row = d.sideRow; }
+        return atlasUV(col, row);
+    }
+
+    public func float faceAO(int face) {
+        if (face == 0) return 1.00;
+        if (face == 1) return 0.50;
+        if (face == 2) return 0.80;
+        if (face == 3) return 0.70;
+        if (face == 4) return 0.85;
+        return 0.65;
+    }
+
+    public func float[] hudColor(int bt) {
+        BlockDef d = get(bt);
+        float[] c = new float[3];
+        if (d == null) { c[0] = 0.5; c[1] = 0.5; c[2] = 0.5; return c; }
+        c[0] = d.hudR; c[1] = d.hudG; c[2] = d.hudB;
+        return c;
+    }
+
+    // ── Default block registrations (matches atlas layout) ──────────────────
+    private func void registerDefaults() {
+        registerDef(new BlockDef(BLOCK_GRASS, "Grass Block")
+            .setTop(0,0).setBottom(2,0).setSide(1,0)
+            .setHud(0.34, 0.76, 0.26).setHardness(3));
+
+        registerDef(new BlockDef(BLOCK_DIRT, "Dirt")
+            .setAll(2,0).setHud(0.52, 0.36, 0.20).setHardness(3));
+
+        registerDef(new BlockDef(BLOCK_STONE, "Stone")
+            .setAll(3,0).setHud(0.56, 0.55, 0.58).setHardness(10));
+
+        registerDef(new BlockDef(BLOCK_LOG, "Oak Log")
+            .setTop(4,1).setBottom(4,1).setSide(3,1)
+            .setHud(0.38, 0.27, 0.10).setHardness(8));
+
+        registerDef(new BlockDef(BLOCK_LEAVES, "Leaves")
+            .setAll(0,2).setHud(0.22, 0.50, 0.17)
+            .setFlags(BLOCK_FLAG_SOLID | BLOCK_FLAG_TRANSPARENT).setHardness(2));
+
+        registerDef(new BlockDef(BLOCK_SAND, "Sand")
+            .setAll(0,1).setHud(0.80, 0.73, 0.46).setHardness(3));
+
+        registerDef(new BlockDef(BLOCK_GRAVEL, "Gravel")
+            .setAll(1,1).setHud(0.48, 0.45, 0.43).setHardness(4));
+
+        registerDef(new BlockDef(BLOCK_WATER, "Water")
+            .setAll(2,2).setHud(0.20, 0.40, 0.85)
+            .setFlags(BLOCK_FLAG_LIQUID | BLOCK_FLAG_TRANSPARENT).setHardness(-1));
+
+        registerDef(new BlockDef(BLOCK_COBBLE, "Cobblestone")
+            .setAll(4,0).setHud(0.55, 0.55, 0.55).setHardness(12));
+
+        registerDef(new BlockDef(BLOCK_PLANKS, "Oak Planks")
+            .setAll(2,1).setHud(0.73, 0.58, 0.32).setHardness(6));
+
+        registerDef(new BlockDef(BLOCK_SNOW, "Snow")
+            .setAll(1,2).setHud(0.92, 0.94, 0.98).setHardness(2));
+
+        registerDef(new BlockDef(BLOCK_BEDROCK, "Bedrock")
+            .setAll(3,2).setHud(0.15, 0.15, 0.15)
+            .setFlags(BLOCK_FLAG_SOLID | BLOCK_FLAG_UNBREAKABLE).setHardness(-1));
+
+        registerDef(new BlockDef(BLOCK_GLASS, "Glass")
+            .setAll(3,0).setHud(0.65, 0.85, 0.95)
+            .setFlags(BLOCK_FLAG_SOLID | BLOCK_FLAG_TRANSPARENT).setHardness(2));
+
+        registerDef(new BlockDef(BLOCK_COAL_ORE, "Coal Ore")
+            .setAll(3,0).setHud(0.25, 0.25, 0.27).setHardness(12));
+
+        registerDef(new BlockDef(BLOCK_IRON_ORE, "Iron Ore")
+            .setAll(3,0).setHud(0.62, 0.52, 0.42).setHardness(14));
+
+        registerDef(new BlockDef(BLOCK_DIAMOND_ORE, "Diamond Ore")
+            .setAll(3,0).setHud(0.30, 0.80, 0.90).setHardness(18));
+
+        registerDef(new BlockDef(BLOCK_SNOW_BLOCK, "Snow Block")
+            .setAll(1,2).setHud(0.92, 0.94, 0.98).setHardness(3));
+
+        registerDef(new BlockDef(BLOCK_FLOWER, "Rose Flower")
+            .setSide(0,2).setHud(0.85, 0.30, 0.30)
+            .setFlags(BLOCK_FLAG_CROSS | BLOCK_FLAG_TRANSPARENT).setHardness(0));
+
+        registerDef(new BlockDef(BLOCK_BRICK, "Bricks")
+            .setAll(3,1).setHud(0.65, 0.30, 0.25).setHardness(8));
+
+        registerDef(new BlockDef(BLOCK_GOLD_ORE, "Gold Ore")
+            .setAll(3,0).setHud(0.85, 0.75, 0.20).setHardness(14));
+
+        registerDef(new BlockDef(BLOCK_CRAFTING, "Crafting Table")
+            .setTop(4,1).setBottom(2,1).setSide(3,1)
+            .setHud(0.55, 0.40, 0.20).setHardness(6));
+    }
+}
+
+// Global registry instance
+public BlockRegistry Blocks = new BlockRegistry();
+
+// Backward-compatible helper functions
+public func float[] getBlockFaceUV(int bt, int face) { return Blocks.faceUV(bt, face); }
+public func float getBlockFaceAO(int face)           { return Blocks.faceAO(face); }
+public func float[] getBlockHUDColor(int bt)         { return Blocks.hudColor(bt); }
+public func string getBlockName(int bt)              { return Blocks.name(bt); }

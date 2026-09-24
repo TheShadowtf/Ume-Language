@@ -1,0 +1,50 @@
+// ═══════════════════════════════════════════════════════════════════════════
+// ShaderManager.ume — GLSL shader loader from assets/shaders/
+// ═══════════════════════════════════════════════════════════════════════════
+
+public func string resolveAssetPath(string rel) {
+    if (FileSystem.exists(rel)) return rel;
+    string demoPath = "minecraft-demo/" + rel;
+    if (FileSystem.exists(demoPath)) return demoPath;
+    return rel;
+}
+
+public func string shaderPath(string name) {
+    return resolveAssetPath("assets/shaders/" + name);
+}
+
+private func string loadShaderSource(string path) {
+    if (FileSystem.exists(path)) {
+        string src = FileSystem.readText(path);
+        if (src.length() > 0) {
+            Console.println("[Shader] Loaded from file: " + path);
+            return src;
+        }
+    }
+    Console.println("[Shader] Error: Failed to load shader from file: " + path);
+    return "";
+}
+
+public func Shader buildTerrainShader() {
+    string tv = loadShaderSource(shaderPath("terrain.vert"));
+    string tf = loadShaderSource(shaderPath("terrain.frag"));
+    return new Shader(tv, tf);
+}
+
+public func Shader buildHUDShader() {
+    string hv = loadShaderSource(shaderPath("hud.vert"));
+    string hf = loadShaderSource(shaderPath("hud.frag"));
+    return new Shader(hv, hf);
+}
+
+public func Shader buildMobShader() {
+    string mv = loadShaderSource(shaderPath("mob.vert"));
+    string mf = loadShaderSource(shaderPath("mob.frag"));
+    return new Shader(mv, mf);
+}
+
+public func Shader buildCelestialShader() {
+    string cv = loadShaderSource(shaderPath("celestial.vert"));
+    string cf = loadShaderSource(shaderPath("celestial.frag"));
+    return new Shader(cv, cf);
+}

@@ -149,10 +149,62 @@ Console.println(s);   // Deleted</code></pre>
 }
 
 HttpStatus s = HttpStatus.Ok;
-Console.println(s.isSuccess());   // true
-
-HttpStatus s = HttpStatus.Ok;
 Console.println(s.isSuccess());   // true</code></pre>
+
+<h2 id="enum-java-style">Java-style enums (Constructors &amp; Fields)</h2>
+<p>Ume supports rich, Java-style enums where constants can be initialized with arguments via constructors. After the constants list (terminated by a semicolon <code>;</code>), you can declare private or public fields, a constructor matching the enum name, and instance or static methods.</p>
+<pre><code class="language-ume">public enum Transmission {
+    MANUAL(&quot;Stick Shift&quot;, 6),
+    AUTOMATIC(&quot;Direct Drive&quot;, 1),
+    CVT(&quot;Continuously Variable&quot;, 0);
+
+    private string description;
+    private int gears;
+
+    // Constructor invoked for each constant
+    public Transmission(string desc, int g) {
+        this.description = desc;
+        this.gears = g;
+    }
+
+    public func string getDescription() {
+        return this.description;
+    }
+
+    public func int getGears() {
+        return this.gears;
+    }
+
+    public func string getDetails() {
+        return this.name() + &quot; (&quot; + this.description + &quot;, &quot; + this.gears + &quot; gears)&quot;;
+    }
+}
+
+// Accessing constants and calling methods
+Transmission t = Transmission.MANUAL;
+Console.println(t.name());           // &quot;MANUAL&quot;
+Console.println(t.ordinal());        // 0
+Console.println(t.getDetails());     // &quot;MANUAL (Stick Shift, 6 gears)&quot;</code></pre>
+
+<h2 id="enum-builtin-methods">Built-in enum methods &amp; iteration</h2>
+<p>Every enum in Ume provides standard instance methods, and the enum type itself provides static utility methods:</p>
+<ul>
+  <li><code>constant.name()</code> — returns the string name of the constant (e.g. <code>&quot;MANUAL&quot;</code>).</li>
+  <li><code>constant.ordinal()</code> — returns the 0-based integer index of the constant.</li>
+  <li><code>constant.toString()</code> — returns the string representation.</li>
+  <li><code>EnumType.values()</code> — static method returning an array of all defined constants for iteration.</li>
+  <li><code>EnumType.valueOf(string name)</code> — static method looking up an enum constant by its exact string identifier.</li>
+</ul>
+
+<pre><code class="language-ume">// Iterating over all enum values
+var all = Transmission.values();
+foreach (Transmission item in all) {
+    Console.println(item.name() + &quot; -&gt; &quot; + item.getDetails());
+}
+
+// Looking up an enum constant by name
+Transmission found = Transmission.valueOf(&quot;AUTOMATIC&quot;);
+Console.println(found.getGears());   // 1</code></pre>
 
 <h2 id="enum-switch">Switching on enums</h2>
 <p>Enums and <code>switch</code> are a natural pair. You can switch on an enum value and dispatch to per-value behavior. A <code>default</code> case is recommended for forward compatibility (new values added later).</p>

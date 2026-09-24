@@ -1,0 +1,201 @@
+// ═══════════════════════════════════════════════════════════════════════════
+// Mob.ume — Base living Mob class with AI and animation loop
+// ═══════════════════════════════════════════════════════════════════════════
+
+import std.math.*;
+import std.time.*;
+
+// (Block, MobPart, EntityBase, IGoal are included before this file)
+
+public class Mob extends LivingEntity {
+    public int          mobType;
+    public GoalSelector goalSelector;
+
+    // Movement & Wander state
+    public double wanderTimer;
+    public double wanderDirX;
+    public double wanderDirZ;
+    public Random rng;
+    public double lookTimer;
+    public double lookCooldown;
+
+    // Animation state
+    public float  walkPhase;
+    public float  walkAmp;
+    public float  headPitch;
+    public float  targetPitch;
+
+    // Per-type special state
+    public double fuseTimer;     // creeper only
+    public bool   exploded;      // creeper only
+    public double flapTimer;     // chicken only
+
+    // Model & assets
+    public float  modelScale;
+    public int    dropBlockId;
+    public int    dropCount;
+    public string modelPath;
+    public string texturePath;
+
+    // AI Context (updated per frame before goal execution)
+    public double currentDt;
+    public double playerX;
+    public double playerY;
+    public double playerZ;
+    public bool   isNightTime;
+    public int    groundBlockId;
+    public bool   hasPlayerTarget;
+    public double targetDist;
+    public bool   isBlockedAhead;
+    public double suggestedAngle;
+    public bool   hasSuggestedAngle;
+
+    public Mob(double sx, double sy, double sz, int type) {
+        super(sx, sy, sz, 10);
+        mobType = type;
+        rng = new Random(System.currentTimeMillis() + cast<long>(type * 1000));
+        goalSelector = new GoalSelector();
+
+        wanderTimer = 0.0;
+        wanderDirX = 0.0; wanderDirZ = 0.0;
+        lookTimer = 0.0;
+        lookCooldown = 0.0;
+        walkPhase = 0.0;
+        facingYaw = cast<float>((rng.nextDouble() - 0.5) * 6.2831853);
+        targetYaw = facingYaw;
+        walkAmp = 0.0;
+        headPitch = 0.0;
+        targetPitch = 0.0;
+        isBlockedAhead = false;
+        suggestedAngle = 0.0;
+        hasSuggestedAngle = false;
+
+        fuseTimer = 0.0;
+        exploded = false;
+        flapTimer = 0.0;
+        modelScale = 1.0;
+        dropBlockId = 0;
+        dropCount = 0;
+        modelPath = "";
+        texturePath = "";
+
+        hasPlayerTarget = false;
+        targetDist = 999.0;
+
+        initDefaults(type);
+    }
+
+    public func void initDefaults(int type) {
+        if (type == MOB_PIG) {
+            maxHealth = 10; health = 10;
+            width = 0.9; height = 0.9;
+            dropBlockId = BLOCK_PLANKS; dropCount = 1;
+            modelPath = "assets/models/entity/pig.geo.json";
+            texturePath = "assets/textures/entity/pig.png";
+        } else if (type == MOB_COW) {
+            maxHealth = 10; health = 10;
+            width = 0.9; height = 1.3;
+            dropBlockId = BLOCK_LEAVES; dropCount = 2;
+            modelPath = "assets/models/entity/cow.geo.json";
+            texturePath = "assets/textures/entity/cow.png";
+        } else if (type == MOB_CHICKEN) {
+            maxHealth = 6; health = 6;
+            width = 0.5; height = 0.7; modelScale = 0.7;
+            dropBlockId = BLOCK_SNOW; dropCount = 1;
+            modelPath = "assets/models/entity/chicken.geo.json";
+            texturePath = "assets/textures/entity/chicken.png";
+        } else if (type == MOB_SHEEP) {
+            maxHealth = 10; health = 10;
+            width = 0.9; height = 1.3;
+            dropBlockId = BLOCK_PLANKS; dropCount = 1;
+            modelPath = "assets/models/entity/sheep.geo.json";
+            texturePath = "assets/textures/entity/sheep.png";
+        } else if (type == MOB_ZOMBIE) {
+            maxHealth = 20; health = 20;
+            width = 0.6; height = 1.8;
+            dropBlockId = BLOCK_DIRT; dropCount = 1;
+            modelPath = "assets/models/entity/zombie.geo.json";
+            texturePath = "assets/textures/entity/zombie.png";
+        } else if (type == MOB_SKELETON) {
+            maxHealth = 16; health = 16;
+            width = 0.6; height = 1.8;
+            dropBlockId = BLOCK_COBBLE; dropCount = 1;
+            modelPath = "assets/models/entity/skeleton.geo.json";
+            texturePath = "assets/textures/entity/skeleton.png";
+        } else if (type == MOB_SPIDER) {
+            maxHealth = 16; health = 16;
+            width = 1.4; height = 0.8; modelScale = 0.85;
+            dropBlockId = BLOCK_DIRT; dropCount = 1;
+            modelPath = "assets/models/entity/spider.geo.json";
+            texturePath = "assets/textures/entity/spider.png";
+        } else if (type == MOB_CREEPER) {
+            maxHealth = 20; health = 20;
+            width = 0.6; height = 1.7;
+            dropBlockId = BLOCK_COAL_ORE; dropCount = 1;
+            modelPath = "assets/models/entity/creeper.geo.json";
+            texturePath = "assets/textures/entity/creeper.png";
+        } else if (type == MOB_PLAYER) {
+            maxHealth = 20; health = 20;
+            width = 0.6; height = 1.8;
+            modelPath = "assets/models/entity/player.geo.json";
+            texturePath = "assets/textures/entity/player.png";
+        }
+    }
+
+    public func void registerGoals() {}
+
+    @Override
+    public func void tick(double dt) {}
+
+    // Update per-frame AI & animation
+    public func void update(double dt, double px, double py, double pz, bool isNight, int groundBlock) {
+        if (!alive) return;
+
+        currentDt = dt;
+        playerX = px; playerY = py; playerZ = pz;
+        isNightTime = isNight;
+        groundBlockId = groundBlock;
+
+        double dx = px - x; double dy = py - y; double dz = pz - z;
+        targetDist = Math.sqrt(dx*dx + dy*dy + dz*dz);
+        hasPlayerTarget = (targetDist < 16.0);
+
+        if (hurtFlash > 0.0) hurtFlash -= dt;
+        if (lookCooldown > 0.0) lookCooldown -= dt;
+
+        // Burn hostile mobs in daylight if exposed
+        if (!isNight && (mobType == MOB_ZOMBIE || mobType == MOB_SKELETON) && groundBlock != BLOCK_WATER) {
+            burnTimer += dt;
+            if (burnTimer > 1.0) {
+                takeDamage(1);
+                burnTimer = 0.0;
+            }
+        }
+
+        // Run AI goal selector
+        goalSelector.tick();
+
+        // When actively moving, targetYaw MUST strictly align with movement direction
+        double speed = Math.sqrt(vx*vx + vz*vz);
+        if (speed > 0.003) {
+            targetYaw = cast<float>(Math.atan2(vx, -vz));
+        }
+
+        // Smooth yaw rotation toward targetYaw
+        float yawDiff = targetYaw - facingYaw;
+        while (yawDiff > 3.14159265)  yawDiff -= 6.2831853;
+        while (yawDiff < -3.14159265) yawDiff += 6.2831853;
+        facingYaw += yawDiff * 0.15;
+
+        // Smooth head pitch rotation toward targetPitch
+        headPitch += (targetPitch - headPitch) * 0.15;
+
+        // Walk animation: advance phase proportionally to horizontal velocity (natural walk cadence)
+        if (speed > 0.001) {
+            walkPhase += cast<float>(speed * 7.0);
+            walkAmp += (1.0 - walkAmp) * 0.2;
+        } else {
+            walkAmp *= 0.85;
+        }
+    }
+}

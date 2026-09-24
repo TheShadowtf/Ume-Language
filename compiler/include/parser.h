@@ -78,7 +78,8 @@ private:
     ASTNodePtr parseImportDecl();
     ASTNodePtr parseFuncDecl(AccessModifier access, bool isStatic, bool isAbstract,
                              bool isOverride, bool isFinal);
-    ASTNodePtr parseClassDecl(AccessModifier access);
+    ASTNodePtr parseClassDecl(AccessModifier access, bool isAbstract = false,
+                              bool isFinal = false, bool isStatic = false);
     ASTNodePtr parseInterfaceDecl(AccessModifier access);
     ASTNodePtr parseEnumDecl(AccessModifier access);
     ASTNodePtr parseStructDecl();

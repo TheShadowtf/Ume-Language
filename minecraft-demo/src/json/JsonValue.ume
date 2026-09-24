@@ -1,0 +1,74 @@
+// ═══════════════════════════════════════════════════════════════════════════
+// JsonValue.ume — JSON AST Node & Type Definitions
+// ═══════════════════════════════════════════════════════════════════════════
+
+import std.collections.*;
+
+public int JSON_NULL   = 0;
+public int JSON_BOOL   = 1;
+public int JSON_NUMBER = 2;
+public int JSON_STRING = 3;
+public int JSON_ARRAY  = 4;
+public int JSON_OBJECT = 5;
+
+public class JsonValue {
+    public int             type;
+    public bool            boolVal;
+    public double          numVal;
+    public string          strVal;
+    public List<JsonValue> arrVal;
+    public List<string>    objKeys;
+    public List<JsonValue> objVals;
+
+    public JsonValue(int t) {
+        type = t;
+        boolVal = false;
+        numVal = 0.0;
+        strVal = "";
+        arrVal = new List<JsonValue>();
+        objKeys = new List<string>();
+        objVals = new List<JsonValue>();
+    }
+
+    public func JsonValue get(string key) {
+        if (type != JSON_OBJECT) return null;
+        for (int i = 0; i < objKeys.size(); i++) {
+            if (objKeys.get(i) == key) return objVals.get(i);
+        }
+        return null;
+    }
+
+    public func bool has(string key) {
+        return get(key) != null;
+    }
+
+    public func string getString(string key, string defVal) {
+        JsonValue v = get(key);
+        if (v == null || v.type != JSON_STRING) return defVal;
+        return v.strVal;
+    }
+
+    public func double getDouble(string key, double defVal) {
+        JsonValue v = get(key);
+        if (v == null || v.type != JSON_NUMBER) return defVal;
+        return v.numVal;
+    }
+
+    public func int getInt(string key, int defVal) {
+        JsonValue v = get(key);
+        if (v == null || v.type != JSON_NUMBER) return defVal;
+        return cast<int>(v.numVal);
+    }
+
+    public func bool getBool(string key, bool defVal) {
+        JsonValue v = get(key);
+        if (v == null || v.type != JSON_BOOL) return defVal;
+        return v.boolVal;
+    }
+
+    public func List<JsonValue> getArray(string key) {
+        JsonValue v = get(key);
+        if (v == null || v.type != JSON_ARRAY) return null;
+        return v.arrVal;
+    }
+}

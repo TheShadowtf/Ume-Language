@@ -1,0 +1,387 @@
+// ═══════════════════════════════════════════════════════════════════════════
+// Player.ume — Per-frame input handling, fixed-step physics, and player actions
+// ═══════════════════════════════════════════════════════════════════════════
+//
+// All functions take GameState as first arg so they can read/write state
+// without returning multiple values.
+//
+// Call order each frame:
+//   handleInput(...)         ← once per frame (ESC, Tab, mouse look, hotkeys)
+//   [fixed step loop]:
+//     gs.tickTimers(dt)
+//     updateHotbar(...)      ← fly toggle + slot 1-9
+//     updatePhysics(...)     ← WASD, gravity, AABB collision, hunger
+//     handlePlayerActions(.) ← block break/place, mob attack
+
+import std.math.*;
+
+// ── Per-frame input ────────────────────────────────────────────────────────────
+public func void handleInput(GameState gs, Window win, Camera cam, World world,
+                              InventoryScreen invScreen, ItemStack[] hotbar, ItemStack[] inventory) {
+    // ESC — toggle pause menu / resume
+    if (win.isKeyPressed(Key.Escape) && gs.setTimer <= 0) {
+        if      (gs.gameState == 1) { gs.gameState = 2; gs.grabbed = false; win.setCursorGrabbed(false); }
+        else if (gs.gameState == 2) { gs.gameState = 1; gs.grabbed = true;  win.setCursorGrabbed(true);  }
+        else if (gs.gameState == 3) { gs.gameState = 1; gs.grabbed = true;  win.setCursorGrabbed(true);  }
+        gs.setTimer = 15;
+    }
+
+    // Tab — grab / ungrab mouse
+    if (gs.gameState == 1 && win.isKeyPressed(Key.Tab) && gs.tabTimer <= 0) {
+        gs.grabbed = !gs.grabbed;
+        win.setCursorGrabbed(gs.grabbed);
+        gs.tabTimer = 15;
+    }
+
+    // Mouse look
+    if (gs.gameState == 1 && gs.grabbed) {
+        float[] md = win.getMouseDelta();
+        cam.yaw   -= md[0] * gs.mouseSens;
+        cam.pitch -= md[1] * gs.mouseSens;
+    }
+    if (cam.pitch >  1.50) cam.pitch =  1.50;
+    if (cam.pitch < -1.50) cam.pitch = -1.50;
+
+    // Hotkeys (only when playing and mouse grabbed)
+    bool canControl = (gs.gameState == 1 && gs.grabbed);
+    if (!canControl) return;
+
+    // E — open inventory
+    if (win.isKeyPressed(Key.E) && gs.invTimer <= 0) {
+        invScreen.syncFrom(hotbar, inventory, gs.hotbarSel);
+        gs.gameState = 3; gs.grabbed = false; win.setCursorGrabbed(false); gs.invTimer = 15;
+    }
+    // F3 — debug overlay
+    if (win.isKeyPressed(Key.F3) && gs.dbgTimer <= 0) {
+        gs.showDebug = !gs.showDebug; gs.dbgTimer = 15;
+    }
+    // L / K — fast-forward / rewind time (debug)
+    if (win.isKeyPressed(Key.L) && gs.dbgTimer <= 0) {
+        gs.worldTime += 0.041666; if (gs.worldTime >= 1.0) gs.worldTime -= 1.0; gs.dbgTimer = 10;
+    }
+    if (win.isKeyPressed(Key.K) && gs.dbgTimer <= 0) {
+        gs.worldTime -= 0.041666; if (gs.worldTime < 0.0) gs.worldTime += 1.0; gs.dbgTimer = 10;
+    }
+    // F5 — save world
+    if (win.isKeyPressed(Key.F5) && gs.saveTimer <= 0) {
+        if (world.currentWorldId.length() > 0) {
+            saveGameById(world.currentWorldId, gs.px, gs.py, gs.pz, cam.yaw, cam.pitch, gs.health, hotbar, inventory, gs.worldTime, world.seed);
+            world.saveWorldChunksById(world.currentWorldId);
+        } else {
+            saveGame(gs.selectedSlot, gs.px, gs.py, gs.pz, cam.yaw, cam.pitch, gs.health, hotbar, inventory, gs.worldTime, world.seed);
+            world.saveWorldChunks(gs.selectedSlot);
+        }
+        gs.saveTimer = 30;
+    }
+    // F9 - load world
+    if (win.isKeyPressed(Key.F9) && gs.loadTimer <= 0) {
+        float[] ld = new float[6]; float[] lt = new float[1]; int[] lseed = new int[1];
+        bool loaded = false;
+        if (world.currentWorldId.length() > 0) {
+            loaded = loadGameById(world.currentWorldId, ld, hotbar, inventory, lt, lseed);
+        } else {
+            loaded = loadGame(gs.selectedSlot, ld, hotbar, inventory, lt, lseed);
+        }
+        if (loaded) {
+            gs.px = cast<double>(ld[0]); gs.py = cast<double>(ld[1]); gs.pz = cast<double>(ld[2]);
+            cam.yaw   = cast<double>(ld[3]); cam.pitch = cast<double>(ld[4]);
+            gs.health = cast<int>(ld[5]);
+            gs.worldTime = cast<double>(lt[0]);
+            int loadedSeed = lseed[0];
+            if (loadedSeed == 0) loadedSeed = world.seed;
+            if (world.currentWorldId.length() > 0) {
+                world.initWorld(loadedSeed, world.currentWorldId);
+                world.loadWorldChunksById(world.currentWorldId);
+            } else {
+                world.initWorld(loadedSeed, gs.selectedSlot);
+                world.loadWorldChunks(gs.selectedSlot);
+            }
+            for (int cx = -1; cx <= 1; cx++) {
+                for (int cz = -1; cz <= 1; cz++) { world.loadChunkImmediate(cx, cz); }
+            }
+            for (int ii = 0; ii < world.count; ii++) world.buildMesh(ii);
+            if (world.isPlayerStuck(gs.px, gs.py, gs.pz)) {
+                gs.py = world.getSpawnY(gs.px, gs.pz);
+            }
+            cam.x = gs.px; cam.y = gs.py + 1.62; cam.z = gs.pz;
+        }
+        gs.loadTimer = 30;
+    }
+    // R — respawn (when dead)
+    if (gs.dead && win.isKeyPressed(Key.R) && gs.respawnTimer <= 0) {
+        gs.px = 0.5; gs.pz = 0.5;
+        gs.py = world.getSpawnY(gs.px, gs.pz);
+        cam.x = gs.px; cam.y = gs.py + 1.62; cam.z = gs.pz;
+        gs.vx = 0.0; gs.vy = 0.0; gs.vz = 0.0;
+        gs.health = gs.maxHealth; gs.hunger = gs.maxHunger;
+        gs.dead = false; gs.gameState = 1;
+        gs.grabbed = true; win.setCursorGrabbed(true);
+        gs.respawnTimer = 30;
+    }
+}
+
+// ── Fixed-step: fly toggle + hotbar slot 1–9 ──────────────────────────────────
+public func void updateHotbar(GameState gs, Window win) {
+    bool canControl = (gs.gameState == 1 && gs.grabbed && !gs.dead);
+    if (!canControl) return;
+
+    // F — toggle fly mode
+    if (win.isKeyPressed(Key.F) && gs.flyTimer <= 0) {
+        gs.flying = !gs.flying;
+        if (gs.flying) { gs.vy = 0.0; gs.vx = 0.0; gs.vz = 0.0; }
+        gs.flyTimer = 18;
+    }
+
+    // Digit keys → hotbar slot
+    if (win.isKeyPressed(Key.Key1)&&gs.d1<=0){gs.hotbarSel=0;gs.d1=12;gs.heldItemTimer=2.0;}
+    if (win.isKeyPressed(Key.Key2)&&gs.d2<=0){gs.hotbarSel=1;gs.d2=12;gs.heldItemTimer=2.0;}
+    if (win.isKeyPressed(Key.Key3)&&gs.d3<=0){gs.hotbarSel=2;gs.d3=12;gs.heldItemTimer=2.0;}
+    if (win.isKeyPressed(Key.Key4)&&gs.d4<=0){gs.hotbarSel=3;gs.d4=12;gs.heldItemTimer=2.0;}
+    if (win.isKeyPressed(Key.Key5)&&gs.d5<=0){gs.hotbarSel=4;gs.d5=12;gs.heldItemTimer=2.0;}
+    if (win.isKeyPressed(Key.Key6)&&gs.d6<=0){gs.hotbarSel=5;gs.d6=12;gs.heldItemTimer=2.0;}
+    if (win.isKeyPressed(Key.Key7)&&gs.d7<=0){gs.hotbarSel=6;gs.d7=12;gs.heldItemTimer=2.0;}
+    if (win.isKeyPressed(Key.Key8)&&gs.d8<=0){gs.hotbarSel=7;gs.d8=12;gs.heldItemTimer=2.0;}
+    if (win.isKeyPressed(Key.Key9)&&gs.d9<=0){gs.hotbarSel=8;gs.d9=12;gs.heldItemTimer=2.0;}
+}
+
+// ── Fixed-step: movement, gravity, AABB collision, hunger/starvation ──────────
+public func void updatePhysics(GameState gs, Window win, Camera cam, World world) {
+    if (gs.gameState == 0 || gs.dead) return;
+
+    double fw  = -Math.sin(cam.yaw); double fwz = -Math.cos(cam.yaw);
+    double rgt =  Math.cos(cam.yaw); double rgz = -Math.sin(cam.yaw);
+    bool canControl = (gs.gameState == 1 && gs.grabbed);
+
+    // ── Fly mode ──
+    if (gs.flying && canControl) {
+        double ms = 0.13;
+        double fwx = cam.fwdX(); double fwy = cam.fwdY(); double fwz2 = cam.fwdZ();
+        if (win.isKeyPressed(Key.W)) { gs.px += fwx*ms; gs.py += fwy*ms; gs.pz += fwz2*ms; }
+        if (win.isKeyPressed(Key.S)) { gs.px -= fwx*ms; gs.py -= fwy*ms; gs.pz -= fwz2*ms; }
+        if (win.isKeyPressed(Key.D)) { gs.px += rgt*ms; gs.pz += rgz*ms; }
+        if (win.isKeyPressed(Key.A)) { gs.px -= rgt*ms; gs.pz -= rgz*ms; }
+        gs.vy = 0.0; gs.vx = 0.0; gs.vz = 0.0;
+        if (win.isKeyPressed(Key.Space))     gs.py += ms;
+        if (win.isKeyPressed(Key.LeftShift)) gs.py -= ms;
+    } else {
+        // ── Ground movement with lerp ──
+        double targetVX = 0.0; double targetVZ = 0.0;
+        if (canControl) {
+            if (win.isKeyPressed(Key.W)) { targetVX += fw; targetVZ += fwz; }
+            if (win.isKeyPressed(Key.S)) { targetVX -= fw; targetVZ -= fwz; }
+            if (win.isKeyPressed(Key.D)) { targetVX += rgt; targetVZ += rgz; }
+            if (win.isKeyPressed(Key.A)) { targetVX -= rgt; targetVZ -= rgz; }
+        }
+        double len = Math.sqrt(targetVX*targetVX + targetVZ*targetVZ);
+        if (len > 0.0) { targetVX /= len; targetVZ /= len; }
+        bool sprinting = canControl && win.isKeyPressed(Key.LeftControl) && gs.onGround;
+        double walkSpd = sprinting ? 0.12 : 0.075;
+        targetVX *= walkSpd; targetVZ *= walkSpd;
+        double lerp = gs.onGround ? 0.22 : 0.05;
+        gs.vx = gs.vx + (targetVX - gs.vx) * lerp;
+        gs.vz = gs.vz + (targetVZ - gs.vz) * lerp;
+
+        // ── Jump & gravity ──
+        bool jump = win.isKeyPressed(Key.Space);
+        if (canControl && gs.onGround && jump) {
+            gs.vy = 0.155; gs.onGround = false;
+        }
+        if (!gs.onGround) {
+            gs.vy -= 0.009;
+            if (gs.vy < -0.80) gs.vy = -0.80;
+        }
+
+        // ── AABB collision ──
+        double halfW = 0.3;
+        double pMinX = gs.px - halfW; double pMaxX = gs.px + halfW;
+        double pMinZ = gs.pz - halfW; double pMaxZ = gs.pz + halfW;
+        double pMinY = gs.py;         double pMaxY = gs.py + 1.8;
+        double oldVy = gs.vy;
+
+        // X
+        gs.px += gs.vx; pMinX = gs.px-halfW; pMaxX = gs.px+halfW;
+        if (gs.vx > 0) {
+            int bx = cast<int>(Math.floor(pMaxX));
+            for (int bz = cast<int>(Math.floor(pMinZ)); bz <= cast<int>(Math.floor(pMaxZ)); bz++) {
+                for (int by = cast<int>(Math.floor(pMinY)); by <= cast<int>(Math.floor(pMaxY)); by++) {
+                    if (Blocks.isSolid(world.getWorldBlock(bx, by, bz))) {
+                        gs.px = cast<double>(bx) - halfW - 0.001;
+                        gs.vx = 0; pMinX=gs.px-halfW; pMaxX=gs.px+halfW; break;
+                    }
+                }
+            }
+        } else if (gs.vx < 0) {
+            int bx = cast<int>(Math.floor(pMinX));
+            for (int bz = cast<int>(Math.floor(pMinZ)); bz <= cast<int>(Math.floor(pMaxZ)); bz++) {
+                for (int by = cast<int>(Math.floor(pMinY)); by <= cast<int>(Math.floor(pMaxY)); by++) {
+                    if (Blocks.isSolid(world.getWorldBlock(bx, by, bz))) {
+                        gs.px = cast<double>(bx) + 1.0 + halfW + 0.001;
+                        gs.vx = 0; pMinX=gs.px-halfW; pMaxX=gs.px+halfW; break;
+                    }
+                }
+            }
+        }
+
+        // Z
+        gs.pz += gs.vz; pMinZ = gs.pz-halfW; pMaxZ = gs.pz+halfW;
+        if (gs.vz > 0) {
+            int bz = cast<int>(Math.floor(pMaxZ));
+            for (int bx = cast<int>(Math.floor(pMinX)); bx <= cast<int>(Math.floor(pMaxX)); bx++) {
+                for (int by = cast<int>(Math.floor(pMinY)); by <= cast<int>(Math.floor(pMaxY)); by++) {
+                    if (Blocks.isSolid(world.getWorldBlock(bx, by, bz))) {
+                        gs.pz = cast<double>(bz) - halfW - 0.001;
+                        gs.vz = 0; pMinZ=gs.pz-halfW; pMaxZ=gs.pz+halfW; break;
+                    }
+                }
+            }
+        } else if (gs.vz < 0) {
+            int bz = cast<int>(Math.floor(pMinZ));
+            for (int bx = cast<int>(Math.floor(pMinX)); bx <= cast<int>(Math.floor(pMaxX)); bx++) {
+                for (int by = cast<int>(Math.floor(pMinY)); by <= cast<int>(Math.floor(pMaxY)); by++) {
+                    if (Blocks.isSolid(world.getWorldBlock(bx, by, bz))) {
+                        gs.pz = cast<double>(bz) + 1.0 + halfW + 0.001;
+                        gs.vz = 0; pMinZ=gs.pz-halfW; pMaxZ=gs.pz+halfW; break;
+                    }
+                }
+            }
+        }
+
+        // Y
+        gs.py += gs.vy; pMinY = gs.py; pMaxY = gs.py + 1.8; gs.onGround = false;
+        if (gs.vy <= 0) {
+            int by = cast<int>(Math.floor(pMinY));
+            for (int bx = cast<int>(Math.floor(pMinX)); bx <= cast<int>(Math.floor(pMaxX)); bx++) {
+                for (int bz = cast<int>(Math.floor(pMinZ)); bz <= cast<int>(Math.floor(pMaxZ)); bz++) {
+                    if (Blocks.isSolid(world.getWorldBlock(bx, by, bz))) {
+                        if (oldVy < -0.35) {
+                            int dmg = cast<int>((-oldVy - 0.35) * 28.0);
+                            gs.health -= dmg; gs.hurtTimer = 1.0; gs.regenTimer = 5.0;
+                        }
+                        gs.py = cast<double>(by) + 1.0 + 0.001;
+                        gs.vy = 0; gs.onGround = true;
+                        pMinY = gs.py; pMaxY = gs.py + 1.8; break;
+                    }
+                }
+            }
+        } else if (gs.vy > 0) {
+            int by = cast<int>(Math.floor(pMaxY));
+            for (int bx = cast<int>(Math.floor(pMinX)); bx <= cast<int>(Math.floor(pMaxX)); bx++) {
+                for (int bz = cast<int>(Math.floor(pMinZ)); bz <= cast<int>(Math.floor(pMaxZ)); bz++) {
+                    if (Blocks.isSolid(world.getWorldBlock(bx, by, bz))) {
+                        gs.py = cast<double>(by) - 1.8 - 0.001;
+                        gs.vy = 0; pMaxY = gs.py + 1.8; break;
+                    }
+                }
+            }
+        }
+
+        // ── Hunger drain (movement-based) ──
+        if (gs.hungerTimer <= 0 && gs.hunger > 0) {
+            gs.hungerTimer = 6.0;
+            double sp = Math.sqrt(gs.vx*gs.vx + gs.vz*gs.vz);
+            if (sp > 0.01) gs.hunger--;
+        }
+        // ── Starvation damage ──
+        if (gs.hunger <= 0 && gs.starveTimer <= 0) {
+            gs.starveTimer = 4.0;
+            if (gs.health > 1) { gs.health--; gs.hurtTimer = 0.5; }
+        }
+        // ── Regen from food ──
+        if (gs.health < gs.maxHealth && gs.regenTimer <= 0 && gs.hurtTimer <= 0 && gs.hunger >= 14) {
+            gs.health++; gs.regenTimer = 3.0; gs.hunger--;
+        }
+        if (gs.health <= 0) { gs.dead = true; gs.gameState = 4; }
+    }
+
+    cam.x = gs.px; cam.y = gs.py + 1.62; cam.z = gs.pz;
+}
+
+// ── Fixed-step: block break / place + mob attack via raycast ─────────────────
+public func void handlePlayerActions(GameState gs, Window win, Camera cam, World world,
+                                      ItemStack[] hotbar, ItemStack[] inventory) {
+    bool canControl = (gs.gameState == 1 && gs.grabbed);
+    bool mouseLeft  = win.isMouseButtonPressed(MouseButton.Left);
+    bool mouseRight = win.isMouseButtonPressed(MouseButton.Right);
+
+    // ── Left click: attack mob or break block ──
+    if (canControl && mouseLeft && gs.breakTimer <= 0 && gs.tabTimer <= 0 && gs.attackTimer <= 0) {
+        double dx = cam.fwdX(); double dy = cam.fwdY(); double dz = cam.fwdZ();
+
+        // Try mob attack first
+        bool hitMob = false;
+        for (int mi = 0; mi < world.mobCount; mi++) {
+            Mob m = world.mobs[mi];
+            if (!m.alive) continue;
+            double mdx = m.x - cam.x; double mdy = m.y - cam.y; double mdz = m.z - cam.z;
+            double dist2 = mdx*mdx + mdy*mdy + mdz*mdz;
+            if (dist2 < 16.0) {
+                double dot = mdx*dx + mdy*dy + mdz*dz;
+                if (dot / Math.sqrt(dist2) > 0.7) {
+                    m.takeDamage(5); hitMob = true; gs.attackTimer = 20; break;
+                }
+            }
+        }
+
+        // DDA block raycast
+        if (!hitMob) {
+            int bx = cast<int>(Math.floor(cam.x));
+            int by = cast<int>(Math.floor(cam.y));
+            int bz = cast<int>(Math.floor(cam.z));
+            double tMX=(dx>0?(cast<double>(bx+1)-cam.x):(cam.x-cast<double>(bx)))/(dx==0.0?0.0001:Math.abs(dx));
+            double tMY=(dy>0?(cast<double>(by+1)-cam.y):(cam.y-cast<double>(by)))/(dy==0.0?0.0001:Math.abs(dy));
+            double tMZ=(dz>0?(cast<double>(bz+1)-cam.z):(cam.z-cast<double>(bz)))/(dz==0.0?0.0001:Math.abs(dz));
+            double dDX=1.0/(dx==0.0?0.0001:Math.abs(dx));
+            double dDY=1.0/(dy==0.0?0.0001:Math.abs(dy));
+            double dDZ=1.0/(dz==0.0?0.0001:Math.abs(dz));
+            int sx=(dx>0?1:-1); int sy=(dy>0?1:-1); int sz=(dz>0?1:-1);
+            bool hit = false;
+            for (int step = 0; step < 8 && !hit; step++) {
+                if (world.getWorldBlock(bx, by, bz) != 0) {
+                    BlockDef bdef = Blocks.get(world.getWorldBlock(bx, by, bz));
+                    if (bdef == null || !bdef.isUnbreakable()) {
+                        addItem(inventory, world.getWorldBlock(bx, by, bz), 1);
+                        world.setWorldBlock(bx, by, bz, 0);
+                    }
+                    hit = true;
+                } else if (tMX < tMY && tMX < tMZ) { bx += sx; tMX += dDX; }
+                  else if (tMY < tMZ)               { by += sy; tMY += dDY; }
+                  else                              { bz += sz; tMZ += dDZ; }
+            }
+            gs.breakTimer = 8;
+        }
+    }
+
+    // ── Right click: place block ──
+    if (canControl && mouseRight && gs.placeTimer <= 0 && gs.tabTimer <= 0) {
+        ItemStack held = hotbar[gs.hotbarSel];
+        if (!held.isEmpty()) {
+            double dx = cam.fwdX(); double dy = cam.fwdY(); double dz = cam.fwdZ();
+            int bx = cast<int>(Math.floor(cam.x));
+            int by = cast<int>(Math.floor(cam.y));
+            int bz = cast<int>(Math.floor(cam.z));
+            int lbx = bx; int lby = by; int lbz = bz;
+            double tMX=(dx>0?(cast<double>(bx+1)-cam.x):(cam.x-cast<double>(bx)))/(dx==0.0?0.0001:Math.abs(dx));
+            double tMY=(dy>0?(cast<double>(by+1)-cam.y):(cam.y-cast<double>(by)))/(dy==0.0?0.0001:Math.abs(dy));
+            double tMZ=(dz>0?(cast<double>(bz+1)-cam.z):(cam.z-cast<double>(bz)))/(dz==0.0?0.0001:Math.abs(dz));
+            double dDX=1.0/(dx==0.0?0.0001:Math.abs(dx));
+            double dDY=1.0/(dy==0.0?0.0001:Math.abs(dy));
+            double dDZ=1.0/(dz==0.0?0.0001:Math.abs(dz));
+            int sx=(dx>0?1:-1); int sy=(dy>0?1:-1); int sz=(dz>0?1:-1);
+            bool hit = false;
+            for (int step = 0; step < 8 && !hit; step++) {
+                if (world.getWorldBlock(bx, by, bz) != 0) {
+                    if (world.getWorldBlock(lbx, lby, lbz) == 0) {
+                        world.setWorldBlock(lbx, lby, lbz, held.blockId);
+                        consumeOne(hotbar, gs.hotbarSel);
+                    }
+                    hit = true;
+                }
+                lbx = bx; lby = by; lbz = bz;
+                if (tMX < tMY && tMX < tMZ)  { bx += sx; tMX += dDX; }
+                else if (tMY < tMZ)           { by += sy; tMY += dDY; }
+                else                          { bz += sz; tMZ += dDZ; }
+            }
+            gs.placeTimer = 8;
+        }
+    }
+}

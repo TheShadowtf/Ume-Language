@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════════════════════════════
-// UmeCraft 3D — Enhanced Edition v6.0
+// Main.ume — UmeCraft 3D — Enhanced Edition v6.0 Entry Point
 // ═══════════════════════════════════════════════════════════════════════════
 //
 // ┌─────────────────────────────────────────────────────────────────────────┐
@@ -22,18 +22,6 @@
 // │  Mouse Left       — Break block / Attack mob                            │
 // │  Mouse Right      — Place block                                         │
 // └─────────────────────────────────────────────────────────────────────────┘
-//
-// Architecture (v6.0):
-//   - blocks.ume       : BlockDef + BlockRegistry + block IDs
-//   - items.ume        : ItemStack (blockId + count, max 64)
-//   - mobs.ume         : Mob base + 8 subclasses + MobRegistry
-//   - mob_models.ume   : MobPart + MobModel + per-mob multipart builders
-//   - world.ume        : Chunk + World + Camera + save/load (v2 format)
-//   - renderer.ume     : load shaders from src/shaders/*.glsl + texture atlas
-//   - ui.ume           : Button + Slider + Panel + drawSlot/drawItemIcon
-//   - hud.ume          : 9-slot hotbar + hearts + hunger + crosshair + debug
-//   - inventory.ume    : full survival inventory screen
-//   - menu.ume         : main menu + settings + death screen
 
 import std.graphics.*;
 import std.math.*;
@@ -42,731 +30,516 @@ import std.collections.*;
 import std.time.*;
 import std.thread.*;
 
-#include "blocks.ume"
-#include "items.ume"
-#include "mob_models.ume"
-#include "mobs.ume"
-#include "world.ume"
-#include "ui.ume"
-#include "hud.ume"
-#include "inventory.ume"
-#include "renderer.ume"
-#include "menu.ume"
+// ── JSON ─────────────────────────────────────────────────────────────────────
+#include "json/JsonValue.ume"
+#include "json/JsonParser.ume"
+
+// ── Blocks ───────────────────────────────────────────────────────────────────
+#include "block/BlockIds.ume"
+#include "block/BlockDef.ume"
+#include "block/Blocks.ume"
+
+// ── Items ────────────────────────────────────────────────────────────────────
+#include "item/ItemStack.ume"
+#include "item/Items.ume"
+
+// ── Models ───────────────────────────────────────────────────────────────────
+#include "model/MobPart.ume"
+#include "model/GeoModelLoader.ume"
+#include "model/MobFallbacks.ume"
+#include "model/MobModels.ume"
+
+// ── Entities ─────────────────────────────────────────────────────────────────
+#include "entity/EntityBase.ume"
+#include "entity/ai/IGoal.ume"
+#include "entity/Mob.ume"
+#include "entity/ai/PassiveGoals.ume"
+#include "entity/ai/CombatGoals.ume"
+#include "entity/mobs/PassiveMobs.ume"
+#include "entity/mobs/HostileMobs.ume"
+#include "entity/Entities.ume"
+#include "entity/MobDef.ume"
+#include "entity/MobRegistry.ume"
+
+// ── World ────────────────────────────────────────────────────────────────────
+#include "world/ChunkConstants.ume"
+#include "world/WorldGen.ume"
+#include "world/Chunk.ume"
+#include "world/Camera.ume"
+#include "world/WorldSave.ume"
+#include "world/World.ume"
+
+// ── Renderer ─────────────────────────────────────────────────────────────────
+#include "render/ShaderManager.ume"
+#include "render/TextureAtlas.ume"
+#include "render/WorldRenderer.ume"
+
+// ── UI ───────────────────────────────────────────────────────────────────────
+#include "ui/Widget.ume"
+#include "ui/HUD.ume"
+#include "ui/InventoryScreen.ume"
+#include "ui/MenuScreen.ume"
+
+// ── Game systems ─────────────────────────────────────────────────────────────
+#include "game/GameState.ume"
+#include "player/Player.ume"
 
 // ═══════════════════════════════════════════════════════════════════════════
-// MAIN
+// MAIN — Setup & orchestration only. All heavy logic lives in the modules above.
 // ═══════════════════════════════════════════════════════════════════════════
 func void main() {
+    // ── Window & shaders ──────────────────────────────────────────────────────
     Window win = new Window(1024, 720, "UmeCraft 3D — v6.0 Enhanced");
     win.enableDepthTest(true);
     win.enableCullFace(true);
     win.setCursorGrabbed(false);
-
     Font font = Font.createDefault(18.0);
 
-    // ── Shaders (loaded from src/shaders/*.glsl with embedded fallbacks) ──
-    Shader terrainSh = buildTerrainShader();
-    Shader hudSh     = buildHUDShader();
-    Shader mobSh     = buildMobShader();
-    Mesh   quad      = Mesh.Quad();
+    Shader terrainSh   = buildTerrainShader();
+    Shader hudSh       = buildHUDShader();
+    Shader mobSh       = buildMobShader();
+    Shader celestialSh = buildCelestialShader();
+    Mesh   quad        = Mesh.Quad();
 
-    // ── Texture atlas ──
-    string texPath = "src/assets/textures/";
-    Texture atlas = loadTextureAtlas(texPath);
+    // ── Texture atlas ─────────────────────────────────────────────────────────
+    Texture atlas = loadTextureAtlas("assets/textures/");
 
-    // ── Game state ──
-    // 0=MainMenu, 1=Playing, 2=Settings, 3=Inventory, 4=Dead
-    int gameState = 0;
-    int selectedSlot = 0;
-    bool grabbed     = false;
-    int health       = 20;
-    int maxHealth    = 20;
-    int hunger       = 20;
-    int maxHunger    = 20;
-    double hurtTimer  = 0.0;
-    double regenTimer = 0.0;
-    double hungerTimer= 0.0;
-    double starveTimer= 0.0;
-    double worldTime  = 0.25;
-    bool dead    = false;
-    bool flying  = false;
-    double vy    = 0.0; double vx2 = 0.0; double vz2 = 0.0;
-    bool onGround = false;
-    double px = 0.5; double py = 9.0; double pz = 0.5;
-    Camera cam = new Camera(px, py + 1.62, pz);
+    // ── Game state ────────────────────────────────────────────────────────────
+    GameState gs = new GameState();
+    gs.py       = 70.0;
+    gs.lastTime = Time.seconds();
+    Camera cam  = new Camera(gs.px, gs.py + 1.62, gs.pz);
 
-    int renderR    = 4;
-    float mouseSens = 0.0022;
-    bool showDebug  = false;
-
-    // ── Hotbar (9 slots now, was 8) and inventory (27 slots = 9×3) ──
+    // ── Hotbar & inventory ────────────────────────────────────────────────────
     ItemStack[] hotbar = newStacks(9);
-    hotbar[0].set(BLOCK_GRASS, 64);
-    hotbar[1].set(BLOCK_DIRT, 64);
-    hotbar[2].set(BLOCK_STONE, 64);
+    hotbar[0].set(BLOCK_GRASS, 64);  
+    hotbar[1].set(BLOCK_DIRT,   64);
+    hotbar[2].set(BLOCK_STONE, 64);  
     hotbar[3].set(BLOCK_COBBLE, 64);
-    hotbar[4].set(BLOCK_PLANKS, 64);
-    hotbar[5].set(BLOCK_LOG, 64);
-    hotbar[6].set(BLOCK_SAND, 64);
-    hotbar[7].set(BLOCK_GLASS, 32);
+    hotbar[4].set(BLOCK_PLANKS, 64); 
+    hotbar[5].set(BLOCK_LOG,    64);
+    hotbar[6].set(BLOCK_SAND,  64);  
+    hotbar[7].set(BLOCK_GLASS,  32);
     hotbar[8].set(BLOCK_BRICK, 32);
-    int hotbarSel = 0;
 
     ItemStack[] inventory = newStacks(27);
-    // Pre-fill some inventory
-    inventory[0].set(BLOCK_LEAVES, 32);
-    inventory[1].set(BLOCK_SNOW, 16);
-    inventory[2].set(BLOCK_COAL_ORE, 8);
-    inventory[3].set(BLOCK_IRON_ORE, 4);
+    inventory[0].set(BLOCK_LEAVES,   32);
+    inventory[1].set(BLOCK_SNOW,     16);
+    inventory[2].set(BLOCK_COAL_ORE,  8);
+    inventory[3].set(BLOCK_IRON_ORE,  4);
 
-    // ── Inventory screen (state) ──
     InventoryScreen invScreen = new InventoryScreen();
 
-    // ── Held-item name popup timer (when hotbar selection changes) ──
-    double heldItemTimer = 0.0;
+    // ── World ─────────────────────────────────────────────────────────────────
+    World world = new World(6000);
 
-    // ── Timers (debounce) ──
-    int tabTimer=0; int flyTimer=0; int breakTimer=0; int placeTimer=0;
-    int invTimer=0; int setTimer=0; int dbgTimer=0; int saveTimer=0;
-    int loadTimer=0; int respawnTimer=0; int attackTimer=0;
-    int d1=0;int d2=0;int d3=0;int d4=0;int d5=0;int d6=0;int d7=0;int d8=0;int d9=0;
+    // ── UI elements ───────────────────────────────────────────────────────────
+    Button btnSingleplayer = new Button("Singleplayer", 0, 0, 380, 42);
+    Button btnOptionsMain  = new Button("Options...",   0, 0, 184, 42);
+    Button btnQuitMain     = new Button("Quit Game",    0, 0, 184, 42);
+    btnSingleplayer.setColor(0.28, 0.28, 0.32); btnSingleplayer.setHoverColor(0.38, 0.52, 0.38);
+    btnOptionsMain.setColor(0.28, 0.28, 0.32);  btnOptionsMain.setHoverColor(0.40, 0.40, 0.46);
+    btnQuitMain.setColor(0.45, 0.15, 0.15);     btnQuitMain.setHoverColor(0.65, 0.22, 0.22);
 
-    int lastPCX = 9999; int lastPCZ = 9999;
-    int pcx = 0; int pcz = 0;
-    int frame = 0;
+    Button btnPlayWorld    = new Button("Play Selected World", 0, 0, 160, 38);
+    Button btnCreateSelect = new Button("Create New World",    0, 0, 160, 38);
+    Button btnDeleteWorld  = new Button("Delete",              0, 0, 90,  38);
+    Button btnCancelSelect = new Button("Cancel",              0, 0, 90,  38);
+    btnPlayWorld.setColor(0.20, 0.42, 0.20);    btnPlayWorld.setHoverColor(0.30, 0.60, 0.30);
+    btnCreateSelect.setColor(0.28, 0.28, 0.32); btnCreateSelect.setHoverColor(0.40, 0.40, 0.46);
+    btnDeleteWorld.setColor(0.42, 0.15, 0.15);  btnDeleteWorld.setHoverColor(0.60, 0.22, 0.22);
+    btnCancelSelect.setColor(0.28, 0.28, 0.32); btnCancelSelect.setHoverColor(0.40, 0.40, 0.46);
 
-    // ── World ──
-    World world = new World((renderR*2+6)*(renderR*2+6));
+    TextInput inputWorldName   = new TextInput("New World", 0, 0, 400, 36, "World Name");
+    Button    btnGameMode      = new Button("Game Mode: Survival", 0, 0, 400, 36);
+    TextInput inputSeed        = new TextInput("", 0, 0, 400, 36, "Leave blank for random seed");
+    Button    btnConfirmCreate = new Button("Create New World", 0, 0, 190, 40);
+    Button    btnCancelCreate  = new Button("Cancel",           0, 0, 190, 40);
+    string    createGameMode   = "Survival";
+    btnGameMode.setColor(0.28, 0.28, 0.32);      btnGameMode.setHoverColor(0.40, 0.40, 0.46);
+    btnConfirmCreate.setColor(0.20, 0.42, 0.20); btnConfirmCreate.setHoverColor(0.30, 0.60, 0.30);
+    btnCancelCreate.setColor(0.28, 0.28, 0.32);  btnCancelCreate.setHoverColor(0.40, 0.40, 0.46);
 
-    // ── Buttons ──
-    Button btnWorld1   = new Button("World 1 - New", 0, 0, 360, 44);
-    Button btnWorld2   = new Button("World 2 - New", 0, 0, 360, 44);
-    Button btnWorld3   = new Button("World 3 - New", 0, 0, 360, 44);
-    Button btnQuit     = new Button("Quit Game",     0, 0, 360, 44);
-    btnWorld1.setColor(0.22, 0.38, 0.22); btnWorld1.setHoverColor(0.32, 0.55, 0.32);
-    btnWorld2.setColor(0.22, 0.38, 0.22); btnWorld2.setHoverColor(0.32, 0.55, 0.32);
-    btnWorld3.setColor(0.22, 0.38, 0.22); btnWorld3.setHoverColor(0.32, 0.55, 0.32);
-    btnQuit.setColor(0.45, 0.12, 0.12);   btnQuit.setHoverColor(0.65, 0.22, 0.22);
+    List<WorldMeta> cachedWorldList = loadWorldList();
+    if (cachedWorldList.size() > 0) {
+        gs.selectedWorldId = cachedWorldList.get(0).id;
+    }
 
-    Button btnResume   = new Button("Back to Game",  0, 0, 220, 44);
-    Button btnSaveQuit = new Button("Save & Quit",   0, 0, 220, 44);
+    Button btnResume   = new Button("Back to Game", 0, 0, 220, 44);
+    Button btnSaveQuit = new Button("Save & Quit",  0, 0, 220, 44);
     btnResume.setColor(0.20, 0.42, 0.20);   btnResume.setHoverColor(0.32, 0.60, 0.32);
     btnSaveQuit.setColor(0.45, 0.12, 0.12); btnSaveQuit.setHoverColor(0.65, 0.22, 0.22);
 
-    Button btnRespawn  = new Button("Respawn", 0, 0, 240, 42);
+    Button btnRespawn = new Button("Respawn", 0, 0, 240, 42);
     btnRespawn.setColor(0.22, 0.38, 0.22); btnRespawn.setHoverColor(0.32, 0.55, 0.32);
 
-    // ── Sliders ──
-    Slider sliderRD   = new Slider("Render Distance", 0, 0, 600, 2, 8, 4);
-    Slider sliderSens = new Slider("Mouse Sensitivity x1000", 0, 0, 600, 1, 5, 2);
+    Slider sliderRD   = new Slider("Render Distance",        0, 0, 600, 2, 32, 8);
+    Slider sliderSens = new Slider("Mouse Sensitivity x1000",0, 0, 600, 1,  5, 2);
 
-    // ── Main loop timing ──
-    double lastTime    = Time.seconds();
-    double accumulator = 0.0;
-    double timeStep    = 1.0 / 60.0;
-    double fpsTimer    = 0.0;
-    int    fpsCount    = 0;
-    int    currentFPS  = 0;
+    bool wasMouseLeftDown = false;
+    double timeStep = 1.0 / 60.0;
 
+    // ═══════════════════════════════════════════════════════════════════════════
+    // MAIN LOOP
+    // ═══════════════════════════════════════════════════════════════════════════
     while (win.isOpen()) {
         win.pollEvents();
+
+        // ── Frame timing ──────────────────────────────────────────────────────
         double currentTime = Time.seconds();
-        double frameTime   = currentTime - lastTime;
-        lastTime = currentTime;
+        double frameTime   = currentTime - gs.lastTime;
+        gs.lastTime = currentTime;
         if (frameTime > 0.25) frameTime = 0.25;
 
-        fpsTimer += frameTime; fpsCount++;
-        if (fpsTimer >= 1.0) { currentFPS = fpsCount; fpsCount = 0; fpsTimer = 0.0; }
+        gs.fpsTimer += frameTime; gs.fpsCount++;
+        if (gs.fpsTimer >= 1.0) {
+            gs.currentFPS = gs.fpsCount; gs.fpsCount = 0; gs.fpsTimer = 0.0;
+        }
+        if (gs.gameState == 1 || gs.gameState == 3 || gs.gameState == 4) {
+            gs.worldTime += frameTime / gs.dayLengthSec;
+            if (gs.worldTime >= 1.0) gs.worldTime -= 1.0;
+        }
+        gs.isNight = (gs.worldTime > 0.45 && gs.worldTime < 0.95);
+        if (gs.heldItemTimer > 0) gs.heldItemTimer -= frameTime;
 
-        worldTime += frameTime / 120.0;
-        if (worldTime >= 1.0) worldTime -= 1.0;
-        bool isNight = (worldTime > 0.45 && worldTime < 0.95);
-        if (heldItemTimer > 0) heldItemTimer -= frameTime;
-
-        float sw = cast<float>(win.getWidth());
-        float sh = cast<float>(win.getHeight());
+        float   sw   = cast<float>(win.getWidth());
+        float   sh   = cast<float>(win.getHeight());
         float[] mpos = win.getMousePosition();
-        float mx = mpos[0]; float my = mpos[1];
+        float   mx   = mpos[0]; float my = mpos[1];
         bool mouseLeft  = win.isMouseButtonPressed(MouseButton.Left);
         bool mouseRight = win.isMouseButtonPressed(MouseButton.Right);
+        bool mouseLeftClicked = mouseLeft && !wasMouseLeftDown;
+        wasMouseLeftDown = mouseLeft;
 
-        // ── ESC ──
-        if (win.isKeyPressed(Key.Escape) && setTimer <= 0) {
-            if      (gameState == 1) { gameState = 2; grabbed = false; win.setCursorGrabbed(false); }
-            else if (gameState == 2) { gameState = 1; }
-            else if (gameState == 3) { gameState = 1; }
-            setTimer = 15;
-        }
+        // ── Per-frame input (ESC, Tab, mouse look, hotkeys) ───────────────────
+        handleInput(gs, win, cam, world, invScreen, hotbar, inventory);
 
-        // ── Tab: grab/ungrab ──
-        if (gameState == 1 && win.isKeyPressed(Key.Tab) && tabTimer <= 0) {
-            grabbed = !grabbed; win.setCursorGrabbed(grabbed); tabTimer = 15;
-        }
+        // ── Fixed-step physics loop ───────────────────────────────────────────
+        gs.accumulator += frameTime;
+        int maxSteps = 3; int physStep = 0;
+        while (gs.accumulator >= timeStep && physStep < maxSteps) {
+            gs.tickTimers(timeStep);
+            updateHotbar(gs, win);
+            updatePhysics(gs, win, cam, world);
+            handlePlayerActions(gs, win, cam, world, hotbar, inventory);
 
-        // ── Mouse look ──
-        if (gameState == 1 && grabbed) {
-            float[] md = win.getMouseDelta();
-            cam.yaw   -= md[0] * mouseSens;
-            cam.pitch -= md[1] * mouseSens;
-        }
-        if (cam.pitch >  1.50) cam.pitch =  1.50;
-        if (cam.pitch < -1.50) cam.pitch = -1.50;
-
-        bool canControl = (gameState == 1 && grabbed);
-
-        if (canControl) {
-            if (win.isKeyPressed(Key.E) && invTimer <= 0) {
-                // Open inventory — sync state
-                invScreen.syncFrom(hotbar, inventory, hotbarSel);
-                gameState = 3; grabbed = false; win.setCursorGrabbed(false); invTimer = 15;
-            }
-            if (win.isKeyPressed(Key.F3) && dbgTimer <= 0) { showDebug = !showDebug; dbgTimer = 15; }
-            if (win.isKeyPressed(Key.F5) && saveTimer <= 0) {
-                saveGame(selectedSlot, px, py, pz, cam.yaw, cam.pitch, health, hotbar, inventory, worldTime);
-                saveTimer = 30;
-            }
-            if (win.isKeyPressed(Key.F9) && loadTimer <= 0) {
-                float[] ld = new float[6]; float[] lt = new float[1];
-                if (loadGame(selectedSlot, ld, hotbar, inventory, lt)) {
-                    px = cast<double>(ld[0]); py = cast<double>(ld[1]); pz = cast<double>(ld[2]);
-                    cam.yaw = cast<double>(ld[3]); cam.pitch = cast<double>(ld[4]);
-                    health = cast<int>(ld[5]);
-                    worldTime = cast<double>(lt[0]);
-                }
-                loadTimer = 30;
-            }
-            if (dead && win.isKeyPressed(Key.R) && respawnTimer <= 0) {
-                px = 0.5; py = 9.0; pz = 0.5; vx2 = 0; vy = 0; vz2 = 0;
-                health = maxHealth; hunger = maxHunger; dead = false; gameState = 1;
-                respawnTimer = 30;
-            }
-        }
-
-        // ── Fixed-step update ──
-        accumulator += frameTime;
-        int maxSteps = 3;
-        int physStep = 0;
-        while (accumulator >= timeStep && physStep < maxSteps) {
-            if (tabTimer > 0) tabTimer--;
-            if (flyTimer > 0) flyTimer--;
-            if (breakTimer > 0) breakTimer--;
-            if (placeTimer > 0) placeTimer--;
-            if (invTimer > 0) invTimer--;
-            if (setTimer > 0) setTimer--;
-            if (dbgTimer > 0) dbgTimer--;
-            if (saveTimer > 0) saveTimer--;
-            if (loadTimer > 0) loadTimer--;
-            if (respawnTimer > 0) respawnTimer--;
-            if (attackTimer > 0) attackTimer--;
-            if (hurtTimer > 0) hurtTimer -= timeStep;
-            if (regenTimer > 0) regenTimer -= timeStep;
-            if (hungerTimer > 0) hungerTimer -= timeStep;
-            if (starveTimer > 0) starveTimer -= timeStep;
-            if (d1>0)d1--; if (d2>0)d2--; if (d3>0)d3--; if (d4>0)d4--;
-            if (d5>0)d5--; if (d6>0)d6--; if (d7>0)d7--; if (d8>0)d8--; if (d9>0)d9--;
-
-            // ── Hotbar selection (1-9) ──
-            if (canControl && !dead) {
-                if (win.isKeyPressed(Key.F) && flyTimer <= 0) {
-                    flying = !flying; if (flying) { vy=0; vx2=0; vz2=0; } flyTimer = 18;
-                }
-                if (win.isKeyPressed(Key.Key1)&&d1<=0){hotbarSel=0;d1=12; heldItemTimer=2.0;}
-                if (win.isKeyPressed(Key.Key2)&&d2<=0){hotbarSel=1;d2=12; heldItemTimer=2.0;}
-                if (win.isKeyPressed(Key.Key3)&&d3<=0){hotbarSel=2;d3=12; heldItemTimer=2.0;}
-                if (win.isKeyPressed(Key.Key4)&&d4<=0){hotbarSel=3;d4=12; heldItemTimer=2.0;}
-                if (win.isKeyPressed(Key.Key5)&&d5<=0){hotbarSel=4;d5=12; heldItemTimer=2.0;}
-                if (win.isKeyPressed(Key.Key6)&&d6<=0){hotbarSel=5;d6=12; heldItemTimer=2.0;}
-                if (win.isKeyPressed(Key.Key7)&&d7<=0){hotbarSel=6;d7=12; heldItemTimer=2.0;}
-                if (win.isKeyPressed(Key.Key8)&&d8<=0){hotbarSel=7;d8=12; heldItemTimer=2.0;}
-                if (win.isKeyPressed(Key.Key9)&&d9<=0){hotbarSel=8;d9=12; heldItemTimer=2.0;}
-            }
-
-            // ── Physics ──
-            if (gameState != 0 && !dead) {
-                double fw  = -Math.sin(cam.yaw); double fwz = -Math.cos(cam.yaw);
-                double rgt =  Math.cos(cam.yaw); double rgz = -Math.sin(cam.yaw);
-
-                if (flying && canControl) {
-                    double ms = 0.13;
-                    double fwx = cam.fwdX(); double fwy = cam.fwdY(); double fwz2 = cam.fwdZ();
-                    if (win.isKeyPressed(Key.W)) { px += fwx*ms; py += fwy*ms; pz += fwz2*ms; }
-                    if (win.isKeyPressed(Key.S)) { px -= fwx*ms; py -= fwy*ms; pz -= fwz2*ms; }
-                    if (win.isKeyPressed(Key.D)) { px += rgt*ms; pz += rgz*ms; }
-                    if (win.isKeyPressed(Key.A)) { px -= rgt*ms; pz -= rgz*ms; }
-                    vy=0; vx2=0; vz2=0;
-                    if (win.isKeyPressed(Key.Space))     py += ms;
-                    if (win.isKeyPressed(Key.LeftShift)) py -= ms;
-                } else {
-                    double targetVX = 0.0; double targetVZ = 0.0;
-                    if (canControl) {
-                        if (win.isKeyPressed(Key.W)) { targetVX += fw; targetVZ += fwz; }
-                        if (win.isKeyPressed(Key.S)) { targetVX -= fw; targetVZ -= fwz; }
-                        if (win.isKeyPressed(Key.D)) { targetVX += rgt; targetVZ += rgz; }
-                        if (win.isKeyPressed(Key.A)) { targetVX -= rgt; targetVZ -= rgz; }
-                    }
-                    double len = Math.sqrt(targetVX*targetVX + targetVZ*targetVZ);
-                    if (len > 0.0) { targetVX /= len; targetVZ /= len; }
-                    bool sprinting = canControl &&
-                        (win.isKeyPressed(Key.LeftControl) || win.isKeyPressed(Key.LeftShift)) &&
-                        onGround;
-                    double walkSpd = sprinting ? 0.12 : 0.075;
-                    targetVX *= walkSpd; targetVZ *= walkSpd;
-                    double lerp = onGround ? 0.22 : 0.05;
-                    vx2 = vx2 + (targetVX - vx2) * lerp;
-                    vz2 = vz2 + (targetVZ - vz2) * lerp;
-
-                    if (canControl && onGround && win.isKeyPressed(Key.Space)) { vy = 0.155; onGround = false; }
-                    if (!onGround) { vy -= 0.009; if (vy < -0.80) vy = -0.80; }
-
-                    double halfW = 0.3;
-                    double pMinX=px-halfW; double pMaxX=px+halfW;
-                    double pMinZ=pz-halfW; double pMaxZ=pz+halfW;
-                    double pMinY=py;       double pMaxY=py+1.8;
-                    double oldVy = vy;
-
-                    // X movement
-                    px += vx2; pMinX=px-halfW; pMaxX=px+halfW;
-                    if (vx2 > 0) {
-                        int bx2 = cast<int>(Math.floor(pMaxX));
-                        for (int bz3 = cast<int>(Math.floor(pMinZ)); bz3 <= cast<int>(Math.floor(pMaxZ)); bz3++) {
-                            for (int by3 = cast<int>(Math.floor(pMinY)); by3 <= cast<int>(Math.floor(pMaxY)); by3++) {
-                                if (world.getWorldBlock(bx2, by3, bz3) != 0) {
-                                    px = cast<double>(bx2) - halfW - 0.001; vx2 = 0; pMinX=px-halfW; pMaxX=px+halfW; break;
-                                }
-                            }
-                        }
-                    } else if (vx2 < 0) {
-                        int bx2 = cast<int>(Math.floor(pMinX));
-                        for (int bz3 = cast<int>(Math.floor(pMinZ)); bz3 <= cast<int>(Math.floor(pMaxZ)); bz3++) {
-                            for (int by3 = cast<int>(Math.floor(pMinY)); by3 <= cast<int>(Math.floor(pMaxY)); by3++) {
-                                if (world.getWorldBlock(bx2, by3, bz3) != 0) {
-                                    px = cast<double>(bx2) + 1.0 + halfW + 0.001; vx2 = 0; pMinX=px-halfW; pMaxX=px+halfW; break;
-                                }
-                            }
-                        }
-                    }
-                    // Z movement
-                    pz += vz2; pMinZ=pz-halfW; pMaxZ=pz+halfW;
-                    if (vz2 > 0) {
-                        int bz3 = cast<int>(Math.floor(pMaxZ));
-                        for (int bxx = cast<int>(Math.floor(pMinX)); bxx <= cast<int>(Math.floor(pMaxX)); bxx++) {
-                            for (int by3 = cast<int>(Math.floor(pMinY)); by3 <= cast<int>(Math.floor(pMaxY)); by3++) {
-                                if (world.getWorldBlock(bxx, by3, bz3) != 0) {
-                                    pz = cast<double>(bz3) - halfW - 0.001; vz2 = 0; pMinZ=pz-halfW; pMaxZ=pz+halfW; break;
-                                }
-                            }
-                        }
-                    } else if (vz2 < 0) {
-                        int bz3 = cast<int>(Math.floor(pMinZ));
-                        for (int bxx = cast<int>(Math.floor(pMinX)); bxx <= cast<int>(Math.floor(pMaxX)); bxx++) {
-                            for (int by3 = cast<int>(Math.floor(pMinY)); by3 <= cast<int>(Math.floor(pMaxY)); by3++) {
-                                if (world.getWorldBlock(bxx, by3, bz3) != 0) {
-                                    pz = cast<double>(bz3) + 1.0 + halfW + 0.001; vz2 = 0; pMinZ=pz-halfW; pMaxZ=pz+halfW; break;
-                                }
-                            }
-                        }
-                    }
-                    // Y movement
-                    py += vy; pMinY=py; pMaxY=py+1.8; onGround = false;
-                    if (vy <= 0) {
-                        int by3 = cast<int>(Math.floor(pMinY));
-                        for (int bxx = cast<int>(Math.floor(pMinX)); bxx <= cast<int>(Math.floor(pMaxX)); bxx++) {
-                            for (int bzz = cast<int>(Math.floor(pMinZ)); bzz <= cast<int>(Math.floor(pMaxZ)); bzz++) {
-                                if (world.getWorldBlock(bxx, by3, bzz) != 0) {
-                                    if (oldVy < -0.35) {
-                                        int dmg = cast<int>((-oldVy - 0.35) * 28.0);
-                                        health -= dmg; hurtTimer = 1.0; regenTimer = 5.0;
-                                    }
-                                    py = cast<double>(by3) + 1.0 + 0.001;
-                                    vy = 0; onGround = true; pMinY = py; pMaxY = py + 1.8; break;
-                                }
-                            }
-                        }
-                    } else if (vy > 0) {
-                        int by3 = cast<int>(Math.floor(pMaxY));
-                        for (int bxx = cast<int>(Math.floor(pMinX)); bxx <= cast<int>(Math.floor(pMaxX)); bxx++) {
-                            for (int bzz = cast<int>(Math.floor(pMinZ)); bzz <= cast<int>(Math.floor(pMaxZ)); bzz++) {
-                                if (world.getWorldBlock(bxx, by3, bzz) != 0) {
-                                    py = cast<double>(by3) - 1.8 - 0.001; vy = 0; pMaxY = py + 1.8; break;
-                                }
-                            }
-                        }
-                    }
-                    // ── Hunger drain (slow) ──
-                    if (hungerTimer <= 0 && hunger > 0) {
-                        hungerTimer = 6.0;
-                        // Only drain if moving
-                        double sp = Math.sqrt(vx2*vx2 + vz2*vz2);
-                        if (sp > 0.01) hunger--;
-                    }
-                    // ── Starvation damage ──
-                    if (hunger <= 0 && starveTimer <= 0) {
-                        starveTimer = 4.0;
-                        if (health > 1) { health--; hurtTimer = 0.5; }
-                    }
-                    // ── Regen from food ──
-                    if (health < maxHealth && regenTimer <= 0 && hurtTimer <= 0 && hunger >= 14) {
-                        health++; regenTimer = 3.0; hunger--;
-                    }
-                    if (health <= 0) { dead = true; gameState = 4; }
-                }
-                cam.x = px; cam.y = py + 1.62; cam.z = pz;
-
-                pcx = cast<int>(Math.floor(px / 16.0));
-                pcz = cast<int>(Math.floor(pz / 16.0));
-                if (pcx != lastPCX || pcz != lastPCZ) {
-                    lastPCX = pcx; lastPCZ = pcz;
-                    for (int dx3 = -1; dx3 <= 1; dx3++) {
-                        for (int dz3 = -1; dz3 <= 1; dz3++) { world.loadChunkImmediate(pcx+dx3, pcz+dz3); }
-                    }
-                    world.evictFar(pcx, pcz, renderR);
-                }
-
-                // ── Break block / Attack (left click) ──
-                if (canControl && mouseLeft && breakTimer <= 0 && tabTimer <= 0 && attackTimer <= 0) {
-                    double dx4=cam.fwdX(); double dy4=cam.fwdY(); double dz4=cam.fwdZ();
-                    // Mob attack
-                    bool hitMob = false;
-                    for (int mi = 0; mi < world.mobCount; mi++) {
-                        Mob m = world.mobs[mi];
-                        if (!m.alive) continue;
-                        double mdx2 = m.x - cam.x; double mdy2 = m.y - cam.y; double mdz2 = m.z - cam.z;
-                        double dist2 = mdx2*mdx2 + mdy2*mdy2 + mdz2*mdz2;
-                        if (dist2 < 16.0) {
-                            double dot2 = mdx2*dx4 + mdy2*dy4 + mdz2*dz4;
-                            double mDist = Math.sqrt(dist2);
-                            if (dot2 / mDist > 0.7) {
-                                m.takeDamage(5); hitMob = true; attackTimer = 20; break;
-                            }
-                        }
-                    }
-                    // Block raycast
-                    if (!hitMob) {
-                        int bx2 = cast<int>(Math.floor(cam.x));
-                        int by3 = cast<int>(Math.floor(cam.y));
-                        int bz3 = cast<int>(Math.floor(cam.z));
-                        double tMX = (dx4>0?(cast<double>(bx2+1)-cam.x):(cam.x-cast<double>(bx2)))/(dx4==0.0?0.0001:Math.abs(dx4));
-                        double tMY = (dy4>0?(cast<double>(by3+1)-cam.y):(cam.y-cast<double>(by3)))/(dy4==0.0?0.0001:Math.abs(dy4));
-                        double tMZ = (dz4>0?(cast<double>(bz3+1)-cam.z):(cam.z-cast<double>(bz3)))/(dz4==0.0?0.0001:Math.abs(dz4));
-                        double dDX=1.0/(dx4==0.0?0.0001:Math.abs(dx4));
-                        double dDY=1.0/(dy4==0.0?0.0001:Math.abs(dy4));
-                        double dDZ=1.0/(dz4==0.0?0.0001:Math.abs(dz4));
-                        int sx2=(dx4>0?1:-1); int sy2=(dy4>0?1:-1); int sz2=(dz4>0?1:-1);
-                        bool hit2=false;
-                        for (int step=0; step<8 && !hit2; step++) {
-                            if (world.getWorldBlock(bx2,by3,bz3)!=0) {
-                                int btype = world.getWorldBlock(bx2,by3,bz3);
-                                BlockDef bdef = Blocks.get(btype);
-                                if (bdef == null || !bdef.isUnbreakable()) {
-                                    // Add to inventory
-                                    addItem(inventory, btype, 1);
-                                    world.setWorldBlock(bx2,by3,bz3,0);
-                                }
-                                hit2=true;
-                            } else if (tMX<tMY && tMX<tMZ) { bx2+=sx2; tMX+=dDX; }
-                            else if (tMY<tMZ)               { by3+=sy2; tMY+=dDY; }
-                            else                             { bz3+=sz2; tMZ+=dDZ; }
-                        }
-                        breakTimer = 8;
+            // Chunk boundary — trigger adjacent load + evict distant
+            gs.pcx = cast<int>(Math.floor(gs.px / 16.0));
+            gs.pcz = cast<int>(Math.floor(gs.pz / 16.0));
+            if (gs.pcx != gs.lastPCX || gs.pcz != gs.lastPCZ) {
+                gs.lastPCX = gs.pcx; gs.lastPCZ = gs.pcz;
+                for (int dx = -1; dx <= 1; dx++) {
+                    for (int dz = -1; dz <= 1; dz++) {
+                        world.loadChunkImmediate(gs.pcx+dx, gs.pcz+dz);
                     }
                 }
-                // ── Place block (right click) ──
-                if (canControl && mouseRight && placeTimer <= 0 && tabTimer <= 0) {
-                    // Only if hotbar slot has items
-                    ItemStack heldStack = hotbar[hotbarSel];
-                    if (!heldStack.isEmpty()) {
-                        double dx4=cam.fwdX(); double dy4=cam.fwdY(); double dz4=cam.fwdZ();
-                        int bx2=cast<int>(Math.floor(cam.x)); int by3=cast<int>(Math.floor(cam.y)); int bz3=cast<int>(Math.floor(cam.z));
-                        int lbx=bx2; int lby=by3; int lbz=bz3;
-                        double tMX=(dx4>0?(cast<double>(bx2+1)-cam.x):(cam.x-cast<double>(bx2)))/(dx4==0.0?0.0001:Math.abs(dx4));
-                        double tMY=(dy4>0?(cast<double>(by3+1)-cam.y):(cam.y-cast<double>(by3)))/(dy4==0.0?0.0001:Math.abs(dy4));
-                        double tMZ=(dz4>0?(cast<double>(bz3+1)-cam.z):(cam.z-cast<double>(bz3)))/(dz4==0.0?0.0001:Math.abs(dz4));
-                        double dDX=1.0/(dx4==0.0?0.0001:Math.abs(dx4));
-                        double dDY=1.0/(dy4==0.0?0.0001:Math.abs(dy4));
-                        double dDZ=1.0/(dz4==0.0?0.0001:Math.abs(dz4));
-                        int sx2=(dx4>0?1:-1); int sy2=(dy4>0?1:-1); int sz2=(dz4>0?1:-1);
-                        bool hit2=false;
-                        for (int step=0; step<8 && !hit2; step++) {
-                            if (world.getWorldBlock(bx2,by3,bz3)!=0) {
-                                if (world.getWorldBlock(lbx,lby,lbz)==0) {
-                                    world.setWorldBlock(lbx,lby,lbz,heldStack.blockId);
-                                    consumeOne(hotbar, hotbarSel);
-                                }
-                                hit2=true;
-                            }
-                            lbx=bx2; lby=by3; lbz=bz3;
-                            if (tMX<tMY && tMX<tMZ)  { bx2+=sx2; tMX+=dDX; }
-                            else if (tMY<tMZ)         { by3+=sy2; tMY+=dDY; }
-                            else                      { bz3+=sz2; tMZ+=dDZ; }
-                        }
-                        placeTimer = 8;
-                    }
-                }
+                world.evictFar(gs.pcx, gs.pcz, gs.renderR);
             }
 
-            // ── Update mobs ──
-            if (gameState != 0) { world.updateMobs(timeStep, px, py, pz, isNight); }
+            // Mob AI tick
+            if (gs.gameState == 1) {
+                world.updateMobs(timeStep, gs.px, gs.py, gs.pz, gs.isNight);
+            }
 
-            // ── Drain pending drops into inventory ──
+            // Drain mob drops into inventory
             if (world.pendingDropCount > 0) {
                 for (int di = 0; di < world.pendingDropCount; di++) {
-                    int bd = world.pendingDrops[di];
-                    addItem(inventory, bd, 1);
+                    addItem(inventory, world.pendingDrops[di], 1);
                 }
                 world.clearPendingDrops();
             }
 
-            accumulator -= timeStep;
+            gs.accumulator -= timeStep;
             physStep++;
         }
-        if (accumulator >= timeStep) accumulator = 0.0;
+        if (gs.accumulator >= timeStep) gs.accumulator = 0.0;
 
-        // ── Chunk streaming ──
-        if (gameState != 0) {
-            world.loadNearestMissing(pcx, pcz, renderR);
-            world.rebuildDirtyChunks(1);
+        // ── Chunk streaming (background load + mesh rebuild) ──────────────────
+        if (gs.gameState == 1) {
+            world.loadNearestMissing(gs.pcx, gs.pcz, gs.renderR);
+            world.rebuildDirtyChunks(4);
         }
-
-        // ── Sky color ──────────────────────────────────────────────────────────
-        float skyR = 0.52; float skyG = 0.74; float skyB = 0.98;
-        if (worldTime < 0.25) {
-            float t = cast<float>(worldTime / 0.25);
-            skyR = 0.80+t*(0.52-0.80); skyG = 0.60+t*(0.74-0.60); skyB = 0.70+t*(0.98-0.70);
-        } else if (worldTime < 0.45) {
-            skyR = 0.52; skyG = 0.74; skyB = 0.98;
-        } else if (worldTime < 0.55) {
-            float t = cast<float>((worldTime-0.45)/0.10);
-            skyR = 0.52+t*(0.80-0.52); skyG = 0.74+t*(0.42-0.74); skyB = 0.98+t*(0.52-0.98);
-        } else if (worldTime < 0.75) {
-            float t = cast<float>((worldTime-0.55)/0.20);
-            skyR = 0.80+t*(0.04-0.80); skyG = 0.42+t*(0.04-0.42); skyB = 0.52+t*(0.12-0.52);
-        } else if (worldTime < 0.95) {
-            skyR = 0.04; skyG = 0.04; skyB = 0.12;
-        } else {
-            float t = cast<float>((worldTime-0.95)/0.05);
-            skyR = 0.04+t*(0.80-0.04); skyG = 0.04+t*(0.60-0.04); skyB = 0.12+t*(0.70-0.12);
-        }
-
-        win.clearRGB(skyR, skyG, skyB);
 
         // ── 3D Rendering ──────────────────────────────────────────────────────
-        if (gameState != 0) {
-            // ── Lighting (based on time of day) ──
-            float lightStrength = isNight ? 0.45 : 1.0;
-            // Smooth transition near dawn/dusk
-            if (worldTime > 0.40 && worldTime < 0.55) {
-                float t = cast<float>((worldTime - 0.40) / 0.15);
-                lightStrength = 1.0 - t * 0.55;
-            } else if (worldTime > 0.90 && worldTime < 1.0) {
-                float t = cast<float>((worldTime - 0.90) / 0.10);
-                lightStrength = 0.45 + t * 0.55;
-            } else if (worldTime < 0.10) {
-                float t = cast<float>(worldTime / 0.10);
-                lightStrength = 0.45 + t * 0.55;
-            }
-            float minLight = 0.18;
+        float[] sky = calcSkyColor(gs.worldTime);
+        win.clearRGB(sky[0], sky[1], sky[2]);
 
-            // Terrain
-            terrainSh.use();
-            float aspect = win.getAspectRatio();
-            Matrix4x4 vp = cam.getVP(aspect);
-            float[] vpa = vp.toArray();
-            terrainSh.setMat4("mvp", vpa);
-            // uModel = identity for terrain
-            Matrix4x4 identity = Matrix4x4.identity();
-            terrainSh.setMat4("uModel", identity.toArray());
-            terrainSh.setVec3("camPos", cast<float>(cam.x), cast<float>(cam.y), cast<float>(cam.z));
-            terrainSh.setVec3("fogColor", skyR*0.9, skyG*0.9, skyB*0.9);
-            terrainSh.setVec3("uLightDir", 0.4, 1.0, 0.3);
-            terrainSh.setFloat("uLightStrength", lightStrength);
-            terrainSh.setFloat("uMinLight", minLight);
-
-            terrainSh.setTexture("uAtlas", atlas, 0);
-            terrainSh.setInt("uUseTexture", 1);
-            terrainSh.setVec3("uFlatColor", 0.5, 0.5, 0.5);
-
-            int pcxRender = cast<int>(Math.floor(px / 16.0));
-            int pczRender = cast<int>(Math.floor(pz / 16.0));
-            double camFwdX = cam.fwdX(); double camFwdZ = cam.fwdZ();
-
-            for (int ci = 0; ci < world.count; ci++) {
-                if (!world.chunks[ci].isBuilt || world.chunks[ci].faceCount <= 0) continue;
-                int ddx = world.cgx[ci] - pcxRender; int ddz = world.cgz[ci] - pczRender;
-                if (ddx < 0) ddx = -ddx; if (ddz < 0) ddz = -ddz;
-                if (ddx <= renderR+1 && ddz <= renderR+1) {
-                    double cdx = cast<double>(world.cgx[ci] * 16 + 8) - cam.x;
-                    double cdz = cast<double>(world.cgz[ci] * 16 + 8) - cam.z;
-                    if (cdx * camFwdX + cdz * camFwdZ > -24.0) {
-                        win.drawMesh(world.chunks[ci].mesh, terrainSh);
-                    }
-                }
-            }
-
-            // ── Mobs (multipart rendering) ──
-            mobSh.use();
-            mobSh.setVec3("camPos", cast<float>(cam.x), cast<float>(cam.y), cast<float>(cam.z));
-            mobSh.setVec3("fogColor", skyR*0.9, skyG*0.9, skyB*0.9);
-            mobSh.setVec3("uLightDir", 0.4, 1.0, 0.3);
-            mobSh.setFloat("uLightStrength", lightStrength);
-            mobSh.setFloat("uMinLight", minLight);
-
-            for (int ci = 0; ci < world.mobCount; ci++) {
-                Mob m = world.mobs[ci];
-                if (!m.alive) continue;
-                double mdx3 = m.x - cam.x; double mdz3 = m.z - cam.z;
-                if (mdx3*mdx3 + mdz3*mdz3 > 1024.0) continue;
-
-                MobModel model = MobModels.get(m.mobType);
-                if (model == null) continue;
-
-                MobDef def = Mobs.get(m.mobType);
-                float modelScale = (def == null) ? 1.0 : def.modelScale;
-
-                // Iterate parts; compute per-part MVP and draw
-                for (int pi = 0; pi < model.partCount; pi++) {
-                    MobPart part = model.parts[pi];
-                    if (!part.visible) continue;
-
-                    Matrix4x4 modelMat = computePartMatrix(
-                        part,
-                        m.x, m.y, m.z,
-                        m.facingYaw,
-                        m.walkPhase,
-                        m.walkAmp,
-                        modelScale
-                    );
-                    Matrix4x4 mvp = vp * modelMat;
-                    mobSh.setMat4("mvp", mvp.toArray());
-                    mobSh.setMat4("uModel", modelMat.toArray());
-                    win.drawMesh(part.mesh, mobSh);
-                }
-            }
+        if (gs.gameState != 0 && gs.gameState != 5 && gs.gameState != 6) {
+            renderWorld(gs, world, cam, win,
+                        terrainSh, mobSh, celestialSh,
+                        atlas, quad,
+                        sky[0], sky[1], sky[2],
+                        cast<float>(currentTime));
         }
 
-        // ── 2D HUD & Menus ────────────────────────────────────────────────────
+        // ── 2D HUD ────────────────────────────────────────────────────────────
         win.enableDepthTest(false);
         hudSh.use();
         hudSh.setInt("uUseTexture", 0);
-        hudSh.setFloat("uUVScale", 1.0);
-        hudSh.setFloat("uScreenW", sw);
-        hudSh.setFloat("uScreenH", sh);
+        hudSh.setFloat("uUVScale",  1.0);
+        hudSh.setFloat("uScreenW",  sw);
+        hudSh.setFloat("uScreenH",  sh);
 
-        // Playing HUD
-        if (gameState == 1 || gameState == 3 || gameState == 4) {
-            int selectedBlockId = hotbar[hotbarSel].blockId;
+        if (gs.gameState == 1 || gs.gameState == 3 || gs.gameState == 4) {
             drawHUD(win, hudSh, quad, sw, sh,
-                hotbar, hotbarSel, health, maxHealth, hunger, maxHunger,
-                grabbed, flying, showDebug,
-                currentFPS, px, py, pz,
-                world.count, world.cap, world.mobCount, worldTime,
-                isNight, selectedBlockId, heldItemTimer);
+                    hotbar, gs.hotbarSel, gs.health, gs.maxHealth, gs.hunger, gs.maxHunger,
+                    gs.grabbed, gs.flying, gs.showDebug,
+                    gs.currentFPS, gs.px, gs.py, gs.pz,
+                    world.count, world.cap, world.mobCount, gs.worldTime,
+                    gs.isNight, hotbar[gs.hotbarSel].blockId, gs.heldItemTimer, world.seed);
         }
 
-        // Main menu
-        if (gameState == 0) {
-            if (worldExists(0)) { btnWorld1.label = "World 1 — Play"; } else { btnWorld1.label = "World 1 — New Game"; }
-            if (worldExists(1)) { btnWorld2.label = "World 2 — Play"; } else { btnWorld2.label = "World 2 — New Game"; }
-            if (worldExists(2)) { btnWorld3.label = "World 3 — Play"; } else { btnWorld3.label = "World 3 — New Game"; }
-
+        // ── Main menu (Title Screen) ──────────────────────────────────────────
+        if (gs.gameState == 0) {
             drawMainMenu(win, hudSh, quad, sw, sh,
-                btnWorld1, btnWorld2, btnWorld3, btnQuit,
-                mx, my, mouseLeft);
+                         btnSingleplayer, btnOptionsMain, btnQuitMain,
+                         mx, my, mouseLeft);
 
-            bool clicked1 = btnWorld1.clicked && setTimer <= 0;
-            bool clicked2 = btnWorld2.clicked && setTimer <= 0;
-            bool clicked3 = btnWorld3.clicked && setTimer <= 0;
-
-            if (clicked1 || clicked2 || clicked3) {
-                int slot = clicked1 ? 0 : (clicked2 ? 1 : 2);
-                selectedSlot = slot;
-                if (worldExists(slot)) {
-                    if (loadGame(slot, new float[6], hotbar, inventory, new float[1])) {
-                        float[] ld = new float[6]; float[] lt = new float[1];
-                        if (loadGame(slot, ld, hotbar, inventory, lt)) {
-                            px = cast<double>(ld[0]); py = cast<double>(ld[1]); pz = cast<double>(ld[2]);
-                            cam.yaw = cast<double>(ld[3]); cam.pitch = cast<double>(ld[4]);
-                            health = cast<int>(ld[5]);
-                            worldTime = cast<double>(lt[0]);
-                        }
-                    }
-                } else {
-                    px = 0.5; py = 9.0; pz = 0.5; cam.yaw = 0; cam.pitch = 0;
-                    worldTime = 0.25; health = maxHealth; hunger = maxHunger;
-                    dead = false; flying = false;
-                    // Reset hotbar to defaults
-                    hotbar[0].set(BLOCK_GRASS, 64);
-                    hotbar[1].set(BLOCK_DIRT, 64);
-                    hotbar[2].set(BLOCK_STONE, 64);
-                    hotbar[3].set(BLOCK_COBBLE, 64);
-                    hotbar[4].set(BLOCK_PLANKS, 64);
-                    hotbar[5].set(BLOCK_LOG, 64);
-                    hotbar[6].set(BLOCK_SAND, 64);
-                    hotbar[7].set(BLOCK_GLASS, 32);
-                    hotbar[8].set(BLOCK_BRICK, 32);
-                    for (int ii = 0; ii < 27; ii++) inventory[ii].setEmpty();
+            if (btnSingleplayer.clicked && gs.setTimer <= 0) {
+                cachedWorldList = loadWorldList();
+                if (cachedWorldList.size() > 0 && gs.selectedWorldId.length() == 0) {
+                    gs.selectedWorldId = cachedWorldList.get(0).id;
                 }
-                for (int cx3 = -1; cx3 <= 1; cx3++) {
-                    for (int cz3 = -1; cz3 <= 1; cz3++) { world.loadChunkImmediate(cx3, cz3); }
+                gs.gameState = 5;
+                gs.setTimer = 15;
+            }
+            if (btnOptionsMain.clicked && gs.setTimer <= 0) {
+                gs.gameState = 2;
+                gs.setTimer = 15;
+            }
+            if (btnQuitMain.clicked) {
+                win.close();
+            }
+        }
+
+        // ── Select World Screen ───────────────────────────────────────────────
+        if (gs.gameState == 5) {
+            string clickedCardId = drawSelectWorldMenu(win, hudSh, quad, sw, sh,
+                                                       cachedWorldList, gs.selectedWorldId,
+                                                       btnPlayWorld, btnCreateSelect, btnDeleteWorld, btnCancelSelect,
+                                                       mx, my, mouseLeft, mouseLeftClicked);
+            if (clickedCardId.length() > 0) {
+                gs.selectedWorldId = clickedCardId;
+            }
+
+            if (win.isKeyPressed(Key.Escape) && gs.setTimer <= 0) {
+                gs.gameState = 0;
+                gs.setTimer = 15;
+            }
+
+            // Play Selected World
+            if (btnPlayWorld.clicked && gs.selectedWorldId.length() > 0 && gs.setTimer <= 0) {
+                float[] ld = new float[6];
+                float[] lt = new float[1];
+                int[] lseed = new int[1];
+                if (loadGameById(gs.selectedWorldId, ld, hotbar, inventory, lt, lseed)) {
+                    gs.px = cast<double>(ld[0]);
+                    gs.py = cast<double>(ld[1]);
+                    gs.pz = cast<double>(ld[2]);
+                    cam.yaw   = cast<double>(ld[3]);
+                    cam.pitch = cast<double>(ld[4]);
+                    gs.health = cast<int>(ld[5]);
+                    gs.worldTime = cast<double>(lt[0]);
+                    int loadedSeed = lseed[0];
+                    if (loadedSeed == 0) loadedSeed = 1337;
+                    world.initWorld(loadedSeed, gs.selectedWorldId);
+                    world.loadWorldChunksById(gs.selectedWorldId);
+                } else {
+                    int defaultSeed = 1337;
+                    world.initWorld(defaultSeed, gs.selectedWorldId);
+                    gs.px = 0.5; gs.pz = 0.5;
+                    gs.py = cast<double>(worldSurfaceAt(0, 0, world.worldNoise) + 1);
+                    cam.yaw = 0; cam.pitch = 0;
+                    gs.worldTime = 0.25;
+                    gs.health = gs.maxHealth;
+                    gs.hunger = gs.maxHunger;
+                    gs.dead = false;
+                    gs.flying = false;
+                }
+                for (int cx = -1; cx <= 1; cx++) {
+                    for (int cz = -1; cz <= 1; cz++) { world.loadChunkImmediate(cx, cz); }
                 }
                 for (int ii = 0; ii < world.count; ii++) world.buildMesh(ii);
-                gameState = 1; grabbed = true; win.setCursorGrabbed(true); setTimer = 15;
+                if (world.isPlayerStuck(gs.px, gs.py, gs.pz)) {
+                    gs.py = world.getSpawnY(gs.px, gs.pz);
+                    cam.x = gs.px; cam.y = gs.py + 1.62; cam.z = gs.pz;
+                    gs.vx = 0.0; gs.vy = 0.0; gs.vz = 0.0;
+                }
+                gs.gameState = 1; gs.grabbed = true; win.setCursorGrabbed(true); gs.setTimer = 15;
             }
-            if (btnQuit.clicked) { win.close(); }
+
+            // Create New World button
+            if (btnCreateSelect.clicked && gs.setTimer <= 0) {
+                inputWorldName.text = "New World";
+                inputSeed.text = "";
+                createGameMode = "Survival";
+                gs.gameState = 6;
+                gs.setTimer = 15;
+            }
+
+            // Delete World button
+            if (btnDeleteWorld.clicked && gs.selectedWorldId.length() > 0 && gs.setTimer <= 0) {
+                deleteWorld(gs.selectedWorldId);
+                gs.selectedWorldId = "";
+                cachedWorldList = loadWorldList();
+                if (cachedWorldList.size() > 0) {
+                    gs.selectedWorldId = cachedWorldList.get(0).id;
+                }
+                gs.setTimer = 15;
+            }
+
+            // Cancel button
+            if (btnCancelSelect.clicked && gs.setTimer <= 0) {
+                gs.gameState = 0;
+                gs.setTimer = 15;
+            }
         }
 
-        // Settings menu
-        if (gameState == 2) {
-            float sensDisplay = mouseSens * 1000.0;
-            sliderSens.value = sensDisplay;
-            sliderRD.value = cast<float>(renderR);
+        // ── Create New World Screen ───────────────────────────────────────────
+        if (gs.gameState == 6) {
+            drawCreateWorldMenu(win, hudSh, quad, sw, sh,
+                                inputWorldName, btnGameMode, inputSeed,
+                                btnConfirmCreate, btnCancelCreate,
+                                createGameMode, mx, my, mouseLeft);
+
+            // Toggle game mode
+            if (btnGameMode.clicked && gs.setTimer <= 0) {
+                if (createGameMode == "Survival") {
+                    createGameMode = "Creative";
+                } else {
+                    createGameMode = "Survival";
+                }
+                gs.setTimer = 15;
+            }
+
+            if (win.isKeyPressed(Key.Escape) && gs.setTimer <= 0) {
+                gs.gameState = 5;
+                gs.setTimer = 15;
+            }
+
+            if (btnCancelCreate.clicked && gs.setTimer <= 0) {
+                gs.gameState = 5;
+                gs.setTimer = 15;
+            }
+
+            if (btnConfirmCreate.clicked && gs.setTimer <= 0) {
+                string wName = inputWorldName.text.trim();
+                if (wName.length() == 0) wName = "New World";
+
+                int genSeed = parseSeed(inputSeed.text);
+                if (genSeed == 0) {
+                    genSeed = (cast<int>(Time.seconds() * 1000.0) ^ cast<int>(System.nanoTime())) & 0x7FFFFFFF;
+                    if (genSeed <= 0) genSeed = 1337;
+                }
+
+                WorldMeta createdMeta = createWorldEntry(wName, createGameMode, genSeed);
+                gs.selectedWorldId = createdMeta.id;
+
+                world.initWorld(genSeed, createdMeta.id);
+
+                gs.px = 0.5;
+                gs.pz = 0.5;
+                gs.py = cast<double>(worldSurfaceAt(0, 0, world.worldNoise) + 1);
+                cam.yaw = 0;
+                cam.pitch = 0;
+                gs.worldTime = 0.25;
+                gs.health = gs.maxHealth;
+                gs.hunger = gs.maxHunger;
+                gs.dead = false;
+                gs.flying = (createGameMode == "Creative");
+
+                hotbar[0].set(BLOCK_GRASS, 64);
+                hotbar[1].set(BLOCK_DIRT,   64);
+                hotbar[2].set(BLOCK_STONE, 64);
+                hotbar[3].set(BLOCK_COBBLE, 64);
+                hotbar[4].set(BLOCK_PLANKS, 64);
+                hotbar[5].set(BLOCK_LOG,    64);
+                hotbar[6].set(BLOCK_SAND,  64);
+                hotbar[7].set(BLOCK_GLASS,  32);
+                hotbar[8].set(BLOCK_BRICK, 32);
+                for (int ii = 0; ii < 27; ii++) inventory[ii].setEmpty();
+
+                saveGameById(createdMeta.id, gs.px, gs.py, gs.pz, cam.yaw, cam.pitch,
+                             gs.health, hotbar, inventory, gs.worldTime, world.seed);
+                world.saveWorldChunksById(createdMeta.id);
+
+                for (int cx = -1; cx <= 1; cx++) {
+                    for (int cz = -1; cz <= 1; cz++) { world.loadChunkImmediate(cx, cz); }
+                }
+                for (int ii = 0; ii < world.count; ii++) world.buildMesh(ii);
+
+                gs.py = world.getSpawnY(gs.px, gs.pz);
+                cam.x = gs.px; cam.y = gs.py + 1.62; cam.z = gs.pz;
+                gs.vx = 0.0; gs.vy = 0.0; gs.vz = 0.0;
+
+                gs.gameState = 1;
+                gs.grabbed = true;
+                win.setCursorGrabbed(true);
+                gs.setTimer = 15;
+            }
+        }
+
+        // ── Settings menu ─────────────────────────────────────────────────────
+        if (gs.gameState == 2) {
+            sliderSens.value = gs.mouseSens * 1000.0;
+            sliderRD.value   = cast<float>(gs.renderR);
 
             drawSettings(win, hudSh, quad, sw, sh,
-                btnResume, btnSaveQuit,
-                sliderRD, sliderSens,
-                health, maxHealth, hunger, maxHunger, worldTime,
-                mx, my, mouseLeft,
-                flying, showDebug);
+                         btnResume, btnSaveQuit, sliderRD, sliderSens,
+                         gs.health, gs.maxHealth, gs.hunger, gs.maxHunger, gs.worldTime,
+                         mx, my, mouseLeft, gs.flying, gs.showDebug);
 
-            renderR  = cast<int>(sliderRD.value);
-            mouseSens = sliderSens.value * 0.001;
+            gs.renderR   = cast<int>(Math.round(sliderRD.value));
+            if (gs.renderR < 2)  gs.renderR = 2;
+            if (gs.renderR > 32) gs.renderR = 32;
+            gs.mouseSens = sliderSens.value * 0.001;
 
-            if (btnResume.clicked && setTimer <= 0) {
-                gameState = 1; grabbed = true; win.setCursorGrabbed(true); setTimer = 15;
+            if (btnResume.clicked && gs.setTimer <= 0) {
+                gs.gameState = 1; gs.grabbed = true; win.setCursorGrabbed(true); gs.setTimer = 15;
             }
-            if (btnSaveQuit.clicked && setTimer <= 0) {
-                saveGame(selectedSlot, px, py, pz, cam.yaw, cam.pitch, health, hotbar, inventory, worldTime);
-                gameState = 0; setTimer = 15;
+            if (btnSaveQuit.clicked && gs.setTimer <= 0) {
+                if (world.currentWorldId.length() > 0) {
+                    saveGameById(world.currentWorldId, gs.px, gs.py, gs.pz, cam.yaw, cam.pitch,
+                                 gs.health, hotbar, inventory, gs.worldTime, world.seed);
+                    world.saveWorldChunksById(world.currentWorldId);
+                } else {
+                    saveGame(gs.selectedSlot, gs.px, gs.py, gs.pz, cam.yaw, cam.pitch,
+                             gs.health, hotbar, inventory, gs.worldTime, world.seed);
+                    world.saveWorldChunks(gs.selectedSlot);
+                }
+                cachedWorldList = loadWorldList();
+                gs.gameState = 0; gs.setTimer = 15;
             }
         }
 
-        // Inventory
-        if (gameState == 3) {
-            // Sync inventory screen state at open (already done on E keypress)
-            invScreen.setTimer = (invScreen.setTimer > 0) ? invScreen.setTimer : 0;
+        // ── Inventory screen ──────────────────────────────────────────────────
+        if (gs.gameState == 3) {
             invScreen.draw(win, hudSh, quad, sw, sh, mx, my, mouseLeft, mouseRight);
-            // Sync back
             invScreen.syncTo(hotbar, inventory);
-            // Close on E
-            if (win.isKeyPressed(Key.E) && invTimer <= 0) {
-                gameState = 1; grabbed = true; win.setCursorGrabbed(true); invTimer = 15;
+            if (win.isKeyPressed(Key.E) && gs.invTimer <= 0) {
+                gs.gameState = 1; gs.grabbed = true; win.setCursorGrabbed(true); gs.invTimer = 15;
             }
         }
 
-        // Death screen
-        if (gameState == 4) {
+        // ── Death screen ──────────────────────────────────────────────────────
+        if (gs.gameState == 4) {
             drawDeathScreen(win, hudSh, quad, sw, sh, btnRespawn);
             btnRespawn.update(mx, my, mouseLeft);
             btnRespawn.draw(win, hudSh, quad, sw, sh);
-            if ((btnRespawn.clicked || win.isKeyPressed(Key.R)) && respawnTimer <= 0) {
-                px = 0.5; py = 9.0; pz = 0.5; vx2 = 0; vy = 0; vz2 = 0;
-                health = maxHealth; hunger = maxHunger; dead = false; gameState = 1;
-                grabbed = true; win.setCursorGrabbed(true);
-                respawnTimer = 30;
+            if ((btnRespawn.clicked || win.isKeyPressed(Key.R)) && gs.respawnTimer <= 0) {
+                gs.px = 0.5; gs.pz = 0.5;
+                gs.py = world.getSpawnY(gs.px, gs.pz);
+                cam.x = gs.px; cam.y = gs.py + 1.62; cam.z = gs.pz;
+                gs.vx = 0.0; gs.vy = 0.0; gs.vz = 0.0;
+                gs.health = gs.maxHealth; gs.hunger = gs.maxHunger;
+                gs.dead = false; gs.gameState = 1;
+                gs.grabbed = true; win.setCursorGrabbed(true);
+                gs.respawnTimer = 30;
             }
         }
 
         win.enableDepthTest(true);
         win.swapBuffers();
-        frame++;
+        gs.frame++;
     }
 }

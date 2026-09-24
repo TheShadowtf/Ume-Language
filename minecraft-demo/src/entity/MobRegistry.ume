@@ -1,0 +1,73 @@
+// ═══════════════════════════════════════════════════════════════════════════
+// MobRegistry.ume — Mob definitions registry and global Mobs table
+// ═══════════════════════════════════════════════════════════════════════════
+
+// (MobDef, MobPart, and Block are included before this file)
+
+public class MobRegistry {
+    public MobDef[] defs;
+
+    public MobRegistry() {
+        defs = new MobDef[MOB_MAX];
+        registerDefaults();
+    }
+
+    public func void registerDef(MobDef d) {
+        if (d.id < 0 || d.id >= defs.length()) return;
+        defs[d.id] = d;
+    }
+
+    public func MobDef get(int id) {
+        if (id < 0 || id >= defs.length()) return null;
+        return defs[id];
+    }
+
+    public func string name(int id) {
+        MobDef d = get(id);
+        return (d == null) ? "Unknown" : d.name;
+    }
+
+    private func void registerDefaults() {
+        registerDef(new MobDef(MOB_PIG, "Pig")
+            .setHealth(10).setFlags(MOB_PASSIVE)
+            .setSpeeds(0.025, 0.025).setModelScale(1.0)
+            .setSize(0.7, 0.7).setDrop(BLOCK_PLANKS, 1));
+
+        registerDef(new MobDef(MOB_COW, "Cow")
+            .setHealth(10).setFlags(MOB_PASSIVE)
+            .setSpeeds(0.022, 0.022).setModelScale(1.0)
+            .setSize(0.8, 0.9).setDrop(BLOCK_LEAVES, 2));
+
+        registerDef(new MobDef(MOB_CHICKEN, "Chicken")
+            .setHealth(6).setFlags(MOB_PASSIVE)
+            .setSpeeds(0.028, 0.028).setModelScale(0.7)
+            .setSize(0.4, 0.5).setDrop(BLOCK_SNOW, 1));
+
+        registerDef(new MobDef(MOB_SHEEP, "Sheep")
+            .setHealth(10).setFlags(MOB_PASSIVE)
+            .setSpeeds(0.022, 0.022).setModelScale(1.0)
+            .setSize(0.7, 0.8).setDrop(BLOCK_PLANKS, 1));
+
+        registerDef(new MobDef(MOB_ZOMBIE, "Zombie")
+            .setHealth(20).setFlags(MOB_HOSTILE | MOB_BURNS_IN_DAY)
+            .setSpeeds(0.025, 0.048).setModelScale(1.0)
+            .setSize(0.6, 1.7).setDrop(BLOCK_DIRT, 1));
+
+        registerDef(new MobDef(MOB_SKELETON, "Skeleton")
+            .setHealth(16).setFlags(MOB_HOSTILE | MOB_BURNS_IN_DAY)
+            .setSpeeds(0.025, 0.048).setModelScale(1.0)
+            .setSize(0.6, 1.75).setDrop(BLOCK_COBBLE, 1));
+
+        registerDef(new MobDef(MOB_SPIDER, "Spider")
+            .setHealth(16).setFlags(MOB_HOSTILE)
+            .setSpeeds(0.028, 0.052).setModelScale(0.85)
+            .setSize(1.1, 0.6).setDrop(BLOCK_DIRT, 1));
+
+        registerDef(new MobDef(MOB_CREEPER, "Creeper")
+            .setHealth(20).setFlags(MOB_HOSTILE)
+            .setSpeeds(0.025, 0.050).setModelScale(1.0)
+            .setSize(0.6, 1.5).setDrop(BLOCK_COAL_ORE, 1));
+    }
+}
+
+public MobRegistry Mobs = new MobRegistry();

@@ -1,0 +1,244 @@
+// ═══════════════════════════════════════════════════════════════════════════
+// Chunk.ume — 16x256x16 Voxel Chunk data and procedural generator
+// ═══════════════════════════════════════════════════════════════════════════
+
+import std.random.*;
+import std.math.*;
+import noise.*;
+
+public class Chunk {
+    public int   chunkX;
+    public int   chunkZ;
+    public int[] blocks;
+    public Mesh  mesh;
+    public int   faceCount;
+    public Mesh  waterMesh;
+    public int   waterFaceCount;
+    public bool  isBuilt;
+    public bool  dirty;
+    public bool  modified;
+    public bool  generated;
+    public bool  generating;
+    public int   seed;
+    public Noise worldNoise;
+
+    public Chunk(int cx, int cz, int seed) {
+        chunkX = cx; 
+        chunkZ = cz;
+        this.seed = seed;
+        blocks = new int[CHUNK_WIDTH * CHUNK_DEPTH * CHUNK_HEIGHT];
+        isBuilt = false; 
+        dirty = false; 
+        modified = false;
+        generated = false; 
+        generating = false; 
+        faceCount = 0; 
+        waterFaceCount = 0;
+        worldNoise = new Noise(seed);
+    }
+
+    public Chunk(int cx, int cz, int seed, Noise noise) {
+        chunkX = cx; 
+        chunkZ = cz;
+        this.seed = seed;
+        blocks = new int[CHUNK_WIDTH * CHUNK_DEPTH * CHUNK_HEIGHT];
+        isBuilt = false; 
+        dirty = false; 
+        modified = false;
+        generated = false; 
+        generating = false; 
+        faceCount = 0; 
+        waterFaceCount = 0;
+        if (noise != null) {
+            worldNoise = noise;
+        } else {
+            worldNoise = new Noise(seed);
+        }
+    }
+
+    // Keep a static or shared Noise instance so we don't reallocate tables every chunk
+    // public Noise worldNoise = new Noise(1337);
+
+    public func void generate() {
+        int wx0 = chunkX * 16; 
+        int wz0 = chunkZ * 16;
+
+        for (int lx = 0; lx < 16; lx++) {
+            for (int lz = 0; lz < 16; lz++) {
+                int wx = wx0 + lx;
+                int wz = wz0 + lz;
+                int sh = worldSurfaceAt(wx, wz, worldNoise);
+                int maxY = (sh < 62) ? 62 : sh;
+
+                for (int y = 0; y <= maxY && y < CHUNK_HEIGHT; y++) {
+                    int t = 0;
+
+                    if (y == 0) {
+                        t = BLOCK_BEDROCK;
+                    } 
+                    else if (y <= 4 && (((lx * 7 + lz * 13 + y * 19 + chunkX * 31 + chunkZ * 17) & 0x7FFFFFFF) % 5 > y)) {
+                        t = BLOCK_BEDROCK;
+                    }
+                    else if (y <= sh) {
+                        // 1. Initial base block assignment (stone / ore / dirt / grass / sand / snow)
+                        if (y < sh - 3) {
+                            t = BLOCK_STONE;
+
+                            // Ore placement inside solid stone (Minecraft 1.10.2 layer distribution)
+                            if (y <= 128 && ((lx * 13 + lz * 7 + y * 5 + chunkX * 17 + chunkZ * 3) & 0x7FFFFFFF) % 31 == 0) {
+                                t = BLOCK_COAL_ORE;
+                            } else if (y <= 64 && ((lx * 7 + lz * 19 + y * 11 + chunkX * 23 + chunkZ * 13) & 0x7FFFFFFF) % 47 == 0) {
+                                t = BLOCK_IRON_ORE;
+                            } else if (y <= 32 && ((lx * 11 + lz * 23 + y * 7 + chunkX * 41 + chunkZ * 29) & 0x7FFFFFFF) % 73 == 0) {
+                                t = BLOCK_GOLD_ORE;
+                            } else if (y <= 16 && ((lx * 17 + lz * 29 + y * 13 + chunkX * 59 + chunkZ * 37) & 0x7FFFFFFF) % 97 == 0) {
+                                t = BLOCK_DIAMOND_ORE;
+                            }
+                        } 
+                        else if (y < sh) {
+                            t = (sh <= 63) ? BLOCK_SAND : BLOCK_DIRT;
+                        } 
+                        else if (y == sh) {
+                            if (sh <= 61) {
+                                t = ((lx + lz + chunkX + chunkZ) % 3 == 0) ? BLOCK_GRAVEL : BLOCK_SAND;
+                            } else if (sh <= 63) {
+                                t = BLOCK_SAND; // Beach / shoreline at sea level
+                            } else if (sh >= 115) {
+                                t = BLOCK_SNOW_BLOCK; // Mountain snow peak
+                            } else if (sh >= 105) {
+                                t = BLOCK_STONE; // Exposed mountain cliff
+                            } else {
+                                t = BLOCK_GRASS;
+                            }
+                        }
+
+                        // 2. 3D Cave Carving (Minecraft style)
+                        // Caves generate strictly underground, preserving the surface landscape
+                        if (y > 4 && y <= sh && t != BLOCK_BEDROCK) {
+                            // Under water/ocean: preserve seabed
+                            bool underSea = (sh <= 62 && y >= sh - 2);
+
+                            if (!underSea) {
+                                double fx = cast<double>(wx) * 0.024;
+                                double fy = cast<double>(y)  * 0.032;
+                                double fz = cast<double>(wz) * 0.024;
+
+                                // Winding 3D tunnel system
+                                double c1a = worldNoise.perlin3D(fx, fy, fz);
+                                double c1b = worldNoise.perlin3D(fx + 100.0, fy + 50.0, fz);
+                                double dist1 = c1a * c1a + c1b * c1b;
+
+                                // Modulated tunnel thickness (tight 2-4 block diameter tubes)
+                                double rMod1 = worldNoise.perlin3D(fx * 0.5 + 40.0, fy * 0.5, fz * 0.5 + 40.0);
+                                double thresh1 = 0.020 + rMod1 * 0.010; // 0.010 to 0.030
+
+                                bool isCave = false;
+
+                                // ── A. Deep & Mid Underground Caves (y < sh - 3) ──
+                                // Strictly underground: the surface topsoil (sh, sh-1, sh-2) is 100% solid and protected
+                                if (y < sh - 3) {
+                                    // Primary tunnel
+                                    if (dist1 < thresh1) {
+                                        isCave = true;
+                                    }
+
+                                    // Localized branching tunnels (forks)
+                                    double branchZone = worldNoise.perlin3D(fx * 0.4 + 200.0, 0.0, fz * 0.4 + 200.0);
+                                    if (branchZone > 0.28) {
+                                        double c2a = worldNoise.perlin3D(fx * 1.1 + 80.0, fy * 0.95 + 120.0, fz * 1.1 + 30.0);
+                                        double c2b = worldNoise.perlin3D(fx * 1.1 + 220.0, fy * 0.95 + 60.0, fz * 1.1 + 180.0);
+                                        if (c2a * c2a + c2b * c2b < 0.018) {
+                                            isCave = true;
+                                        }
+                                    }
+
+                                    // Deep cavern chambers (strictly below sea level, y <= 45)
+                                    if (y <= 45) {
+                                        double roomNoise = worldNoise.simplex3D(cast<double>(wx) * 0.018 + 88.0, cast<double>(y) * 0.022 + 33.0, cast<double>(wz) * 0.018 + 99.0);
+                                        if (roomNoise > 0.70) isCave = true;
+                                    }
+
+                                    // Underground ravines (strictly between y=16 and y=50)
+                                    if (y >= 16 && y <= 50) {
+                                        double rLine = worldNoise.perlin3D(cast<double>(wx) * 0.008 + 350.0, 0.0, cast<double>(wz) * 0.008 + 350.0);
+                                        if (Math.abs(rLine) < 0.010) {
+                                            double rCut = worldNoise.perlin3D(cast<double>(wx) * 0.03, cast<double>(y) * 0.06, cast<double>(wz) * 0.03);
+                                            if (rCut > -0.15) isCave = true;
+                                        }
+                                    }
+                                }
+                                // ── B. Rare, Small Surface Cave Openings (y >= sh - 3 && y <= sh) ──
+                                // Only punches a small, focused opening where an ascending tunnel meets a rare entrance spot on dry land
+                                else if (sh >= 63) {
+                                    double entranceMask = worldNoise.perlin3D(cast<double>(wx) * 0.012 + 400.0, 0.0, cast<double>(wz) * 0.012 + 400.0);
+                                    // Rare spot (entranceMask > 0.65) and only the tight core of a tunnel (dist1 < 0.014)
+                                    if (entranceMask > 0.65 && dist1 < 0.014) {
+                                        isCave = true;
+                                    }
+                                }
+
+                                if (isCave) {
+                                    if (y <= 11) {
+                                        t = BLOCK_WATER; // Deep underground lake
+                                    } else {
+                                        t = 0; // Cave air
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    else if (y <= 62) {
+                        // Water filling oceans / rivers up to sea level 62
+                        t = BLOCK_WATER;
+                    }
+
+                    blocks[lx + lz * 16 + y * CHUNK_LAYER] = t;
+                }
+
+                // Sparse wild flowers on grass
+                if (sh >= 64 && sh < 105 && blocks[lx + lz * 16 + sh * CHUNK_LAYER] == BLOCK_GRASS && sh + 1 < CHUNK_HEIGHT) {
+                    if (((lx * 31 + lz * 17 + chunkX * 7 + chunkZ * 11) & 0x7FFFFFFF) % 43 == 0) {
+                        blocks[lx + lz * 16 + (sh + 1) * CHUNK_LAYER] = BLOCK_FLOWER;
+                    }
+                }
+            }
+        }
+
+        // ── Trees (Only plant if the block below remained solid grass) ──────────
+        var rng = new Random(seed * 31 + 7919 + chunkX * 7321 + chunkZ * 3739);
+        int numTrees = rng.nextInt(3) + 1;
+
+        for (int t = 0; t < numTrees; t++) {
+            int tx = rng.nextInt(11) + 2; 
+            int tz2 = rng.nextInt(11) + 2;
+            int sh = worldSurfaceAt(wx0 + tx, wz0 + tz2, worldNoise);
+
+            // Ensure the surface block is actually intact grass, below snow line, and has room below the ceiling
+            if (sh >= 63 && sh < 105 && blocks[tx + tz2 * 16 + sh * CHUNK_LAYER] == BLOCK_GRASS && sh + 6 < CHUNK_HEIGHT) {
+                // Trunk (4 tall)
+                blocks[tx + tz2 * 16 + (sh + 1) * CHUNK_LAYER] = BLOCK_LOG;
+                blocks[tx + tz2 * 16 + (sh + 2) * CHUNK_LAYER] = BLOCK_LOG;
+                blocks[tx + tz2 * 16 + (sh + 3) * CHUNK_LAYER] = BLOCK_LOG;
+                blocks[tx + tz2 * 16 + (sh + 4) * CHUNK_LAYER] = BLOCK_LOG;
+
+                // Canopy (3 layers)
+                int top = sh + 4;
+                for (int dx = -2; dx <= 2; dx++) {
+                    for (int dz2 = -2; dz2 <= 2; dz2++) {
+                        if (dx == 0 && dz2 == 0) continue;
+                        int lx2 = tx + dx; 
+                        int lz3 = tz2 + dz2;
+                        if (lx2 >= 0 && lx2 < 16 && lz3 >= 0 && lz3 < 16) {
+                            if (top < CHUNK_HEIGHT && blocks[lx2 + lz3 * 16 + top * CHUNK_LAYER] == 0)
+                                blocks[lx2 + lz3 * 16 + top * CHUNK_LAYER] = BLOCK_LEAVES;
+                            if (top - 1 > sh && top - 1 < CHUNK_HEIGHT && blocks[lx2 + lz3 * 16 + (top - 1) * CHUNK_LAYER] == 0)
+                                blocks[lx2 + lz3 * 16 + (top - 1) * CHUNK_LAYER] = BLOCK_LEAVES;
+                        }
+                    }
+                }
+                // Cap
+                if (top + 1 < CHUNK_HEIGHT) blocks[tx + tz2 * 16 + (top + 1) * CHUNK_LAYER] = BLOCK_LEAVES;
+            }
+        }
+    }
+}

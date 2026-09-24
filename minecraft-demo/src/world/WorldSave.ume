@@ -1,0 +1,342 @@
+// ═══════════════════════════════════════════════════════════════════════════
+// WorldSave.ume — World slot persistence (player pos, seed, chunk data, inv)
+// ═══════════════════════════════════════════════════════════════════════════
+
+import std.collections.*;
+import std.time.*;
+
+// (Item is included by main.ume before world/World.ume)
+
+public int SAVE_VERSION = 3;
+
+// ── World Metadata (for Select World screen) ──────────────────────────────────
+public class WorldMeta {
+    public string id;          // world file key, e.g. "world_1"
+    public string name;        // display name, e.g. "New World"
+    public string mode;        // "Survival" or "Creative"
+    public int    seed;        // generator seed
+    public string lastPlayed;  // display timestamp / date
+
+    public WorldMeta(string id, string name, string mode, int seed, string lastPlayed) {
+        this.id = id;
+        this.name = name;
+        this.mode = mode;
+        this.seed = seed;
+        this.lastPlayed = lastPlayed;
+    }
+}
+
+// ── Seed Parsing Helper ───────────────────────────────────────────────────────
+public func int parseSeed(string s) {
+    s = s.trim();
+    if (s.length() == 0) return 0;
+    bool allDigits = true;
+    for (int i = 0; i < s.length(); i++) {
+        string c = s.charAt(i);
+        if (!(c >= "0" && c <= "9") && !(i == 0 && c == "-")) {
+            allDigits = false;
+        }
+    }
+    if (allDigits) {
+        int v = s.toInt();
+        return v < 0 ? -v : v;
+    }
+    int h = 0;
+    for (int i = 0; i < s.length(); i++) {
+        string c = s.charAt(i);
+        int cv = 65;
+        if (c >= "a" && c <= "z") cv = 97;
+        else if (c >= "0" && c <= "9") cv = 48;
+        h = (h * 31 + cv + i) & 0x7FFFFFFF;
+    }
+    if (h <= 0) h = 1337;
+    return h;
+}
+
+// ── Chunk RLE Compression (Minecraft-style run-length block encoding) ─────────
+public func string encodeChunkRLE(int[] blocks) {
+    int len = blocks.length();
+    if (len == 0) return "";
+    string outStr = "";
+    int curId = blocks[0];
+    int runLen = 1;
+    for (int i = 1; i < len; i++) {
+        int id = blocks[i];
+        if (id == curId) {
+            runLen++;
+        } else {
+            outStr = outStr + runLen + "x" + curId + ",";
+            curId = id;
+            runLen = 1;
+        }
+    }
+    outStr = outStr + runLen + "x" + curId;
+    return outStr;
+}
+
+public func void decodeChunkRLE(int[] blocks, string rle) {
+    if (rle.length() == 0) return;
+    string[] runs = rle.split(",");
+    int idx = 0;
+    int total = blocks.length();
+    for (int i = 0; i < runs.length(); i++) {
+        string run = runs[i].trim();
+        if (run.length() == 0) continue;
+        int xPos = run.indexOf("x");
+        if (xPos > 0) {
+            int count = run.substring(0, xPos).trim().toInt();
+            int id = run.substring(xPos + 1, run.length()).trim().toInt();
+            for (int k = 0; k < count && idx < total; k++) {
+                blocks[idx] = id;
+                idx++;
+            }
+        }
+    }
+    while (idx < total) {
+        blocks[idx] = 0;
+        idx++;
+    }
+}
+
+// ── World List Management (reads/writes saves/worlds.txt) ─────────────────────
+public func List<WorldMeta> loadWorldList() {
+    List<WorldMeta> list = new List<WorldMeta>();
+    string indexFile = "saves/worlds.txt";
+    if (FileSystem.exists(indexFile)) {
+        string content = FileSystem.readText(indexFile);
+        if (content.length() > 0) {
+            string[] lines = content.split("\n");
+            for (int i = 0; i < lines.length(); i++) {
+                string line = lines[i].trim();
+                if (line.length() == 0) continue;
+                string[] parts = line.split("|");
+                if (parts.length() >= 5) {
+                    string wid = parts[0].trim();
+                    string wname = parts[1].trim();
+                    string wmode = parts[2].trim();
+                    int wseed = parts[3].trim().toInt();
+                    string wdate = parts[4].trim();
+                    list.add(new WorldMeta(wid, wname, wmode, wseed, wdate));
+                }
+            }
+        }
+    }
+
+    // Auto-migrate any legacy root save files if saves/worlds.txt is empty
+    if (list.size() == 0) {
+        for (int slot = 0; slot < 3; slot++) {
+            string oldFn = "umecraft_world_" + slot + ".txt";
+            if (FileSystem.exists(oldFn)) {
+                int s = loadWorldSeed(slot);
+                if (s == 0) s = 1337 + slot * 1000;
+                string wid = "world_" + (slot + 1);
+                WorldMeta wm = new WorldMeta(wid, "World " + (slot + 1), "Survival", s, "Local Save");
+                list.add(wm);
+                string oldContent = FileSystem.readText(oldFn);
+                FileSystem.writeText("saves/" + wid + ".txt", oldContent);
+                string oldChunks = "umecraft_world_" + slot + "_chunks.dat";
+                if (FileSystem.exists(oldChunks)) {
+                    FileSystem.writeText("saves/" + wid + "_chunks.dat", FileSystem.readText(oldChunks));
+                }
+            }
+        }
+        if (list.size() > 0) {
+            saveWorldList(list);
+        }
+    }
+    return list;
+}
+
+public func void saveWorldList(List<WorldMeta> list) {
+    string outStr = "";
+    int total = list.size();
+    for (int i = 0; i < total; i++) {
+        WorldMeta wm = list.get(i);
+        if (wm != null) {
+            outStr = outStr + wm.id + "|" + wm.name + "|" + wm.mode + "|" + wm.seed + "|" + wm.lastPlayed + "\n";
+        }
+    }
+    FileSystem.writeText("saves/worlds.txt", outStr);
+}
+
+public func WorldMeta createWorldEntry(string name, string mode, int seed) {
+    List<WorldMeta> list = loadWorldList();
+    int count = list.size() + 1;
+    string wid = "world_" + count;
+    while (FileSystem.exists("saves/" + wid + ".txt")) {
+        count++;
+        wid = "world_" + count;
+    }
+    WorldMeta wm = new WorldMeta(wid, name, mode, seed, "Just now");
+    list.add(wm);
+    saveWorldList(list);
+    return wm;
+}
+
+public func void deleteWorld(string worldId) {
+    List<WorldMeta> list = loadWorldList();
+    List<WorldMeta> newList = new List<WorldMeta>();
+    int total = list.size();
+    for (int i = 0; i < total; i++) {
+        WorldMeta wm = list.get(i);
+        if (wm != null && wm.id != worldId) {
+            newList.add(wm);
+        }
+    }
+    saveWorldList(newList);
+    FileSystem.remove("saves/" + worldId + ".txt");
+    FileSystem.remove("saves/" + worldId + "_chunks.dat");
+}
+
+// ── World Save / Load By World ID ─────────────────────────────────────────────
+public func void saveGameById(string worldId, double px, double py, double pz, double yaw, double pitch,
+                              int health, ItemStack[] hotbar, ItemStack[] inv, double worldTime, int seed) {
+    string filename = "saves/" + worldId + ".txt";
+    string data = "VERSION:" + SAVE_VERSION + "\n";
+    data = data + "SEED:" + seed + "\n";
+    data = data + "PLAYER:" + px + "," + py + "," + pz + "," + yaw + "," + pitch + "," + health + "\n";
+    data = data + "TIME:" + worldTime + "\n";
+    data = data + "HOTBAR:";
+    int hbLen = hotbar.length();
+    for (int i = 0; i < 9; i++) {
+        if (i > 0) data = data + ";";
+        if (i < hbLen) {
+            data = data + hotbar[i].blockId + "," + hotbar[i].count;
+        } else {
+            data = data + "0,0";
+        }
+    }
+    data = data + "\n";
+    data = data + "INV:";
+    int invLen = (inv == null) ? 0 : inv.length();
+    for (int i = 0; i < 27; i++) {
+        if (i > 0) data = data + ";";
+        if (i < invLen) {
+            data = data + inv[i].blockId + "," + inv[i].count;
+        } else {
+            data = data + "0,0";
+        }
+    }
+    data = data + "\n";
+    FileSystem.writeText(filename, data);
+}
+
+public func bool loadGameById(string worldId, float[] outData, ItemStack[] outHotbar, ItemStack[] outInv, float[] outTime, int[] outSeed) {
+    string filename = "saves/" + worldId + ".txt";
+    if (!FileSystem.exists(filename)) {
+        // Fallback check in root
+        filename = worldId + ".txt";
+        if (!FileSystem.exists(filename)) return false;
+    }
+    string content = FileSystem.readText(filename);
+    if (content.length() == 0) return false;
+    string[] lines = content.split("\n");
+    int version = 1;
+    if (outSeed != null && outSeed.length() > 0) outSeed[0] = 0;
+    for (int i = 0; i < lines.length(); i++) {
+        string line = lines[i];
+        if (line.startsWith("VERSION:")) {
+            version = line.substring(8, line.length()).trim().toInt();
+        }
+        else if (line.startsWith("SEED:")) {
+            if (outSeed != null && outSeed.length() > 0) {
+                outSeed[0] = line.substring(5, line.length()).trim().toInt();
+            }
+        }
+        else if (line.startsWith("PLAYER:")) {
+            string rest = line.substring(7, line.length());
+            string[] parts = rest.split(",");
+            if (parts.length() >= 6) {
+                outData[0] = cast<float>(parts[0].toDouble());
+                outData[1] = cast<float>(parts[1].toDouble());
+                outData[2] = cast<float>(parts[2].toDouble());
+                outData[3] = cast<float>(parts[3].toDouble());
+                outData[4] = cast<float>(parts[4].toDouble());
+                outData[5] = cast<float>(parts[5].toDouble());
+            }
+        }
+        else if (line.startsWith("TIME:")) {
+            outTime[0] = cast<float>(line.substring(5, line.length()).trim().toDouble());
+        }
+        else if (line.startsWith("HOTBAR:")) {
+            string rest = line.substring(7, line.length());
+            if (version >= 2) {
+                string[] slots = rest.split(";");
+                for (int j = 0; j < 9 && j < slots.length(); j++) {
+                    string[] pair = slots[j].split(",");
+                    if (pair.length() >= 2) {
+                        outHotbar[j].blockId = pair[0].trim().toInt();
+                        outHotbar[j].count    = pair[1].trim().toInt();
+                    } else {
+                        outHotbar[j].setEmpty();
+                    }
+                }
+            } else {
+                string[] ids = rest.split(",");
+                for (int j = 0; j < 9 && j < ids.length(); j++) {
+                    int id = ids[j].trim().toInt();
+                    if (id != 0) { outHotbar[j].blockId = id; outHotbar[j].count = 1; }
+                    else { outHotbar[j].setEmpty(); }
+                }
+            }
+        }
+        else if (line.startsWith("INV:") && version >= 2) {
+            string rest = line.substring(4, line.length());
+            string[] slots = rest.split(";");
+            for (int j = 0; j < 27 && j < slots.length(); j++) {
+                string[] pair = slots[j].split(",");
+                if (pair.length() >= 2) {
+                    outInv[j].blockId = pair[0].trim().toInt();
+                    outInv[j].count    = pair[1].trim().toInt();
+                } else {
+                    outInv[j].setEmpty();
+                }
+            }
+        }
+    }
+    return true;
+}
+
+// ── Slot-based Backward Compatibility ─────────────────────────────────────────
+public func void saveGame(int slot, double px, double py, double pz, double yaw, double pitch,
+                          int health, ItemStack[] hotbar, ItemStack[] inv, double worldTime, int seed) {
+    saveGameById("world_" + (slot + 1), px, py, pz, yaw, pitch, health, hotbar, inv, worldTime, seed);
+}
+
+public func bool loadGame(int slot, float[] outData, ItemStack[] outHotbar, ItemStack[] outInv, float[] outTime, int[] outSeed) {
+    string wid = "world_" + (slot + 1);
+    if (FileSystem.exists("saves/" + wid + ".txt")) {
+        return loadGameById(wid, outData, outHotbar, outInv, outTime, outSeed);
+    }
+    // Check old filename
+    string filename = "umecraft_world_" + slot + ".txt";
+    if (FileSystem.exists(filename)) {
+        return loadGameById("umecraft_world_" + slot, outData, outHotbar, outInv, outTime, outSeed);
+    }
+    return false;
+}
+
+public func bool loadGame(int slot, float[] outData, ItemStack[] outHotbar, ItemStack[] outInv, float[] outTime) {
+    int[] dummySeed = new int[1];
+    return loadGame(slot, outData, outHotbar, outInv, outTime, dummySeed);
+}
+
+public func int loadWorldSeed(int slot) {
+    int[] seed = new int[1];
+    float[] d = new float[6];
+    ItemStack[] hb = newStacks(9);
+    ItemStack[] inv = newStacks(27);
+    float[] t = new float[1];
+    if (loadGame(slot, d, hb, inv, t, seed)) {
+        return seed[0];
+    }
+    return 0;
+}
+
+public func bool worldExists(int slot) {
+    return FileSystem.exists("saves/world_" + (slot + 1) + ".txt") || FileSystem.exists("umecraft_world_" + slot + ".txt");
+}
+
+public func bool worldExistsById(string worldId) {
+    return FileSystem.exists("saves/" + worldId + ".txt");
+}

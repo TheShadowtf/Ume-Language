@@ -1,0 +1,46 @@
+// ═══════════════════════════════════════════════════════════════════════════
+// MobDef.ume — Mob definition metadata, flags, and drops
+// ═══════════════════════════════════════════════════════════════════════════
+
+// (Block is included by main.ume before entity/Entity.ume)
+
+public int MOB_HOSTILE      = 1;
+public int MOB_BURNS_IN_DAY = 2;
+public int MOB_PASSIVE      = 4;
+public int MOB_FLYING       = 8;
+
+public class MobDef {
+    public int    id;
+    public string name;
+    public int    maxHealth;
+    public int    flags;
+    public float  walkSpeed;
+    public float  chaseSpeed;
+    public float  modelScale;
+    public float  width;
+    public float  height;
+    public int    dropBlockId;
+    public int    dropCount;
+
+    public MobDef(int id, string name) {
+        this.id = id; this.name = name;
+        maxHealth = 10;
+        flags = MOB_PASSIVE;
+        walkSpeed = 0.02;
+        chaseSpeed = 0.045;
+        modelScale = 1.0;
+        width = 0.6; height = 0.8;
+        dropBlockId = 0;
+        dropCount = 0;
+    }
+
+    public func MobDef setHealth(int h) { maxHealth = h; return this; }
+    public func MobDef setFlags(int f)  { flags = f; return this; }
+    public func MobDef setSpeeds(float w, float c) { walkSpeed = w; chaseSpeed = c; return this; }
+    public func MobDef setModelScale(float s) { modelScale = s; return this; }
+    public func MobDef setSize(float w, float h) { width = w; height = h; return this; }
+    public func MobDef setDrop(int blockId, int count) { dropBlockId = blockId; dropCount = count; return this; }
+
+    public func bool isHostile()    { return (flags & MOB_HOSTILE) != 0; }
+    public func bool burnsInDay()   { return (flags & MOB_BURNS_IN_DAY) != 0; }
+}

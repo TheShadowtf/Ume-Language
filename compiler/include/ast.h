@@ -455,6 +455,7 @@ struct ClassDecl : ASTNode {
 };
 
 struct InterfaceDecl : ASTNode {
+    std::vector<Attribute>           attributes;
     AccessModifier                   access = AccessModifier::Default;
     std::string                      name;
     std::vector<std::string>         typeParams;
@@ -465,8 +466,9 @@ struct InterfaceDecl : ASTNode {
 };
 
 struct EnumValue {
-    std::string name;
-    ASTNodePtr  value; // may be null (auto-numbered)
+    std::string             name;
+    ASTNodePtr              value; // may be null (auto-numbered)
+    std::vector<ASTNodePtr> args;  // Java-style enum constructor arguments: e.g. MANUAL("Stick Shift", 6)
 };
 
 struct EnumDecl : ASTNode {

@@ -1,0 +1,328 @@
+import std.math.*;
+
+// (Widget, Item, Block are included before this file)
+
+public class InventoryScreen {
+    public ItemStack[] mainInv;      // 27 slots
+    public ItemStack[] hotbar;       // 9 slots
+    public ItemStack[] armor;        // 4 slots (head, chest, legs, feet) — blockId 0 = empty
+    public ItemStack[] crafting;     // 4 slots (2×2)
+    public ItemStack   cursor;       // held by mouse
+    public int         hotbarSel;
+    public int         setTimer;
+
+    // Cached slot positions (set in draw, used in click handling)
+    public float[] mainSlotX;  public float[] mainSlotY;
+    public float[] hotbarSlotX; public float[] hotbarSlotY;
+    public float[] armorSlotX;  public float[] armorSlotY;
+    public float[] craftSlotX;  public float[] craftSlotY;
+    public float slotSize;
+    public float panelX; public float panelY; public float panelW; public float panelH;
+
+    public InventoryScreen() {
+        mainInv = newStacks(27);
+        hotbar  = newStacks(9);
+        armor   = newStacks(4);
+        crafting= newStacks(4);
+        cursor  = new ItemStack();
+        hotbarSel = 0;
+        setTimer = 0;
+        mainSlotX = new float[27]; mainSlotY = new float[27];
+        hotbarSlotX = new float[9]; hotbarSlotY = new float[9];
+        armorSlotX = new float[4]; armorSlotY = new float[4];
+        craftSlotX = new float[4]; craftSlotY = new float[4];
+        slotSize = 40.0;
+        panelX = 0; panelY = 0; panelW = 0; panelH = 0;
+    }
+
+    // ── Sync from main loop's hotbar/inv arrays ─────────────────────────────
+    public func void syncFrom(ItemStack[] hb, ItemStack[] inv, int sel) {
+        for (int i = 0; i < 9 && i < hb.length(); i++) {
+            hotbar[i].blockId = hb[i].blockId;
+            hotbar[i].count = hb[i].count;
+        }
+        for (int i = 0; i < 27 && i < inv.length(); i++) {
+            mainInv[i].blockId = inv[i].blockId;
+            mainInv[i].count = inv[i].count;
+        }
+        hotbarSel = sel;
+    }
+
+    // ── Sync back to main loop's arrays ─────────────────────────────────────
+    public func void syncTo(ItemStack[] hb, ItemStack[] inv) {
+        for (int i = 0; i < 9 && i < hb.length(); i++) {
+            hb[i].blockId = hotbar[i].blockId;
+            hb[i].count = hotbar[i].count;
+        }
+        for (int i = 0; i < 27 && i < inv.length(); i++) {
+            inv[i].blockId = mainInv[i].blockId;
+            inv[i].count = mainInv[i].count;
+        }
+    }
+
+    // ── Layout & draw (Minecraft-Style Layout) ───────────────────────────────
+    public func void draw(Window win, Shader hudSh, Mesh quad, float sw, float sh,
+                          float mx, float my, bool mouseLeft, bool mouseRight) {
+        // ── Dimensions & Layout Math ───────────────────────────────────────────
+        slotSize = 38.0;
+        float pad = 4.0;
+        float stride = slotSize + pad;
+
+        // 9-column width defines the panel width
+        float invGridW = 9.0 * stride - pad;
+        float mainH    = 3.0 * stride - pad;
+
+        // Top section height is 4 armor slots tall
+        float topH     = 4.0 * stride - pad;
+
+        panelW = invGridW + 28.0;
+        // Padding: top(28) + topSection + gap(14) + mainInv(3 rows) + gap(10) + hotbar(1 row) + bottom(14)
+        panelH = 28.0 + topH + 14.0 + mainH + 10.0 + slotSize + 14.0;
+
+        panelX = (sw - panelW) * 0.5;
+        panelY = (sh - panelH) * 0.5;
+
+        // ── 1. Screen Dimmer & Panel Frame ──────────────────────────────────────
+        drawRect2D(win, hudSh, quad, 0, 0, sw, sh, 0.0, 0.0, 0.0, 0.75, sw, sh);
+        drawPanel(win, hudSh, quad, panelX, panelY, panelW, panelH, sw, sh);
+
+        float leftX = panelX + 14.0;
+        float topY  = panelY + 26.0;
+
+        // ── 2. TOP SECTION: Armor (Left Column of 4) ────────────────────────────
+        // Slot 0 = Head, 1 = Chest, 2 = Legs, 3 = Feet
+        float armorX = leftX;
+        for (int i = 0; i < 4; i++) {
+            float sx = armorX;
+            float sy = topY + cast<float>(i) * stride;
+            armorSlotX[i] = sx; armorSlotY[i] = sy;
+
+            bool hover = (mx >= sx && mx <= sx + slotSize && my >= sy && my <= sy + slotSize);
+            drawSlot(win, hudSh, quad, sx, sy, slotSize, hover, false, sw, sh);
+
+            if (!armor[i].isEmpty()) {
+                drawItemIcon(win, hudSh, quad, armor[i].blockId, sx, sy, slotSize, sw, sh);
+                drawItemCount(win, armor[i].count, sx, sy, slotSize);
+            }
+
+            if (hover && setTimer <= 0) {
+                if (mouseLeft)  handleClick(i, armor, false);
+                if (mouseRight) handleClick(i, armor, true);
+                setTimer = 8;
+            }
+        }
+
+        // ── 3. TOP SECTION: Player Preview Box (Center) ─────────────────────────
+        float prevX = armorX + stride + 10.0;
+        float prevW = 100.0;
+        float prevH = topH;
+
+        // Background & inner shadow frame
+        drawRect2D(win, hudSh, quad, prevX, topY, prevW, prevH, 0.08, 0.08, 0.10, 1.0, sw, sh);
+        drawRect2D(win, hudSh, quad, prevX + 2, topY + 2, prevW - 4, prevH - 4, 0.14, 0.14, 0.17, 1.0, sw, sh);
+
+        // Player figure (scaled & centered inside box)
+        float bodyCX = prevX + prevW * 0.5;
+        float figureTop = topY + 20.0;
+
+        // Head
+        drawRect2D(win, hudSh, quad, bodyCX - 12, figureTop, 24, 24, 0.85, 0.70, 0.55, 1.0, sw, sh);
+        // Torso
+        drawRect2D(win, hudSh, quad, bodyCX - 15, figureTop + 27, 30, 38, 0.20, 0.45, 0.75, 1.0, sw, sh);
+        // Arms
+        drawRect2D(win, hudSh, quad, bodyCX - 24, figureTop + 27, 8, 36, 0.20, 0.45, 0.75, 1.0, sw, sh);
+        drawRect2D(win, hudSh, quad, bodyCX + 16, figureTop + 27, 8, 36, 0.20, 0.45, 0.75, 1.0, sw, sh);
+        // Legs
+        drawRect2D(win, hudSh, quad, bodyCX - 14, figureTop + 67, 12, 38, 0.25, 0.22, 0.35, 1.0, sw, sh);
+        drawRect2D(win, hudSh, quad, bodyCX + 2,  figureTop + 67, 12, 38, 0.25, 0.22, 0.35, 1.0, sw, sh);
+
+        // ── 4. TOP SECTION: 2x2 Crafting & Output (Right) ───────────────────────
+        float craftX = prevX + prevW + 18.0;
+        float craftY = topY + 24.0;
+        drawTextShadow(win, "Crafting", craftX, craftY - 30, 0.75, 0.75, 0.75, 10.0);
+
+        for (int i = 0; i < 4; i++) {
+            int c = i % 2;
+            int r = i / 2;
+            float sx = craftX + cast<float>(c) * stride;
+            float sy = craftY + cast<float>(r) * stride;
+            craftSlotX[i] = sx; craftSlotY[i] = sy;
+
+            bool hover = (mx >= sx && mx <= sx + slotSize && my >= sy && my <= sy + slotSize);
+            drawSlot(win, hudSh, quad, sx, sy, slotSize, hover, false, sw, sh);
+
+            if (!crafting[i].isEmpty()) {
+                drawItemIcon(win, hudSh, quad, crafting[i].blockId, sx, sy, slotSize, sw, sh);
+                drawItemCount(win, crafting[i].count, sx, sy, slotSize);
+            }
+
+            if (hover && setTimer <= 0) {
+                if (mouseLeft)  handleClick(i, crafting, false);
+                if (mouseRight) handleClick(i, crafting, true);
+                setTimer = 8;
+            }
+        }
+
+        // Arrow pointing right ->
+        float arrowX = craftX + 2.0 * stride + 8.0;
+        float arrowY = craftY + stride * 0.5 - 4.0;
+        drawRect2D(win, hudSh, quad, arrowX, arrowY, 18, 6, 0.40, 0.40, 0.42, 1.0, sw, sh);
+        drawRect2D(win, hudSh, quad, arrowX + 14, arrowY - 4, 4, 14, 0.40, 0.40, 0.42, 1.0, sw, sh);
+
+        // Crafting result slot
+        float resultSlotX = arrowX + 26.0;
+        float resultSlotY = craftY + (stride - slotSize * 0.5) - 6.0;
+        drawSlot(win, hudSh, quad, resultSlotX, resultSlotY, slotSize, false, false, sw, sh);
+
+        // ── 5. MAIN INVENTORY (9×3 Grid) ────────────────────────────────────────
+        float mainGridY = topY + topH + 14.0;
+        // drawTextShadow(win, "Inventory", leftX, mainGridY - 13, 0.75, 0.75, 0.75, 10.0);
+
+        for (int i = 0; i < 27; i++) {
+            int c = i % 9;
+            int r = i / 9;
+            float sx = leftX + cast<float>(c) * stride;
+            float sy = mainGridY + cast<float>(r) * stride;
+            mainSlotX[i] = sx; mainSlotY[i] = sy;
+
+            bool hover = (mx >= sx && mx <= sx + slotSize && my >= sy && my <= sy + slotSize);
+            drawSlot(win, hudSh, quad, sx, sy, slotSize, hover, false, sw, sh);
+
+            if (!mainInv[i].isEmpty()) {
+                drawItemIcon(win, hudSh, quad, mainInv[i].blockId, sx, sy, slotSize, sw, sh);
+                drawItemCount(win, mainInv[i].count, sx, sy, slotSize);
+            }
+
+            if (hover && setTimer <= 0) {
+                if (mouseLeft)  handleClick(i, mainInv, false);
+                if (mouseRight) handleClick(i, mainInv, true);
+                setTimer = 8;
+            }
+        }
+
+        // ── 6. HOTBAR (9×1 Row) ─────────────────────────────────────────────────
+        float hbY = mainGridY + mainH + 10.0;
+
+        for (int i = 0; i < 9; i++) {
+            float sx = leftX + cast<float>(i) * stride;
+            float sy = hbY;
+            hotbarSlotX[i] = sx; hotbarSlotY[i] = sy;
+
+            bool hover = (mx >= sx && mx <= sx + slotSize && my >= sy && my <= sy + slotSize);
+            bool selected = (i == hotbarSel);
+            drawSlot(win, hudSh, quad, sx, sy, slotSize, hover, selected, sw, sh);
+
+            if (!hotbar[i].isEmpty()) {
+                drawItemIcon(win, hudSh, quad, hotbar[i].blockId, sx, sy, slotSize, sw, sh);
+                drawItemCount(win, hotbar[i].count, sx, sy, slotSize);
+            }
+
+            if (hover && setTimer <= 0) {
+                if (mouseLeft)  handleClick(i, hotbar, false);
+                if (mouseRight) handleClick(i, hotbar, true);
+                setTimer = 8;
+            }
+        }
+
+        // ── 7. Tooltip ──────────────────────────────────────────────────────────
+        string hoveredName = getHoveredSlotName(mx, my);
+        if (hoveredName.length() > 0) {
+            float tipW = cast<float>(hoveredName.length()) * 9.0 + 16.0;
+            float tipH = 22.0;
+            float tipX = mx + 14.0;
+            float tipY = my - 28.0;
+            if (tipX + tipW > sw) tipX = sw - tipW - 4.0;
+            if (tipY < 0.0)       tipY = my + 18.0;
+
+            // drawRect2D(win, hudSh, quad, tipX - 3, tipY - 2, tipW, tipH, 0.05, 0.0, 0.10, 0.95, sw, sh);
+            // drawRect2D(win, hudSh, quad, tipX - 3, tipY - 2, tipW + hoveredName.length(), tipH, 0.0, 0.00, 0.0, 0.25, sw, sh);
+            drawTextShadow(win, hoveredName, tipX + 2, tipY + 4, 1.0, 1.0, 1.0, 13.0);
+        }
+
+        // ── 8. Cursor Item (Carried by mouse) ───────────────────────────────────
+        if (!cursor.isEmpty()) {
+            drawItemIcon(win, hudSh, quad, cursor.blockId, mx - slotSize * 0.5, my - slotSize * 0.5, slotSize, sw, sh);
+            drawItemCount(win, cursor.count, mx - slotSize * 0.5, my - slotSize * 0.5, slotSize);
+        }
+
+        if (setTimer > 0) setTimer--;
+    }
+
+    // ── Click handler — pick up / place / swap / merge ───────────────────────
+    private func void handleClick(int idx, ItemStack[] arr, bool rightClick) {
+        if (idx < 0 || idx >= arr.length()) return;
+        ItemStack slot = arr[idx];
+        if (rightClick) {
+            // Place 1 from cursor
+            if (!cursor.isEmpty()) {
+                if (slot.isEmpty() || slot.blockId == cursor.blockId) {
+                    if (slot.isEmpty()) { slot.blockId = cursor.blockId; slot.count = 0; }
+                    if (slot.count < MAX_STACK) {
+                        slot.count++;
+                        cursor.count--;
+                        if (cursor.count <= 0) cursor.setEmpty();
+                    }
+                }
+            }
+        } else {
+            // Left click
+            if (cursor.isEmpty()) {
+                // Pick up entire stack
+                if (!slot.isEmpty()) {
+                    cursor.blockId = slot.blockId;
+                    cursor.count = slot.count;
+                    slot.setEmpty();
+                }
+            } else {
+                // Cursor has stuff
+                if (slot.isEmpty()) {
+                    // Place entire cursor stack
+                    slot.blockId = cursor.blockId;
+                    slot.count = cursor.count;
+                    cursor.setEmpty();
+                } else if (slot.blockId == cursor.blockId) {
+                    // Merge
+                    int space = MAX_STACK - slot.count;
+                    int take = (cursor.count <= space) ? cursor.count : space;
+                    slot.count += take;
+                    cursor.count -= take;
+                    if (cursor.count <= 0) cursor.setEmpty();
+                } else {
+                    // Swap
+                    int tmpId = slot.blockId; int tmpCt = slot.count;
+                    slot.blockId = cursor.blockId; slot.count = cursor.count;
+                    cursor.blockId = tmpId; cursor.count = tmpCt;
+                }
+            }
+        }
+    }
+
+    // ── Find the name of the slot under the mouse (for tooltip) ─────────────
+    private func string getHoveredSlotName(float mx, float my) {
+        for (int i = 0; i < 27; i++) {
+            if (!mainInv[i].isEmpty() && pointInSlot(mx, my, mainSlotX[i], mainSlotY[i])) {
+                return Blocks.name(mainInv[i].blockId) + " x" + mainInv[i].count;
+            }
+        }
+        for (int i = 0; i < 9; i++) {
+            if (!hotbar[i].isEmpty() && pointInSlot(mx, my, hotbarSlotX[i], hotbarSlotY[i])) {
+                return Blocks.name(hotbar[i].blockId) + " x" + hotbar[i].count;
+            }
+        }
+        for (int i = 0; i < 4; i++) {
+            if (!armor[i].isEmpty() && pointInSlot(mx, my, armorSlotX[i], armorSlotY[i])) {
+                return Blocks.name(armor[i].blockId);
+            }
+        }
+        for (int i = 0; i < 4; i++) {
+            if (!crafting[i].isEmpty() && pointInSlot(mx, my, craftSlotX[i], craftSlotY[i])) {
+                return Blocks.name(crafting[i].blockId);
+            }
+        }
+        return "";
+    }
+
+    private func bool pointInSlot(float mx, float my, float sx, float sy) {
+        return (mx >= sx && mx <= sx + slotSize && my >= sy && my <= sy + slotSize);
+    }
+}

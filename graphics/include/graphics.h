@@ -14,14 +14,19 @@ namespace Ume::Graphics {
 enum class Key {
     // Letter keys
     A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y, Z,
-    // Number keys
     Key0, Key1, Key2, Key3, Key4, Key5, Key6, Key7, Key8, Key9,
-    // Special keys
     Space, Enter, Escape, Backspace, Tab, Delete,
     Left, Right, Up, Down, Home, End,
-    // Function keys
     F1, F2, F3, F4, F5, F6, F7, F8, F9, F10, F11, F12,
-    LeftShift, RightShift, LeftControl, RightControl, LeftAlt, RightAlt
+    LeftShift, RightShift, LeftControl, RightControl, LeftAlt, RightAlt,
+    Apostrophe, Comma, Minus, Period, Slash, Semicolon, Equal, LeftBracket, Backslash, RightBracket, GraveAccent, NumLock,
+    Insert, PageUp, PageDown,
+    CapsLock, ScrollLock, PrintScreen, Pause,
+    F13, F14, F15, F16, F17, F18, F19, F20, F21, F22, F23, F24, F25,
+    Kp0, Kp1, Kp2, Kp3, Kp4, Kp5, Kp6, Kp7, Kp8, Kp9,
+    KpDecimal, KpDivide, KpMultiply, KpSubtract, KpAdd, KpEnter, KpEqual,
+    LeftSuper, RightSuper, Menu,
+    World1, World2, Unknown
 };
 
 enum class MouseButton {
@@ -320,5 +325,8 @@ private:
 
     bool InitOpenGL();
 };
+
+// Load raw pixel data [width, height, r, g, b, a, ...] using stb_image
+std::vector<int> LoadImagePixels(const std::string& path);
 
 }

@@ -1,0 +1,261 @@
+// ═══════════════════════════════════════════════════════════════════════════
+// WorldRenderer.ume — Sky color, 3D terrain, mob, and water rendering
+// ═══════════════════════════════════════════════════════════════════════════
+//
+// Exposes two public functions:
+//   calcSkyColor(worldTime)   → float[3] {r, g, b}
+//   renderWorld(...)          → draws celestial bodies, terrain, mobs, water
+
+import std.math.*;
+
+// ── Sky color based on time of day ────────────────────────────────────────────
+public func float[] calcSkyColor(double worldTime) {
+    float skyR; float skyG; float skyB;
+    if (worldTime < 0.25) {
+        float t = cast<float>(worldTime / 0.25);
+        skyR = 0.80+t*(0.52-0.80); skyG = 0.60+t*(0.74-0.60); skyB = 0.70+t*(0.98-0.70);
+    } else if (worldTime < 0.45) {
+        skyR = 0.52; skyG = 0.74; skyB = 0.98;
+    } else if (worldTime < 0.55) {
+        float t = cast<float>((worldTime-0.45)/0.10);
+        skyR = 0.52+t*(0.80-0.52); skyG = 0.74+t*(0.42-0.74); skyB = 0.98+t*(0.52-0.98);
+    } else if (worldTime < 0.75) {
+        float t = cast<float>((worldTime-0.55)/0.20);
+        skyR = 0.80+t*(0.04-0.80); skyG = 0.42+t*(0.04-0.42); skyB = 0.52+t*(0.12-0.52);
+    } else if (worldTime < 0.95) {
+        skyR = 0.04; skyG = 0.04; skyB = 0.12;
+    } else {
+        float t = cast<float>((worldTime-0.95)/0.05);
+        skyR = 0.04+t*(0.80-0.04); skyG = 0.04+t*(0.60-0.04); skyB = 0.12+t*(0.70-0.12);
+    }
+    float[] sky = new float[3];
+    sky[0] = skyR; sky[1] = skyG; sky[2] = skyB;
+    return sky;
+}
+
+// ── Full 3D world render (celestial → terrain → mobs → water) ────────────────
+public func void renderWorld(GameState gs, World world, Camera cam, Window win,
+                              Shader terrainSh, Shader mobSh, Shader celestialSh,
+                              Texture atlas, Mesh quad,
+                              float skyR, float skyG, float skyB,
+                              float currentTime) {
+    double worldTime = gs.worldTime;
+    bool   isNight   = gs.isNight;
+
+    // ── Directional lighting from sun / moon ──────────────────────────────────
+    float sunRot  = cast<float>(worldTime * 6.2831853);
+    float lx = cast<float>(-Math.cos(sunRot));
+    float ly = cast<float>( Math.sin(sunRot) * 0.70 + 0.18);
+    float lz = 0.55;
+
+    bool  isSunUp  = (ly > -0.05);
+    float lightX   = isSunUp ? lx : -lx;
+    float lightY   = isSunUp ? ly : -ly;
+    float lightZ   = isSunUp ? lz : -lz;
+    if (lightY < 0.15) lightY = 0.15;
+
+    float lightLen = cast<float>(Math.sqrt(lightX*lightX + lightY*lightY + lightZ*lightZ));
+    lightX /= lightLen; lightY /= lightLen; lightZ /= lightLen;
+
+    float lightStrength = isNight ? 0.35 : 1.0;
+    if (worldTime > 0.40 && worldTime < 0.55) {
+        float t = cast<float>((worldTime - 0.40) / 0.15);
+        lightStrength = 1.0 - t * 0.65;
+    } else if (worldTime > 0.90 && worldTime < 1.0) {
+        float t = cast<float>((worldTime - 0.90) / 0.10);
+        lightStrength = 0.35 + t * 0.65;
+    } else if (worldTime < 0.10) {
+        float t = cast<float>(worldTime / 0.10);
+        lightStrength = 0.35 + t * 0.65;
+    }
+    float minLight = 0.20;
+
+    float sunColR = 1.0; float sunColG = 0.95; float sunColB = 0.85;
+    if (worldTime < 0.12) {
+        float t = cast<float>(worldTime / 0.12);
+        sunColR = 1.0; sunColG = 0.62 + t*0.33; sunColB = 0.32 + t*0.53;
+    } else if (worldTime > 0.42 && worldTime < 0.55) {
+        float t = cast<float>((worldTime - 0.42) / 0.13);
+        sunColR = 1.0; sunColG = 0.95 - t*0.45; sunColB = 0.85 - t*0.60;
+    } else if (isNight) {
+        sunColR = 0.45; sunColG = 0.55; sunColB = 0.80;
+    }
+
+    float fogEnd   = cast<float>(gs.renderR * 16);
+    float fogStart = fogEnd * 0.65;
+    if (fogStart < 20.0) fogStart = 20.0;
+
+    float     aspect = win.getAspectRatio();
+    Matrix4x4 vp     = cam.getVP(aspect);
+    float[]   vpa    = vp.toArray();
+
+    // ── Celestial bodies (sun & moon) ─────────────────────────────────────────
+    celestialSh.use();
+    celestialSh.setMat4("mvp", vpa);
+
+    float sunDist   = 320.0;
+    float sunDirLen = cast<float>(Math.sqrt(lx*lx + ly*ly + lz*lz));
+    float sDirX = lx / sunDirLen;
+    float sDirY = ly / sunDirLen;
+    float sDirZ = lz / sunDirLen;
+
+    float rX = -sDirZ; float rY = 0.0; float rZ = sDirX;
+    float rL = cast<float>(Math.sqrt(rX*rX + rZ*rZ));
+    if (rL > 0.001) { rX /= rL; rZ /= rL; } else { rX = 1.0; rZ = 0.0; }
+    float uX = rY*sDirZ - rZ*sDirY;
+    float uY = rZ*sDirX - rX*sDirZ;
+    float uZ = rX*sDirY - rY*sDirX;
+
+    // Sun
+    float sunScale = 60.0;
+    float[] mSun = new float[16];
+    mSun[0]=rX*sunScale; mSun[1]=rY*sunScale; mSun[2]=rZ*sunScale; mSun[3]=0.0;
+    mSun[4]=uX*sunScale; mSun[5]=uY*sunScale; mSun[6]=uZ*sunScale; mSun[7]=0.0;
+    mSun[8]=sDirX*sunScale; mSun[9]=sDirY*sunScale; mSun[10]=sDirZ*sunScale; mSun[11]=0.0;
+    mSun[12]=cast<float>(cam.x)+sDirX*sunDist;
+    mSun[13]=cast<float>(cam.y)+sDirY*sunDist;
+    mSun[14]=cast<float>(cam.z)+sDirZ*sunDist;
+    mSun[15]=1.0;
+    celestialSh.setMat4("uModel", mSun);
+    celestialSh.setVec3("uColor", 1.0, 0.92, 0.20);
+    celestialSh.setFloat("uAlpha", 1.0);
+    celestialSh.setInt("uIsMoon", 0);
+    win.drawMesh(quad, celestialSh);
+
+    // Moon
+    float moonScale = 45.0;
+    float[] mMoon = new float[16];
+    mMoon[0]=-rX*moonScale; mMoon[1]=-rY*moonScale; mMoon[2]=-rZ*moonScale; mMoon[3]=0.0;
+    mMoon[4]=-uX*moonScale; mMoon[5]=-uY*moonScale; mMoon[6]=-uZ*moonScale; mMoon[7]=0.0;
+    mMoon[8]=-sDirX*moonScale; mMoon[9]=-sDirY*moonScale; mMoon[10]=-sDirZ*moonScale; mMoon[11]=0.0;
+    mMoon[12]=cast<float>(cam.x)-sDirX*sunDist;
+    mMoon[13]=cast<float>(cam.y)-sDirY*sunDist;
+    mMoon[14]=cast<float>(cam.z)-sDirZ*sunDist;
+    mMoon[15]=1.0;
+    celestialSh.setMat4("uModel", mMoon);
+    celestialSh.setVec3("uColor", 0.92, 0.95, 1.0);
+    celestialSh.setFloat("uAlpha", 1.0);
+    celestialSh.setInt("uIsMoon", 1);
+    win.drawMesh(quad, celestialSh);
+
+    // ── Pass 1: Opaque terrain chunks ─────────────────────────────────────────
+    terrainSh.use();
+    terrainSh.setMat4("mvp", vpa);
+    Matrix4x4 identity = Matrix4x4.identity();
+    terrainSh.setMat4("uModel", identity.toArray());
+    terrainSh.setVec3("camPos", cast<float>(cam.x), cast<float>(cam.y), cast<float>(cam.z));
+    terrainSh.setVec3("fogColor", skyR*0.9, skyG*0.9, skyB*0.9);
+    terrainSh.setVec3("uLightDir", lightX, lightY, lightZ);
+    terrainSh.setVec3("uSunColor", sunColR, sunColG, sunColB);
+    terrainSh.setVec3("uSkyColor", skyR, skyG, skyB);
+    terrainSh.setFloat("uLightStrength", lightStrength);
+    terrainSh.setFloat("uMinLight", minLight);
+    terrainSh.setFloat("uFogStart", fogStart);
+    terrainSh.setFloat("uFogEnd", fogEnd);
+    terrainSh.setFloat("uTime", currentTime);
+    terrainSh.setTexture("uAtlas", atlas, 0);
+    terrainSh.setInt("uUseTexture", 1);
+    terrainSh.setVec3("uFlatColor", 0.5, 0.5, 0.5);
+
+    int pcxR = cast<int>(Math.floor(gs.px / 16.0));
+    int pczR = cast<int>(Math.floor(gs.pz / 16.0));
+    double camFwdX = cam.fwdX(); double camFwdZ = cam.fwdZ();
+
+    for (int ci = 0; ci < world.count; ci++) {
+        if (!world.chunks[ci].isBuilt || world.chunks[ci].faceCount <= 0) continue;
+        int ddx = world.cgx[ci] - pcxR; int ddz = world.cgz[ci] - pczR;
+        if (ddx < 0) ddx = -ddx; if (ddz < 0) ddz = -ddz;
+        if (ddx <= gs.renderR+1 && ddz <= gs.renderR+1) {
+            double cdx = cast<double>(world.cgx[ci]*16+8) - cam.x;
+            double cdz = cast<double>(world.cgz[ci]*16+8) - cam.z;
+            if (cdx*camFwdX + cdz*camFwdZ > -24.0) {
+                win.drawMesh(world.chunks[ci].mesh, terrainSh);
+            }
+        }
+    }
+
+    // ── Pass 2: Mobs (multi-part) ─────────────────────────────────────────────
+    mobSh.use();
+    mobSh.setVec3("camPos", cast<float>(cam.x), cast<float>(cam.y), cast<float>(cam.z));
+    mobSh.setVec3("fogColor", skyR*0.9, skyG*0.9, skyB*0.9);
+    mobSh.setVec3("uLightDir", lightX, lightY, lightZ);
+    mobSh.setVec3("uSunColor", sunColR, sunColG, sunColB);
+    mobSh.setVec3("uSkyColor", skyR, skyG, skyB);
+    mobSh.setFloat("uLightStrength", lightStrength);
+    mobSh.setFloat("uMinLight", minLight);
+    mobSh.setFloat("uFogStart", fogStart);
+    mobSh.setFloat("uFogEnd", fogEnd);
+    mobSh.setInt("uUseTexture", 0);
+
+    for (int ci = 0; ci < world.mobCount; ci++) {
+        Mob m = world.mobs[ci];
+        if (!m.alive) continue;
+        double mdx = m.x - cam.x; double mdz = m.z - cam.z;
+        if (mdx*mdx + mdz*mdz > 1024.0) continue;
+
+        MobModel model = MobModels.get(m.mobType);
+        if (model == null) continue;
+
+        if (model.hasTexture && model.texture != null) {
+            mobSh.setTexture("uTexture", model.texture, 0);
+            mobSh.setInt("uUseTexture", 1);
+        } else {
+            mobSh.setInt("uUseTexture", 0);
+        }
+
+        MobDef def = Mobs.get(m.mobType);
+        float modelScale = (def == null) ? 1.0 : def.modelScale;
+
+        for (int pi = 0; pi < model.partCount; pi++) {
+            MobPart part = model.parts[pi];
+            if (!part.visible) continue;
+            Matrix4x4 modelMat = computePartMatrix(
+                part, m.x, m.y, m.z,
+                m.facingYaw, m.headPitch,
+                m.walkPhase, m.walkAmp,
+                modelScale
+            );
+            Matrix4x4 mvp = vp * modelMat;
+            mobSh.setMat4("mvp", mvp.toArray());
+            mobSh.setMat4("uModel", modelMat.toArray());
+            win.drawMesh(part.mesh, mobSh);
+        }
+    }
+
+    // ── Pass 3: Translucent water chunks (back-to-front) ─────────────────────
+    terrainSh.use();
+    int[]    waterIdx  = new int[world.count];
+    double[] waterDist = new double[world.count];
+    int waterCount = 0;
+
+    for (int ci = 0; ci < world.count; ci++) {
+        if (!world.chunks[ci].isBuilt || world.chunks[ci].waterFaceCount <= 0) continue;
+        int ddx = world.cgx[ci] - pcxR; int ddz = world.cgz[ci] - pczR;
+        if (ddx < 0) ddx = -ddx; if (ddz < 0) ddz = -ddz;
+        if (ddx <= gs.renderR+1 && ddz <= gs.renderR+1) {
+            double cdx = cast<double>(world.cgx[ci]*16+8) - cam.x;
+            double cdz = cast<double>(world.cgz[ci]*16+8) - cam.z;
+            if (cdx*camFwdX + cdz*camFwdZ > -24.0) {
+                waterIdx[waterCount]  = ci;
+                waterDist[waterCount] = cdx*cdx + cdz*cdz;
+                waterCount++;
+            }
+        }
+    }
+    // Insertion sort — furthest first
+    for (int wi = 1; wi < waterCount; wi++) {
+        int    ki = waterIdx[wi];
+        double kd = waterDist[wi];
+        int    wj = wi - 1;
+        while (wj >= 0 && waterDist[wj] < kd) {
+            waterIdx[wj+1]  = waterIdx[wj];
+            waterDist[wj+1] = waterDist[wj];
+            wj--;
+        }
+        waterIdx[wj+1]  = ki;
+        waterDist[wj+1] = kd;
+    }
+    for (int wi = 0; wi < waterCount; wi++) {
+        win.drawMesh(world.chunks[waterIdx[wi]].waterMesh, terrainSh);
+    }
+}

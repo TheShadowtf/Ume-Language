@@ -1,0 +1,71 @@
+// ═══════════════════════════════════════════════════════════════════════════
+// TextureAtlas.ume — Dynamic terrain texture atlas generator
+// ═══════════════════════════════════════════════════════════════════════════
+
+// (Block and ShaderManager are included before this file)
+
+public func Texture loadTextureAtlas(string basePath) {
+    string resolvedBase = resolveAssetPath(basePath);
+    if (!resolvedBase.endsWith("/") && !resolvedBase.endsWith("\\")) {
+        resolvedBase = resolvedBase + "/";
+    }
+
+    int atlasCols = ATLAS_COLS;
+    int atlasRows = ATLAS_ROWS;
+    int tileW     = 16;
+    int tileH     = 16;
+    int atlasW    = atlasCols * tileW;
+    int atlasH    = atlasRows * tileH;
+    int totalPixels = atlasW * atlasH * 4;
+
+    int[] atlasPixels = new int[totalPixels];
+    for (int i = 0; i < totalPixels; i++) {
+        if (i % 4 == 3) atlasPixels[i] = 255;
+        else atlasPixels[i] = 0;
+    }
+
+    string[] texNames = new string[atlasCols * atlasRows];
+    texNames[0]  = resolvedBase + "grass_top.png";
+    texNames[1]  = resolvedBase + "grass_side.png";
+    texNames[2]  = resolvedBase + "dirt.png";
+    texNames[3]  = resolvedBase + "stone.png";
+    texNames[4]  = resolvedBase + "cobblestone.png";
+    texNames[5]  = resolvedBase + "sand.png";
+    texNames[6]  = resolvedBase + "gravel.png";
+    texNames[7]  = resolvedBase + "planks.png";
+    texNames[8]  = resolvedBase + "log_side.png";
+    texNames[9]  = resolvedBase + "log_top.png";
+    texNames[10] = resolvedBase + "leaves.png";
+    texNames[11] = resolvedBase + "snow.png";
+    texNames[12] = resolvedBase + "water.png";
+    texNames[13] = resolvedBase + "bedrock.png";
+    texNames[14] = resolvedBase + "stone.png";
+
+    for (int tileRow = 0; tileRow < atlasRows; tileRow++) {
+        for (int tileCol = 0; tileCol < atlasCols; tileCol++) {
+            int tileIndex = tileRow * atlasCols + tileCol;
+            string path = texNames[tileIndex];
+            int[] imgData = Graphics.loadImagePixels(path);
+            if (imgData.length() >= 2 + 16 * 16 * 4) {
+                int imgW = imgData[0];
+                int imgH = imgData[1];
+                for (int py = 0; py < tileH && py < imgH; py++) {
+                    for (int px = 0; px < tileW && px < imgW; px++) {
+                        int srcIdx = 2 + (py * imgW + px) * 4;
+                        int atlasX = tileCol * tileW + px;
+                        int atlasY = tileRow * tileH + py;
+                        int destIdx = (atlasY * atlasW + atlasX) * 4;
+                        atlasPixels[destIdx]   = imgData[srcIdx];
+                        atlasPixels[destIdx+1] = imgData[srcIdx+1];
+                        atlasPixels[destIdx+2] = imgData[srcIdx+2];
+                        atlasPixels[destIdx+3] = imgData[srcIdx+3];
+                    }
+                }
+            } else {
+                Console.println("[Texture] Warning: Failed to load " + path);
+            }
+        }
+    }
+
+    return new Texture(atlasW, atlasH, atlasPixels, 4);
+}
